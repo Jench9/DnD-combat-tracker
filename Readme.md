@@ -1,82 +1,107 @@
 # Combat Tracker
 
-A single-page D&D combat tracker (initiative, HP, conditions, death saves). No
-backend, no database, no build step — it's one self-contained `index.html`
-file, which is why Dockerizing it is just "serve this file."
+A shared D&D combat tracker: initiative, HP, conditions, and death saves,
+synced live across every device connected to it. One player can bump a
+monster's HP and everyone else's screen updates instantly.
 
-## Run with Docker
+Unlike the very first version of this, it's no longer a single static HTML
+file — there's a small Node server that holds the combat state in memory
+and pushes updates to all connected browsers over WebSocket.
+
+## How it works
+
+- `server.js` is the source of truth. It holds one state object
+  (`{ round, activeIndex, combatants }`) in memory.
+- Every action (add a combatant, adjust HP, toggle a condition, advance the
+  turn...) is sent from the browser to the server as a small WebSocket
+  message. The server applies it and broadcasts the new state to *all*
+  connected clients, including whoever sent it.
+- The browser (`public/index.html`) never trusts its own local copy of the
+  state — it only ever renders whatever the server last sent it. That's
+  what keeps two people clicking at once from producing conflicting results.
+
+## Run it
+
+### With Docker (recommended)
 
 ```bash
 docker compose up --build
 ```
 
-Then open **http://localhost:8080**
+Open **http://localhost:3000**
 
-To stop it: `docker compose down`
+Stop it with `docker compose down`.
 
-### Without docker-compose
+### Without Docker
 
 ```bash
-docker build -t combat-tracker .
-docker run -d -p 8080:80 --name combat-tracker combat-tracker
+npm install
+node server.js
 ```
 
-### Changing the port
+Same URL, same behavior — Docker just packages the Node runtime and
+dependencies so you don't need Node installed locally, and gives you
+`restart: unless-stopped` for free.
 
-Edit `docker-compose.yml` and change the left side of `"8080:80"` to
-whatever port you want, e.g. `"3000:80"`.
+## Letting friends connect
+
+`docker compose up` only binds to your machine. For others to reach it:
+
+- **Same wifi**: they open `http://<your-laptop's-LAN-IP>:3000` in their
+  browser. Find your IP with `ipconfig getifaddr en0` (Mac) or `ipconfig`
+  (Windows, look for IPv4 Address).
+- **Different networks**: you'd need a tunnel (`ngrok`, `cloudflared`) to
+  get a public URL without configuring your router.
+
+## Data persistence
+
+Combat state lives **only in memory** in the running server process. That
+means:
+
+- Everyone sees the same live state while the server is running — that's
+  the whole point.
+- Restarting the container (`docker compose down` / a crash / your laptop
+  sleeping if Docker isn't set to keep running) wipes it. There's currently
+  no database or file backing it.
+- If you want state to survive a restart, that's a follow-up step (writing
+  state to a JSON file or SQLite and mounting it as a Docker volume) — not
+  needed for a normal session, since you'd typically just start a fresh
+  combat each time anyway.
 
 ## Updating the app
 
-Edit `app/index.html`, then rebuild:
+Edit `server.js` (server-side logic/actions) or `public/index.html`
+(everything the browser renders and how it sends messages), then:
 
 ```bash
 docker compose up --build
 ```
-
-## Data / saving
-
-Combat state is saved in the browser's `localStorage`, per browser/device —
-there's no server-side storage. That means:
-- Refreshing the page keeps your combat going.
-- It does **not** sync across devices (each player/laptop has its own copy).
-- Clearing browser data wipes it.
-
-If you want everyone at the table to see the same live combat state on their
-own phones, that needs a small backend (e.g. a shared store or WebSocket
-server) — let me know if you want that built out next.
-
-## Deploying so it's reachable outside your machine
-
-The `docker compose up` above only serves on your own machine (`localhost`).
-To make it reachable by others:
-
-- **Your home network / LAN**: run it on a machine that stays on (an old
-  laptop, a Raspberry Pi, a home server) and connect from other devices using
-  that machine's local IP, e.g. `http://192.168.1.50:8080`.
-- **A VPS** (DigitalOcean, Linode, Hetzner, a cheap cloud box): copy this
-  folder over, run the same `docker compose up -d --build`, and open the
-  matching port in the firewall. Put it behind a reverse proxy (Caddy or
-  nginx + Let's Encrypt) if you want a real domain and HTTPS.
-- **Free static hosts, no Docker needed** — since this is just static HTML,
-  you can skip Docker entirely and drag-and-drop `app/index.html` into:
-  - [Netlify Drop](https://app.netlify.com/drop)
-  - [Vercel](https://vercel.com) or [Cloudflare Pages](https://pages.dev)
-  - **GitHub Pages**: push this repo, enable Pages on the `app/` folder (or
-    move `index.html` to the repo root), done — free HTTPS URL.
-
-For a home game with your friends, GitHub Pages or Netlify Drop is honestly
-the least fuss: no server to maintain, free, and you get a shareable link in
-under a minute. Docker is the better call if you want to self-host on your
-own hardware or bundle this alongside other services later.
 
 ## Project structure
 
 ```
 combat-tracker-app/
-├── app/
-│   └── index.html      # the whole app
+├── server.js            # WebSocket server + shared state + static file serving
+├── public/
+│   └── index.html        # the frontend — sends actions, renders whatever the server sends back
+├── package.json
+├── package-lock.json
 ├── Dockerfile
 ├── docker-compose.yml
+├── .dockerignore
+├── .gitignore
 └── README.md
 ```
+
+## Deploying beyond your laptop
+
+Since this now runs a persistent Node process (not just static files), you
+have a couple of paths if you outgrow "my laptop on game night":
+
+- **A VPS** (DigitalOcean, Linode, Hetzner, etc.): copy this repo over, run
+  `docker compose up -d --build`, open the port in the firewall. Add a
+  reverse proxy (Caddy or nginx + Let's Encrypt) for a real domain and
+  HTTPS.
+- **A platform that runs containers for you** (Fly.io, Railway, Render):
+  point it at this repo — the Dockerfile is already set up to build and run
+  as-is.
