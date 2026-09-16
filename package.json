@@ -1,0 +1,13 @@
+{
+  "name": "combat-tracker-server",
+  "version": "1.0.0",
+  "description": "Shared-state backend for the D&D combat tracker",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  }
+}
