@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Combat Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .round-box { display: flex; align-items: center; gap: 14px; }
+  .round-count { text-align: right; }
+  .round-count .num {
+    font-family: var(--font-display);
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--wax);
+  }
+  .round-count .lbl { font-size: 12px; color: var(--ink-soft); }
+
+  .add-form {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto auto;
+    gap: 10px;
+    align-items: end;
+  }
+  @media (max-width: 620px) {
+    .add-form { grid-template-columns: 1fr 1fr; }
+  }
+  .type-toggle {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .type-toggle button {
+    flex: 1;
+    padding: 8px 6px;
+    background: var(--bg);
+    color: var(--ink-soft);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .type-toggle button.active.pc { background: var(--good); color: #fff; }
+  .type-toggle button.active.monster { background: var(--wax); color: #fff; }
+
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .empty {
+    text-align: center;
+    color: var(--ink-soft);
+    padding: 30px 10px;
+    font-size: 14px;
+  }
+
+  .row {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--line);
+    border-radius: 7px;
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: 42px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+  .row.active {
+    border-left-color: var(--gold);
+    background: linear-gradient(90deg, rgba(212,174,76,0.12), transparent 60%);
+  }
+  .row.down { opacity: 0.6; }
+
+  .init-badge {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 20px;
+    text-align: center;
+    color: var(--ink-soft);
+  }
+  .row.active .init-badge { color: var(--gold); }
+
+  .row-main { min-width: 0; }
+  .name-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .name-line .marker { color: var(--gold); font-size: 13px; }
+  .cname {
+    font-weight: 600;
+    font-size: 15.5px;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-body);
+    padding: 2px 0;
+    max-width: 180px;
+  }
+  .pc-dot, .mon-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block;
+  }
+  .pc-dot { background: var(--good); }
+  .mon-dot { background: var(--wax); }
+  .ac-tag {
+    font-size: 12px;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 6px;
+  }
+
+  .hp-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .hp-btn {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hp-btn:hover { border-color: var(--gold); }
+  .hp-val {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    min-width: 62px;
+    text-align: center;
+  }
+  .hp-val .max { color: var(--ink-soft); font-weight: 400; font-size: 13px; }
+  .hp-bar-track {
+    flex: 1;
+    min-width: 60px;
+    height: 5px;
+    background: var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .hp-bar-fill { height: 100%; background: var(--good); transition: width 0.2s ease; }
+  .hp-bar-fill.mid { background: var(--gold); }
+  .hp-bar-fill.low { background: var(--wax); }
+
+  .conditions { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+  .chip {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(140,47,47,0.12);
+    color: var(--wax);
+    border: 1px solid var(--wax-soft);
+    cursor: default;
+    position: relative;
+  }
+  .chip button {
+    background: none; color: inherit; margin-left: 4px; font-size: 11px; opacity: 0.7;
+  }
+  .add-cond {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    border: 1px dashed var(--line);
+    background: transparent;
+    color: var(--ink-soft);
+  }
+
+  .death-saves {
+    display: flex; align-items: center; gap: 10px; margin-top: 8px;
+    font-size: 11.5px; color: var(--ink-soft);
+  }
+  .save-dots { display: flex; gap: 4px; }
+  .dot {
+    width: 13px; height: 13px; border-radius: 50%;
+    border: 1.5px solid var(--line); cursor: pointer;
+  }
+  .dot.success.filled { background: var(--good); border-color: var(--good); }
+  .dot.fail.filled { background: var(--wax); border-color: var(--wax); }
+
+  .row-actions { display: flex; flex-direction: column; gap: 6px; }
+  .remove-btn {
+    background: none; color: var(--ink-soft); font-size: 12px;
+    border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px;
+  }
+  .remove-btn:hover { color: var(--wax); border-color: var(--wax-soft); }
+
+  details.ref {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 18px;
+  }
+  details.ref summary {
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 16px;
+    list-style: none;
+  }
+  details.ref summary::-webkit-details-marker { display: none; }
+  details.ref summary::before { content: "▸ "; color: var(--gold); }
+  details.ref[open] summary::before { content: "▾ "; }
+  .ref-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-top: 14px;
+  }
+  @media (max-width: 620px) { .ref-grid { grid-template-columns: 1fr; } }
+  .ref-grid h3 {
+    font-size: 12.5px;
+    text-transform: none;
+    color: var(--gold);
+    margin: 0 0 8px;
+    font-weight: 600;
+  }
+  .ref-grid dl { margin: 0; }
+  .ref-grid dt { font-weight: 600; font-size: 13px; margin-top: 8px; }
+  .ref-grid dd { margin: 1px 0 0; color: var(--ink-soft); font-size: 12.5px; }
+
+  .footer-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+  .controls-row { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="app-nav">
+    <a class="nav-btn" href="index.html"><span class="ic">🏠</span> Home</a>
+    <a class="nav-btn active" href="combat.html"><span class="ic">⚔️</span> Combat Tracker</a>
+    <a class="nav-btn" href="characters.html"><span class="ic">📜</span> Character Sheets</a>
+  </nav>
+
+  <header>
+    <div>
+      <h1>Combat Tracker</h1>
+      <div class="tagline">Keep initiative, HP, and conditions straight at the table</div>
+    </div>
+    <div class="round-box">
+      <div class="round-count">
+        <div class="num" id="roundNum">1</div>
+        <div class="lbl">round</div>
+      </div>
+      <button class="btn" id="nextTurnBtn">Next turn →</button>
+    </div>
+  </header>
+
+  <div class="panel">
+    <div class="add-form">
+      <div class="field">
+        <label for="inpName">Name</label>
+        <input id="inpName" type="text" placeholder="e.g. Goblin Archer" maxlength="30">
+      </div>
+      <div class="field">
+        <label for="inpInit">Initiative</label>
+        <input id="inpInit" type="number" placeholder="0">
+      </div>
+      <div class="field">
+        <label for="inpAC">AC</label>
+        <input id="inpAC" type="number" placeholder="0">
+      </div>
+      <div class="field">
+        <label for="inpHP">Max HP</label>
+        <input id="inpHP" type="number" placeholder="0">
+      </div>
+      <div class="field">
+        <label>Type</label>
+        <div class="type-toggle" id="typeToggle">
+          <button type="button" class="active pc" data-type="pc">PC</button>
+          <button type="button" class="monster" data-type="monster">Monster</button>
+        </div>
+      </div>
+      <button class="btn" id="addBtn" style="height:38px;">Add</button>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <button class="btn secondary small" id="sortBtn">Re-sort by initiative</button>
+    <button class="btn secondary small" id="clearBtn">Clear all</button>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <div class="footer-actions"></div>
+
+  <div style="height:18px;"></div>
+
+  <details class="ref">
+    <summary>Quick reference — conditions & actions</summary>
+    <div class="ref-grid">
+      <div>
+        <h3>Conditions</h3>
+        <dl id="condRef"></dl>
+      </div>
+      <div>
+        <h3>Things you can do on your turn</h3>
+        <dl>
+          <dt>Attack</dt><dd>Make a melee or ranged attack.</dd>
+          <dt>Cast a spell</dt><dd>Some spells take your action, some take a bonus action.</dd>
+          <dt>Dash</dt><dd>Gain extra movement equal to your speed.</dd>
+          <dt>Disengage</dt><dd>Move without provoking opportunity attacks.</dd>
+          <dt>Dodge</dt><dd>Attacks against you have disadvantage until your next turn.</dd>
+          <dt>Help</dt><dd>Give an ally advantage on their next check or attack.</dd>
+          <dt>Hide</dt><dd>Make a Stealth check to become hidden.</dd>
+          <dt>Ready</dt><dd>Prepare an action to trigger on a condition you set.</dd>
+          <dt>One move + one action</dt><dd>You get both each turn, in any order.</dd>
+        </dl>
+      </div>
+    </div>
+  </details>
+</div>
+
+<script>
+(function() {
+  const CONDITIONS = [
+    ['Blinded', "Can't see; auto-fails sight checks; attacks against you have advantage, yours have disadvantage."],
+    ['Charmed', "Can't attack the charmer; charmer has advantage on social checks with you."],
+    ['Deafened', "Can't hear; auto-fails hearing checks."],
+    ['Frightened', "Disadvantage on checks/attacks while the source is in sight; can't move closer to it."],
+    ['Grappled', "Speed becomes 0; ends if the grappler is incapacitated."],
+    ['Incapacitated', "Can't take actions or reactions."],
+    ['Invisible', "Can't be seen without special sense; attacks against you have disadvantage, yours have advantage."],
+    ['Paralyzed', "Incapacitated, can't move/speak; auto-fails STR/DEX saves; hits within 5ft are crits."],
+    ['Poisoned', "Disadvantage on attack rolls and ability checks."],
+    ['Prone', "Disadvantage on attacks; melee attacks against you have advantage, ranged have disadvantage."],
+    ['Restrained', "Speed 0; disadvantage on attacks and DEX saves; attacks against you have advantage."],
+    ['Stunned', "Incapacitated, can't move; auto-fails STR/DEX saves; attacks against you have advantage."],
+    ['Unconscious', "Incapacitated, prone, unaware; auto-fails STR/DEX saves; nearby hits are crits."]
+  ];
+
+  const condRefEl = document.getElementById('condRef');
+  CONDITIONS.forEach(([name, desc]) => {
+    const dt = document.createElement('dt'); dt.textContent = name;
+    const dd = document.createElement('dd'); dd.textContent = desc;
+    condRefEl.appendChild(dt); condRefEl.appendChild(dd);
+  });
+
+
+  let state = { round: 1, activeIndex: 0, combatants: [] };
+
+  let ws;
+  function connect() {
+    ws = new WebSocket(location.origin.replace(/^http/, 'ws'));
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'state') {
+        state = msg.state;
+        render();
+      }
+    };
+    ws.onclose = () => setTimeout(connect, 1000); // auto-reconnect
+  }
+
+  connect();
+  
+  function send(type, payload = {}) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type, payload }));
+    }
+  } 
+
+  function render() {
+    document.getElementById('roundNum').textContent = state.round;
+    const list = document.getElementById('list');
+    list.innerHTML = '';
+
+    if (state.combatants.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'No combatants yet — add your party and any monsters above, then hit "Next turn" to start.';
+      list.appendChild(empty);
+      return;
+    }
+
+    if (state.activeIndex >= state.combatants.length) state.activeIndex = 0;
+
+    state.combatants.forEach((c, idx) => {
+      const row = document.createElement('div');
+      row.className = 'row' + (idx === state.activeIndex ? ' active' : '') + (c.hp <= 0 ? ' down' : '');
+
+      // init badge
+      const badge = document.createElement('div');
+      badge.className = 'init-badge';
+      badge.textContent = c.init;
+      row.appendChild(badge);
+
+      // main
+      const main = document.createElement('div');
+      main.className = 'row-main';
+
+      const nameLine = document.createElement('div');
+      nameLine.className = 'name-line';
+      if (idx === state.activeIndex) {
+        const marker = document.createElement('span');
+        marker.className = 'marker'; marker.textContent = '▶';
+        nameLine.appendChild(marker);
+      }
+      const dot = document.createElement('span');
+      dot.className = c.type === 'pc' ? 'pc-dot' : 'mon-dot';
+      nameLine.appendChild(dot);
+
+      const nameInput = document.createElement('input');
+      nameInput.className = 'cname';
+      nameInput.value = c.name;
+      nameInput.addEventListener('change', () => { send('renameCombatant', { id: c.id, name: nameInput.value });  });
+      nameLine.appendChild(nameInput);
+
+      const acTag = document.createElement('span');
+      acTag.className = 'ac-tag';
+      acTag.textContent = 'AC ' + c.ac;
+      nameLine.appendChild(acTag);
+
+      main.appendChild(nameLine);
+
+      // hp line
+      const hpLine = document.createElement('div');
+      hpLine.className = 'hp-line';
+
+      const minus5 = mkHpBtn('−', () => adjustHP(c, -5));
+      const minus1 = mkHpBtn('−', () => adjustHP(c, -1));
+      hpLine.appendChild(minus5); hpLine.appendChild(minus1);
+
+      const hpVal = document.createElement('div');
+      hpVal.className = 'hp-val';
+      hpVal.innerHTML = '<span class="cur">' + Math.max(c.hp,0) + '</span><span class="max"> / ' + c.maxHp + '</span>';
+      hpLine.appendChild(hpVal);
+
+      const plus1 = mkHpBtn('+', () => adjustHP(c, 1));
+      const plus5 = mkHpBtn('+', () => adjustHP(c, 5));
+      hpLine.appendChild(plus1); hpLine.appendChild(plus5);
+
+      const barTrack = document.createElement('div');
+      barTrack.className = 'hp-bar-track';
+      const barFill = document.createElement('div');
+      const pct = Math.max(0, Math.min(100, (c.hp / c.maxHp) * 100));
+      barFill.className = 'hp-bar-fill' + (pct <= 25 ? ' low' : pct <= 55 ? ' mid' : '');
+      barFill.style.width = pct + '%';
+      barTrack.appendChild(barFill);
+      hpLine.appendChild(barTrack);
+
+      main.appendChild(hpLine);
+
+      // death saves (PC at 0 hp)
+      if (c.type === 'pc' && c.hp <= 0) {
+        const ds = document.createElement('div');
+        ds.className = 'death-saves';
+        ds.appendChild(document.createTextNode('Death saves — S:'));
+        const succWrap = document.createElement('span'); succWrap.className = 'save-dots';
+        for (let i = 0; i < 3; i++) {
+          const d = document.createElement('span');
+          d.className = 'dot success' + (i < c.deathSuccess ? ' filled' : '');
+          d.addEventListener('click', () => {
+            send('toggleDeathSave', { id: c.id, kind: 'success', index: i });
+            
+          });
+          succWrap.appendChild(d);
+        }
+        ds.appendChild(succWrap);
+        ds.appendChild(document.createTextNode(' F:'));
+        const failWrap = document.createElement('span'); failWrap.className = 'save-dots';
+        for (let i = 0; i < 3; i++) {
+          const d = document.createElement('span');
+          d.className = 'dot fail' + (i < c.deathFail ? ' filled' : '');
+          d.addEventListener('click', () => {
+            send('toggleDeathSave', { id: c.id, kind: 'fail', index: i });
+            
+          });
+          failWrap.appendChild(d);
+        }
+        ds.appendChild(failWrap);
+        main.appendChild(ds);
+      }
+
+      // conditions
+      const condWrap = document.createElement('div');
+      condWrap.className = 'conditions';
+      c.conditions.forEach(cond => {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.title = (CONDITIONS.find(x => x[0] === cond) || [,''])[1];
+        chip.textContent = cond;
+        const rm = document.createElement('button');
+        rm.textContent = '×';
+        rm.addEventListener('click', () => {
+          send('removeCondition', { id: c.id, condition: cond });
+          
+        });
+        chip.appendChild(rm);
+        condWrap.appendChild(chip);
+      });
+      const addCondBtn = document.createElement('button');
+      addCondBtn.className = 'add-cond';
+      addCondBtn.textContent = '+ condition';
+      addCondBtn.addEventListener('click', () => {
+        const menu = document.createElement('select');
+        menu.style.fontSize = '11px';
+        const blank = document.createElement('option');
+        blank.textContent = 'Choose…'; blank.value = '';
+        menu.appendChild(blank);
+        CONDITIONS.forEach(([n]) => {
+          if (!c.conditions.includes(n)) {
+            const opt = document.createElement('option');
+            opt.value = n; opt.textContent = n;
+            menu.appendChild(opt);
+          }
+        });
+        menu.addEventListener('change', () => {
+          if (menu.value) { send('addCondition', { id: c.id, condition: menu.value }); 
+           }
+        });
+        condWrap.replaceChild(menu, addCondBtn);
+        menu.focus();
+        menu.addEventListener('blur', () => render());
+      });
+      condWrap.appendChild(addCondBtn);
+      main.appendChild(condWrap);
+
+      row.appendChild(main);
+
+      // row actions
+      const actions = document.createElement('div');
+      actions.className = 'row-actions';
+      const rm = document.createElement('button');
+      rm.className = 'remove-btn';
+      rm.textContent = 'Remove';
+      rm.addEventListener('click', () => {
+        send('removeCombatant', { id: c.id });
+        
+      });
+      actions.appendChild(rm);
+      row.appendChild(actions);
+
+      list.appendChild(row);
+    });
+  }
+
+  function mkHpBtn(label, fn) {
+    const b = document.createElement('button');
+    b.className = 'hp-btn';
+    b.textContent = label;
+    b.addEventListener('click', fn);
+    return b;
+  }
+
+  function adjustHP(c, delta) {
+    send('adjustHP', { id: c.id, delta });
+    
+  }
+
+  // add combatant
+  let selectedType = 'pc';
+  document.getElementById('typeToggle').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-type]');
+    if (!btn) return;
+    selectedType = btn.dataset.type;
+    document.querySelectorAll('#typeToggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+
+  document.getElementById('addBtn').addEventListener('click', () => {
+    const name = document.getElementById('inpName').value.trim();
+    const init = parseInt(document.getElementById('inpInit').value, 10);
+    const ac = parseInt(document.getElementById('inpAC').value, 10) || 10;
+    const hp = parseInt(document.getElementById('inpHP').value, 10) || 1;
+    if (!name || isNaN(init)) {
+      document.getElementById('inpName').focus();
+      return;
+    }
+    send('addCombatant', {
+      name, init, ac, hp, maxHp: hp,
+      type: selectedType
+    });
+    
+    document.getElementById('inpName').value = '';
+    document.getElementById('inpInit').value = '';
+    document.getElementById('inpAC').value = '';
+    document.getElementById('inpHP').value = '';
+    document.getElementById('inpName').focus();
+  });
+
+  document.getElementById('sortBtn').addEventListener('click', () => {
+    const activeId = state.combatants[state.activeIndex] ? state.combatants[state.activeIndex].id : null;
+    send('sortInit');
+    if (activeId) state.activeIndex = state.combatants.findIndex(c => c.id === activeId);
+    
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    if (state.combatants.length && !confirm('Clear all combatants and reset the round?')) return;
+    send('clearAll');
+    
+  });
+
+  document.getElementById('nextTurnBtn').addEventListener('click', () => {
+    send('nextTurn');
+    
+  });
+})();
+</script>
+</body>
+</html>

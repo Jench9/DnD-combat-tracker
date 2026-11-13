@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Character Sheets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .char-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 620px) { .char-grid { grid-template-columns: 1fr; } }
+
+  .char-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--gold);
+    border-radius: 8px;
+    padding: 14px 16px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px var(--card-shadow);
+    transition: border-color 0.15s ease, transform 0.08s ease;
+  }
+  .char-card:hover { border-color: var(--gold); }
+  .char-card:active { transform: scale(0.99); }
+  .char-card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .char-card-name { font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+  .char-card-sub { color: var(--ink-soft); font-size: 12.5px; margin-top: 2px; }
+  .char-card-stats { display: flex; gap: 14px; margin-top: 10px; font-size: 12.5px; color: var(--ink-soft); }
+  .char-card-stats b { color: var(--ink); font-family: var(--font-display); font-size: 14px; }
+  .char-card-hpbar { margin-top: 8px; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .char-card-hpbar .fill { height: 100%; background: var(--good); }
+  .char-card-hpbar .fill.mid { background: var(--gold); }
+  .char-card-hpbar .fill.low { background: var(--wax); }
+  .ac-tag {
+    font-size: 12px; color: var(--ink-soft); border: 1px solid var(--line);
+    border-radius: 4px; padding: 1px 6px;
+  }
+
+  .sheet-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sheet-header .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .sheet-grid-top {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 700px) { .sheet-grid-top { grid-template-columns: 1fr 1fr; } }
+
+  .abilities-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  @media (max-width: 700px) { .abilities-grid { grid-template-columns: repeat(3, 1fr); } }
+  .ability-box {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .ability-box label {
+    display: block; font-size: 10.5px; letter-spacing: 0.5px; color: var(--ink-soft);
+    text-transform: uppercase; margin-bottom: 6px; font-weight: 600;
+  }
+  .ability-box input {
+    width: 100%; text-align: center; font-family: var(--font-display); font-size: 20px;
+    font-weight: 600; border: none; background: transparent; color: var(--ink);
+    padding: 0; margin-bottom: 2px;
+  }
+  .ability-box .mod { font-size: 12px; color: var(--gold); font-weight: 600; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  .subhead {
+    font-family: var(--font-display); font-weight: 600; font-size: 14.5px;
+    color: var(--gold); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line);
+  }
+
+  .check-list { display: flex; flex-direction: column; gap: 2px; }
+  .check-row {
+    display: flex; align-items: center; gap: 8px; padding: 5px 2px;
+    font-size: 13.5px; border-radius: 4px;
+  }
+  .check-row:hover { background: rgba(156,122,36,0.08); }
+  .check-row input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--gold); flex-shrink: 0; }
+  .check-row .bonus {
+    margin-left: auto; font-family: var(--font-display); font-weight: 600; color: var(--ink-soft);
+    min-width: 28px; text-align: right;
+  }
+  .check-row.prof .bonus { color: var(--gold); }
+  .check-row .sname { flex: 1; }
+  .check-row .ability-tag { font-size: 10.5px; color: var(--ink-soft); text-transform: uppercase; }
+
+  textarea.big { min-height: 90px; resize: vertical; font-family: var(--font-body); }
+
+  .hp-editor { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+  .hp-editor .field { flex: 1; min-width: 80px; }
+
+  .empty-lg { text-align: center; color: var(--ink-soft); padding: 50px 20px; }
+  .empty-lg .big-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="app-nav">
+    <a class="nav-btn" href="index.html"><span class="ic">🏠</span> Home</a>
+    <a class="nav-btn" href="combat.html"><span class="ic">⚔️</span> Combat Tracker</a>
+    <a class="nav-btn active" href="characters.html"><span class="ic">📜</span> Character Sheets</a>
+  </nav>
+
+  <!-- List sub-view -->
+  <div id="char-list-view">
+    <header>
+      <div>
+        <h1>Character Sheets</h1>
+        <div class="tagline">Build and store full character sheets, synced live with the table</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:14px;">
+        <span class="conn-status"><span class="conn-dot" id="connDot"></span><span id="connLabel">Connecting…</span></span>
+        <button class="btn" id="newCharBtn">+ New character</button>
+      </div>
+    </header>
+    <div class="char-grid" id="charGrid"></div>
+  </div>
+
+  <!-- Editor sub-view -->
+  <div id="char-edit-view" style="display:none;">
+    <div class="sheet-header">
+      <div>
+        <button class="btn secondary small" id="backToListBtn">← Back</button>
+      </div>
+      <div class="btn-group">
+        <button class="btn blue small" id="sendToCombatBtn">Send to Combat Tracker</button>
+        <button class="btn secondary small" id="deleteCharBtn">Delete</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="sheet-grid-top">
+        <div class="field"><label>Character name</label><input id="csName" type="text" placeholder="e.g. Elowen Brightwood"></div>
+        <div class="field"><label>Race</label><input id="csRace" type="text" placeholder="Elf"></div>
+        <div class="field"><label>Class</label><input id="csClass" type="text" placeholder="Ranger"></div>
+        <div class="field"><label>Level</label><input id="csLevel" type="number" min="1" max="20" value="1"></div>
+        <div class="field"><label>Background</label><input id="csBackground" type="text" placeholder="Outlander"></div>
+      </div>
+      <div class="sheet-grid-top">
+        <div class="field"><label>Alignment</label><input id="csAlignment" type="text" placeholder="Neutral Good"></div>
+        <div class="field"><label>Armor Class</label><input id="csAC" type="number" placeholder="14"></div>
+        <div class="field"><label>Speed (ft)</label><input id="csSpeed" type="number" placeholder="30"></div>
+        <div class="field"><label>Prof. bonus</label><input id="csProf" type="number" value="2" readonly style="opacity:0.75;"></div>
+        <div class="field"><label>Hit dice</label><input id="csHitDice" type="text" placeholder="1d10"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="subhead">Ability scores</div>
+      <div class="abilities-grid" id="abilitiesGrid"></div>
+      <div class="hp-editor">
+        <div class="field"><label>Max HP</label><input id="csHpMax" type="number" value="10"></div>
+        <div class="field"><label>Current HP</label><input id="csHpCur" type="number" value="10"></div>
+        <div class="field"><label>Temp HP</label><input id="csHpTemp" type="number" value="0"></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <div class="subhead">Saving throws</div>
+        <div class="check-list" id="savesList"></div>
+      </div>
+      <div class="panel">
+        <div class="subhead">Skills</div>
+        <div class="check-list" id="skillsList"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="subhead">Equipment & inventory</div>
+      <div class="field"><textarea id="csEquipment" class="big" placeholder="Longbow, quiver of 20 arrows, leather armor, explorer's pack..."></textarea></div>
+    </div>
+
+    <div class="panel">
+      <div class="subhead">Features, traits & spells</div>
+      <div class="field"><textarea id="csFeatures" class="big" placeholder="Favored Enemy, Natural Explorer, Hunter's Mark..."></textarea></div>
+    </div>
+
+    <div class="panel">
+      <div class="subhead">Notes</div>
+      <div class="field"><textarea id="csNotes" class="big" placeholder="Backstory, personality, bonds, allies..."></textarea></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  const ABILITIES = [
+    ['str', 'STR'], ['dex', 'DEX'], ['con', 'CON'],
+    ['int', 'INT'], ['wis', 'WIS'], ['cha', 'CHA']
+  ];
+  const SKILLS = [
+    ['Acrobatics', 'dex'], ['Animal Handling', 'wis'], ['Arcana', 'int'],
+    ['Athletics', 'str'], ['Deception', 'cha'], ['History', 'int'],
+    ['Insight', 'wis'], ['Intimidation', 'cha'], ['Investigation', 'int'],
+    ['Medicine', 'wis'], ['Nature', 'int'], ['Perception', 'wis'],
+    ['Performance', 'cha'], ['Persuasion', 'cha'], ['Religion', 'int'],
+    ['Sleight of Hand', 'dex'], ['Stealth', 'dex'], ['Survival', 'wis']
+  ];
+
+  let characters = [];
+  let activeCharId = null;
+
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+  function abilityMod(score) { return Math.floor(((parseInt(score, 10) || 10) - 10) / 2); }
+  function fmtMod(n) { return (n >= 0 ? '+' : '') + n; }
+  function profBonusForLevel(level) {
+    const lvl = parseInt(level, 10) || 1;
+    if (lvl >= 17) return 6;
+    if (lvl >= 13) return 5;
+    if (lvl >= 9) return 4;
+    if (lvl >= 5) return 3;
+    return 2;
+  }
+  function findChar(id) { return characters.find(c => c.id === id); }
+
+  /* ---------------- websocket ---------------- */
+  let ws;
+  function connect() {
+    ws = new WebSocket(location.origin.replace(/^http/, 'ws'));
+    ws.onopen = () => setConn(true);
+    ws.onclose = () => { setConn(false); setTimeout(connect, 1000); };
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'charState') {
+        characters = msg.characters;
+        renderCharGrid();
+        if (activeCharId) refreshEditorFromServer();
+      }
+    };
+  }
+  function setConn(live) {
+    document.getElementById('connDot').classList.toggle('live', live);
+    document.getElementById('connLabel').textContent = live ? 'Live' : 'Connecting…';
+  }
+  function send(type, payload = {}) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type, payload }));
+    }
+  }
+  connect();
+
+  /* small debounce so we're not sending a message on every keystroke */
+  function debounce(fn, ms) {
+    let t;
+    return function (...args) {
+      clearTimeout(t);
+      t = setTimeout(() => fn.apply(this, args), ms);
+    };
+  }
+
+  function blankCharacter(id) {
+    return {
+      id,
+      name: '', race: '', class: '', level: 1, background: '', alignment: '',
+      ac: 10, speed: 30, hitDice: '1d8',
+      abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+      hpMax: 10, hpCurrent: 10, hpTemp: 0,
+      saveProf: {}, skillProf: {},
+      equipment: '', features: '', notes: ''
+    };
+  }
+
+  /* ---------------- list view ---------------- */
+  function renderCharGrid() {
+    const grid = document.getElementById('charGrid');
+    grid.innerHTML = '';
+    if (characters.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-lg';
+      empty.style.gridColumn = '1 / -1';
+      empty.innerHTML = '<div class="big-icon">📜</div>No character sheets yet — click "New character" to create one.';
+      grid.appendChild(empty);
+      return;
+    }
+    characters.forEach(ch => {
+      const card = document.createElement('div');
+      card.className = 'char-card';
+      card.addEventListener('click', () => openCharEditor(ch.id));
+
+      const top = document.createElement('div');
+      top.className = 'char-card-top';
+      const name = document.createElement('div');
+      name.className = 'char-card-name';
+      name.textContent = ch.name || 'Unnamed character';
+      top.appendChild(name);
+      const lvl = document.createElement('div');
+      lvl.className = 'ac-tag';
+      lvl.textContent = 'Lv ' + (ch.level || 1);
+      top.appendChild(lvl);
+      card.appendChild(top);
+
+      const sub = document.createElement('div');
+      sub.className = 'char-card-sub';
+      sub.textContent = [ch.race, ch.class].filter(Boolean).join(' ') || 'No race/class set';
+      card.appendChild(sub);
+
+      const stats = document.createElement('div');
+      stats.className = 'char-card-stats';
+      stats.innerHTML =
+        '<span><b>AC</b> ' + (ch.ac || 10) + '</span>' +
+        '<span><b>' + Math.max(0, ch.hpCurrent) + '</b>/' + ch.hpMax + ' HP</span>' +
+        '<span><b>' + (ch.speed || 30) + '</b> ft</span>';
+      card.appendChild(stats);
+
+      const hpBarTrack = document.createElement('div');
+      hpBarTrack.className = 'char-card-hpbar';
+      const fill = document.createElement('div');
+      const pct = ch.hpMax > 0 ? Math.max(0, Math.min(100, (ch.hpCurrent / ch.hpMax) * 100)) : 0;
+      fill.className = 'fill' + (pct <= 25 ? ' low' : pct <= 55 ? ' mid' : '');
+      fill.style.width = pct + '%';
+      hpBarTrack.appendChild(fill);
+      card.appendChild(hpBarTrack);
+
+      grid.appendChild(card);
+    });
+  }
+
+  /* ---------------- editor view ---------------- */
+  function renderAbilitiesGrid(ch) {
+    const grid = document.getElementById('abilitiesGrid');
+    grid.innerHTML = '';
+    ABILITIES.forEach(([key, label]) => {
+      const box = document.createElement('div');
+      box.className = 'ability-box';
+      const lab = document.createElement('label');
+      lab.textContent = label;
+      box.appendChild(lab);
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = '1'; input.max = '30';
+      input.value = ch.abilities[key];
+      input.dataset.ability = key;
+      box.appendChild(input);
+      const modEl = document.createElement('div');
+      modEl.className = 'mod';
+      modEl.textContent = fmtMod(abilityMod(ch.abilities[key]));
+      modEl.id = 'mod-' + key;
+      box.appendChild(modEl);
+
+      const commit = debounce(() => {
+        const val = parseInt(input.value, 10) || 10;
+        send('updateCharacter', { id: ch.id, patch: { abilities: { [key]: val } } });
+      }, 300);
+
+      input.addEventListener('input', () => {
+        modEl.textContent = fmtMod(abilityMod(parseInt(input.value, 10) || 10));
+        commit();
+      });
+      grid.appendChild(box);
+    });
+  }
+
+  function renderSaves(ch) {
+    const wrap = document.getElementById('savesList');
+    wrap.innerHTML = '';
+    const prof = profBonusForLevel(ch.level);
+    ABILITIES.forEach(([key, label]) => {
+      const isProf = !!ch.saveProf[key];
+      const bonus = abilityMod(ch.abilities[key]) + (isProf ? prof : 0);
+      const row = document.createElement('label');
+      row.className = 'check-row' + (isProf ? ' prof' : '');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = isProf;
+      cb.addEventListener('change', () => {
+        send('updateCharacter', { id: ch.id, patch: { saveProf: { [key]: cb.checked } } });
+      });
+      row.appendChild(cb);
+      const sname = document.createElement('span');
+      sname.className = 'sname';
+      sname.textContent = label + ' save';
+      row.appendChild(sname);
+      const b = document.createElement('span');
+      b.className = 'bonus';
+      b.textContent = fmtMod(bonus);
+      row.appendChild(b);
+      wrap.appendChild(row);
+    });
+  }
+
+  function renderSkills(ch) {
+    const wrap = document.getElementById('skillsList');
+    wrap.innerHTML = '';
+    const prof = profBonusForLevel(ch.level);
+    SKILLS.forEach(([name, abilKey]) => {
+      const isProf = !!ch.skillProf[name];
+      const bonus = abilityMod(ch.abilities[abilKey]) + (isProf ? prof : 0);
+      const row = document.createElement('label');
+      row.className = 'check-row' + (isProf ? ' prof' : '');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = isProf;
+      cb.addEventListener('change', () => {
+        send('updateCharacter', { id: ch.id, patch: { skillProf: { [name]: cb.checked } } });
+      });
+      row.appendChild(cb);
+      const sname = document.createElement('span');
+      sname.className = 'sname';
+      sname.textContent = name + ' ';
+      const tag = document.createElement('span');
+      tag.className = 'ability-tag';
+      tag.textContent = '(' + abilKey.toUpperCase() + ')';
+      sname.appendChild(tag);
+      row.appendChild(sname);
+      const b = document.createElement('span');
+      b.className = 'bonus';
+      b.textContent = fmtMod(bonus);
+      row.appendChild(b);
+      wrap.appendChild(row);
+    });
+  }
+
+  // field id -> [character prop, isNumber]
+  const FIELD_MAP = {
+    csName: ['name', false], csRace: ['race', false], csClass: ['class', false],
+    csLevel: ['level', true], csBackground: ['background', false], csAlignment: ['alignment', false],
+    csAC: ['ac', true], csSpeed: ['speed', true], csHitDice: ['hitDice', false],
+    csHpMax: ['hpMax', true], csHpCur: ['hpCurrent', true], csHpTemp: ['hpTemp', true],
+    csEquipment: ['equipment', false], csFeatures: ['features', false], csNotes: ['notes', false]
+  };
+
+  function bindFields(ch) {
+    Object.entries(FIELD_MAP).forEach(([id, [prop, isNumber]]) => {
+      const el = document.getElementById(id);
+      el.value = ch[prop];
+      const commit = debounce(() => {
+        const patch = {};
+        patch[prop] = isNumber ? (parseInt(el.value, 10) || 0) : el.value;
+        send('updateCharacter', { id: ch.id, patch });
+        if (prop === 'level') {
+          document.getElementById('csProf').value = profBonusForLevel(patch.level);
+        }
+      }, 300);
+      el.oninput = () => {
+        if (prop === 'level') {
+          document.getElementById('csProf').value = profBonusForLevel(parseInt(el.value, 10) || 1);
+          renderSaves({ ...ch, level: parseInt(el.value, 10) || 1 });
+          renderSkills({ ...ch, level: parseInt(el.value, 10) || 1 });
+        }
+        commit();
+      };
+    });
+  }
+
+  function openCharEditor(id) {
+    activeCharId = id;
+    const ch = findChar(id);
+    if (!ch) return;
+
+    bindFields(ch);
+    document.getElementById('csProf').value = profBonusForLevel(ch.level);
+    renderAbilitiesGrid(ch);
+    renderSaves(ch);
+    renderSkills(ch);
+
+    document.getElementById('char-list-view').style.display = 'none';
+    document.getElementById('char-edit-view').style.display = 'block';
+  }
+
+  // Called whenever a fresh charState arrives from the server while
+  // the editor is open (e.g. someone else at the table is also
+  // looking at / editing this sheet). Only touches fields the user
+  // isn't actively typing into, so it won't fight their cursor.
+  function refreshEditorFromServer() {
+    const ch = findChar(activeCharId);
+    if (!ch) { closeCharEditor(); return; }
+
+    Object.entries(FIELD_MAP).forEach(([id, [prop]]) => {
+      const el = document.getElementById(id);
+      if (document.activeElement !== el) el.value = ch[prop];
+    });
+    document.getElementById('csProf').value = profBonusForLevel(ch.level);
+
+    document.querySelectorAll('#abilitiesGrid input').forEach(input => {
+      if (document.activeElement !== input) {
+        const key = input.dataset.ability;
+        input.value = ch.abilities[key];
+        document.getElementById('mod-' + key).textContent = fmtMod(abilityMod(ch.abilities[key]));
+      }
+    });
+
+    renderSaves(ch);
+    renderSkills(ch);
+  }
+
+  function closeCharEditor() {
+    activeCharId = null;
+    renderCharGrid();
+    document.getElementById('char-edit-view').style.display = 'none';
+    document.getElementById('char-list-view').style.display = 'block';
+  }
+
+  document.getElementById('newCharBtn').addEventListener('click', () => {
+    const id = uid();
+    characters.unshift(blankCharacter(id)); // optimistic, server will confirm
+    send('addCharacter', { id });
+    openCharEditor(id);
+  });
+
+  document.getElementById('backToListBtn').addEventListener('click', closeCharEditor);
+
+  document.getElementById('deleteCharBtn').addEventListener('click', () => {
+    const ch = findChar(activeCharId);
+    if (!ch) return;
+    if (!confirm('Delete "' + (ch.name || 'this character') + '"? This can\'t be undone.')) return;
+    send('deleteCharacter', { id: activeCharId });
+    closeCharEditor();
+  });
+
+  document.getElementById('sendToCombatBtn').addEventListener('click', () => {
+    if (!activeCharId) return;
+    send('sendToCombat', { id: activeCharId });
+    window.location.href = 'combat.html';
+  });
+
+})();
+</script>
+</body>
+</html>
