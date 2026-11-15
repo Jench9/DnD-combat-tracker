@@ -319,10 +319,30 @@ function ddbStatValue(data, statId) {
   const base = (data.stats || []).find((s) => s.id === statId);
   const bonus = (data.bonusStats || []).find((s) => s.id === statId);
   const override = (data.overrideStats || []).find((s) => s.id === statId);
-  if (override && typeof override.value === 'number') return override.value;
+
+  if (override && typeof override.value === 'number') {
+    return override.value;
+  }
+
   const baseVal = base && typeof base.value === 'number' ? base.value : 10;
   const bonusVal = bonus && typeof bonus.value === 'number' ? bonus.value : 0;
-  return baseVal + bonusVal;
+
+  const abilityNames = {
+    1: 'strength',
+    2: 'dexterity',
+    3: 'constitution',
+    4: 'intelligence',
+    5: 'wisdom',
+    6: 'charisma',
+  };
+
+  const abilityName = abilityNames[statId];
+
+  const featBonus = (data.modifiers?.feat || [])
+    .filter((m) => m.type === 'bonus' && m.subType === `${abilityName}-score`)
+    .reduce((sum, m) => sum + (Number(m.value) || 0), 0);
+
+  return baseVal + bonusVal + featBonus;
 }
 
 function mapDndBeyondData(data) {
