@@ -138,7 +138,7 @@ const combatActions = {
 // One flat list, shared by everyone connected — same idea as the
 // combatant list, just with a much bigger per-item shape.
 let characters = [];
-// { id, name, race, class, level, background, alignment,
+// { id, portrait (data URL), name, race, class, level, background, alignment,
 //   ac, speed, hitDice,
 //   abilities: { str, dex, con, int, wis, cha },
 //   hpMax, hpCurrent, hpTemp,
@@ -154,6 +154,7 @@ function findCharacter(id) {
 function blankCharacter(id) {
   return {
     id,
+    portrait: '',
     name: '', race: '', class: '', level: 1, background: '', alignment: '',
     ac: 10, speed: 30, hitDice: '1d8',
     abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
@@ -173,6 +174,19 @@ function mod(score) {
 // for everyone else at the table.
 function sanitizeCharacterPatch(existing, patch) {
   const next = { ...existing };
+
+  // Portrait: a small base64 image data URL (the client downsizes to
+  // ~256px before sending), or '' to remove it. Anything else is ignored.
+  if (typeof patch.portrait === 'string') {
+    if (patch.portrait === '') {
+      next.portrait = '';
+    } else if (
+      patch.portrait.length <= 200000 &&
+      /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(patch.portrait)
+    ) {
+      next.portrait = patch.portrait;
+    }
+  }
 
   if (typeof patch.name === 'string') next.name = patch.name.slice(0, 60);
   if (typeof patch.race === 'string') next.race = patch.race.slice(0, 40);

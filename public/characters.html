@@ -6,104 +6,229 @@
 <title>Character Sheets</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
+  /* hide number spinners on the big stat inputs */
+  input[type=number].bare { -moz-appearance: textfield; appearance: textfield; }
+  input[type=number].bare::-webkit-inner-spin-button,
+  input[type=number].bare::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+  /* ---------- list view ---------- */
   .char-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 620px) { .char-grid { grid-template-columns: 1fr; } }
 
+  .avatar {
+    width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0;
+    background: var(--bg); border: 2px solid var(--line); overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 24px; color: var(--ink-soft);
+  }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
   .char-card {
+    display: flex; gap: 14px; align-items: center;
     background: var(--bg-panel);
     border: 1px solid var(--line);
-    border-left: 4px solid var(--gold);
     border-radius: 8px;
-    padding: 14px 16px;
+    padding: 14px;
     cursor: pointer;
     box-shadow: 0 1px 3px var(--card-shadow);
     transition: border-color 0.15s ease, transform 0.08s ease;
   }
-  .char-card:hover { border-color: var(--gold); }
+  .char-card:hover { border-color: var(--wax); }
   .char-card:active { transform: scale(0.99); }
+  .char-card:hover .avatar { border-color: var(--wax); }
+  .char-card-body { min-width: 0; flex: 1; }
   .char-card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .char-card-name { font-family: var(--font-display); font-weight: 700; font-size: 18px; }
-  .char-card-sub { color: var(--ink-soft); font-size: 12.5px; margin-top: 2px; }
-  .char-card-stats { display: flex; gap: 14px; margin-top: 10px; font-size: 12.5px; color: var(--ink-soft); }
+  .char-card-name {
+    font-family: var(--font-display); font-weight: 700; font-size: 19px; line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .char-card-sub { color: var(--ink-soft); font-size: 12.5px; margin-top: 1px; }
+  .char-card-stats { display: flex; gap: 14px; margin-top: 8px; font-size: 12px; color: var(--ink-soft); }
   .char-card-stats b { color: var(--ink); font-family: var(--font-display); font-size: 14px; }
-  .char-card-hpbar { margin-top: 8px; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
-  .char-card-hpbar .fill { height: 100%; background: var(--good); }
-  .char-card-hpbar .fill.mid { background: var(--gold); }
-  .char-card-hpbar .fill.low { background: var(--wax); }
-  .ac-tag {
-    font-size: 12px; color: var(--ink-soft); border: 1px solid var(--line);
-    border-radius: 4px; padding: 1px 6px;
+  .lvl-pill {
+    font-family: var(--font-display); font-weight: 700; font-size: 11.5px; letter-spacing: 0.5px;
+    text-transform: uppercase; color: #fff; background: var(--wax);
+    border-radius: 10px; padding: 1px 8px; flex-shrink: 0;
   }
 
-  .sheet-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-  .sheet-header .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
-
-  .sheet-grid-top {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  @media (max-width: 700px) { .sheet-grid-top { grid-template-columns: 1fr 1fr; } }
-
-  .abilities-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 10px;
-    margin-bottom: 18px;
-  }
-  @media (max-width: 700px) { .abilities-grid { grid-template-columns: repeat(3, 1fr); } }
-  .ability-box {
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    padding: 10px 8px;
-    text-align: center;
-  }
-  .ability-box label {
-    display: block; font-size: 10.5px; letter-spacing: 0.5px; color: var(--ink-soft);
-    text-transform: uppercase; margin-bottom: 6px; font-weight: 600;
-  }
-  .ability-box input {
-    width: 100%; text-align: center; font-family: var(--font-display); font-size: 20px;
-    font-weight: 600; border: none; background: transparent; color: var(--ink);
-    padding: 0; margin-bottom: 2px;
-  }
-  .ability-box .mod { font-size: 12px; color: var(--gold); font-weight: 600; }
-
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
-
-  .subhead {
-    font-family: var(--font-display); font-weight: 600; font-size: 14.5px;
-    color: var(--gold); margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line);
-  }
-
-  .check-list { display: flex; flex-direction: column; gap: 2px; }
-  .check-row {
-    display: flex; align-items: center; gap: 8px; padding: 5px 2px;
-    font-size: 13.5px; border-radius: 4px;
-  }
-  .check-row:hover { background: rgba(156,122,36,0.08); }
-  .check-row input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--gold); flex-shrink: 0; }
-  .check-row .bonus {
-    margin-left: auto; font-family: var(--font-display); font-weight: 600; color: var(--ink-soft);
-    min-width: 28px; text-align: right;
-  }
-  .check-row.prof .bonus { color: var(--gold); }
-  .check-row .sname { flex: 1; }
-  .check-row .ability-tag { font-size: 10.5px; color: var(--ink-soft); text-transform: uppercase; }
-
-  textarea.big { min-height: 90px; resize: vertical; font-family: var(--font-body); }
-
-  .hp-editor { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
-  .hp-editor .field { flex: 1; min-width: 80px; }
+  .hpbar { margin-top: 8px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .hpbar .fill { height: 100%; width: 0; background: var(--good); transition: width 0.2s ease; }
+  .hpbar .fill.mid { background: var(--gold); }
+  .hpbar .fill.low { background: var(--wax); }
 
   .empty-lg { text-align: center; color: var(--ink-soft); padding: 50px 20px; }
   .empty-lg .big-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.6; }
+
+  /* ---------- sheet header ---------- */
+  .sheet-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sheet-header .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .hero { display: flex; gap: 20px; align-items: flex-start; border-top: 3px solid var(--wax); }
+  .portrait-col { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+  .portrait {
+    width: 108px; height: 108px; border-radius: 50%; padding: 0; overflow: hidden;
+    border: 3px solid var(--wax); background: var(--bg); color: var(--ink-soft);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 11.5px; letter-spacing: 0.7px;
+    text-transform: uppercase; line-height: 1.3; cursor: pointer; transition: opacity 0.15s ease;
+  }
+  .portrait:hover { opacity: 0.85; }
+  .portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .link-btn { background: none; color: var(--ink-soft); font-size: 11.5px; text-decoration: underline; padding: 0; }
+  .link-btn:hover { color: var(--wax); }
+
+  .hero-main { flex: 1; min-width: 0; }
+  .name-input {
+    width: 100%; font-family: var(--font-display); font-weight: 700; font-size: 28px; line-height: 1.2;
+    border: none; border-bottom: 2px solid var(--line); background: transparent; color: var(--ink);
+    padding: 2px 0 4px; margin-bottom: 12px; border-radius: 0;
+  }
+  .name-input:focus { outline: none; border-bottom-color: var(--wax); }
+  .hero-fields { display: grid; grid-template-columns: 1.2fr 1.2fr 0.6fr 1.2fr 1.2fr; gap: 10px; }
+  @media (max-width: 700px) {
+    .hero { flex-direction: column; align-items: center; }
+    .hero-main { width: 100%; }
+    .name-input { text-align: center; }
+    .hero-fields { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ---------- vitals tiles ---------- */
+  .vitals { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+  @media (max-width: 620px) { .vitals { grid-template-columns: repeat(3, 1fr); } }
+  .tile {
+    background: var(--bg-panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 6px 8px; text-align: center; box-shadow: 0 1px 3px var(--card-shadow);
+  }
+  .tile.ac { border-color: var(--wax); border-radius: 8px 8px 24px 24px; }
+  .tile input, .tile .tile-val {
+    display: block; width: 100%; text-align: center; border: none; background: transparent;
+    font-family: var(--font-display); font-size: 28px; font-weight: 700; line-height: 1.2;
+    color: var(--ink); padding: 0;
+  }
+  .tile input.sm { font-size: 20px; line-height: 1.68; }
+  .tile input:focus { outline: none; }
+  .tile:focus-within { border-color: var(--wax); }
+  .tile-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+    color: var(--ink-soft); margin-top: 2px;
+  }
+
+  .subhead {
+    position: relative; font-family: var(--font-display); font-weight: 700; font-size: 13px;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--ink);
+    margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line);
+  }
+  .subhead::after { content: ''; position: absolute; left: 0; bottom: -1px; width: 34px; height: 2px; background: var(--wax); }
+
+  .hp-editor { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+  /* ---------- tabs ---------- */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 16px; overflow-x: auto; }
+  .tab-btn {
+    background: none; color: var(--ink-soft); padding: 10px 18px; white-space: nowrap;
+    font-family: var(--font-display); font-weight: 700; font-size: 13.5px; letter-spacing: 0.9px;
+    text-transform: uppercase; border-bottom: 3px solid transparent; margin-bottom: -1px;
+  }
+  .tab-btn:hover { color: var(--ink); }
+  .tab-btn.active { color: var(--ink); border-bottom-color: var(--wax); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* ---------- ability scores ---------- */
+  .abilities-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 30px; }
+  @media (max-width: 700px) { .abilities-grid { grid-template-columns: repeat(3, 1fr); row-gap: 26px; } }
+  .ability {
+    position: relative; background: var(--bg-panel); border: 1px solid var(--line);
+    border-radius: 8px 8px 20px 20px; padding: 10px 4px 22px; text-align: center;
+    box-shadow: 0 1px 3px var(--card-shadow);
+  }
+  .ab-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.7px; text-transform: uppercase; color: var(--ink-soft); }
+  .ab-mod { font-family: var(--font-display); font-weight: 700; font-size: 34px; line-height: 1.15; margin-top: 4px; }
+  .ab-score {
+    position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%);
+    width: 50px; height: 28px; border-radius: 14px; border: 2px solid var(--line);
+    background: var(--bg-panel); color: var(--ink); text-align: center; padding: 0;
+    font-family: var(--font-display); font-weight: 700; font-size: 15px;
+  }
+  .ability:focus-within { border-color: var(--wax); }
+  .ab-score:focus { outline: none; border-color: var(--wax); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  .check-list { display: flex; flex-direction: column; gap: 1px; }
+  .check-row {
+    position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 4px;
+    font-size: 13.5px; border-radius: 4px; cursor: pointer;
+  }
+  .check-row:hover { background: var(--bg); }
+  .check-row input { position: absolute; opacity: 0; pointer-events: none; }
+  .prof-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--ink-soft); flex-shrink: 0; }
+  .check-row input:checked + .prof-dot { background: var(--ink); border-color: var(--ink); }
+  .check-row input:focus-visible + .prof-dot { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .check-row .bonus {
+    min-width: 36px; text-align: center; border: 1px solid var(--line); border-radius: 4px;
+    background: var(--bg); font-family: var(--font-display); font-weight: 700; font-size: 13.5px; padding: 1px 4px;
+  }
+  .check-row.prof .bonus { border-color: var(--ink-soft); }
+  .check-row .sname { flex: 1; }
+  .check-row .ability-tag { font-size: 10px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.5px; margin-left: 2px; }
+
+  /* ---------- item lists (equipment / features) ---------- */
+  .item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 6px;
+    border: 1px solid var(--line); border-left: 3px solid var(--wax); border-radius: 6px; background: var(--bg);
+  }
+  .item .nm {
+    flex: 1; min-width: 0; border: none; background: transparent; color: var(--ink);
+    font-family: var(--font-body); font-size: 14px; padding: 2px 0; line-height: 1.45;
+  }
+  .item .nm:focus { outline: none; }
+  .item textarea.nm { resize: none; overflow: hidden; display: block; }
+  .item .qty {
+    width: 46px; text-align: center; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--bg-panel); color: var(--ink); font-family: var(--font-display);
+    font-weight: 700; font-size: 12.5px; padding: 2px 4px;
+  }
+  .item .qty-x { color: var(--ink-soft); font-size: 11px; margin-right: -6px; }
+  .item .del { background: none; color: var(--ink-soft); font-size: 18px; line-height: 1; padding: 2px 6px; }
+  .item .del:hover { color: var(--wax); }
+  .empty-mini { color: var(--ink-soft); font-size: 13px; padding: 10px 2px; }
+  .item-add { display: flex; gap: 8px; margin-top: 12px; }
+  .item-add input {
+    flex: 1; padding: 9px 10px; border: 1px solid var(--line); border-radius: 4px;
+    background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px;
+  }
+  .item-add input:focus { outline: 2px solid var(--wax); outline-offset: 1px; }
+  textarea.big { min-height: 160px; resize: vertical; font-family: var(--font-body); }
+
+  /* ---------- import panel ---------- */
+  .import-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .import-tab {
+    padding: 7px 12px; border-radius: 4px; font-family: var(--font-display); font-size: 13px; font-weight: 700;
+    letter-spacing: 0.7px; text-transform: uppercase;
+    background: var(--bg); color: var(--ink-soft); border: 1px solid var(--line);
+  }
+  .import-tab.active { background: var(--wax); color: #fff; border-color: var(--wax); }
+  .import-pane { display: none; }
+  .import-pane.active { display: block; }
+  .import-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .import-row .field { flex: 1; min-width: 220px; }
+  .import-hint { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+  .import-msg { font-size: 13px; margin-top: 10px; padding: 8px 10px; border-radius: 5px; display: none; }
+  .import-msg.error { display: block; background: rgba(197,49,49,0.12); color: var(--wax); border: 1px solid var(--wax-soft); }
+  .import-msg.ok { display: block; background: rgba(46,125,50,0.12); color: var(--good); border: 1px solid var(--good); }
+  .import-msg.warn { display: block; background: rgba(183,121,31,0.12); color: var(--gold); border: 1px solid var(--gold); }
+  .file-drop {
+    display: block; border: 1.5px dashed var(--line); border-radius: 6px; padding: 20px;
+    text-align: center; color: var(--ink-soft); font-size: 13px; cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  .file-drop:hover, .file-drop.drag { border-color: var(--wax); color: var(--ink); }
+  .file-drop input { display: none; }
 </style>
 </head>
 <body>
@@ -115,84 +240,151 @@
     <a class="nav-btn active" href="characters.html"><span class="ic">📜</span> Character Sheets</a>
   </nav>
 
-  <!-- List sub-view -->
+  <!-- ================= LIST VIEW ================= -->
   <div id="char-list-view">
     <header>
       <div>
         <h1>Character Sheets</h1>
         <div class="tagline">Build and store full character sheets, synced live with the table</div>
       </div>
-      <div style="display:flex; align-items:center; gap:14px;">
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
         <span class="conn-status"><span class="conn-dot" id="connDot"></span><span id="connLabel">Connecting…</span></span>
+        <button class="btn secondary" id="importToggleBtn">Import</button>
         <button class="btn" id="newCharBtn">+ New character</button>
       </div>
     </header>
+
+    <div class="panel" id="importPanel" style="display:none;">
+      <div class="import-tabs">
+        <button class="import-tab active" data-pane="ddb">D&amp;D Beyond</button>
+        <button class="import-tab" data-pane="pdf">Upload PDF</button>
+      </div>
+
+      <div class="import-pane active" id="pane-ddb">
+        <div class="import-row">
+          <div class="field">
+            <label for="ddbInput">D&amp;D Beyond character URL or ID</label>
+            <input id="ddbInput" type="text" placeholder="https://www.dndbeyond.com/characters/12345678">
+          </div>
+          <button class="btn blue" id="ddbImportBtn" style="height:38px;">Import</button>
+        </div>
+        <div class="import-hint">The character's sharing must be set to <b>Public</b> in D&amp;D Beyond (Character settings → Sharing) or this can't read it.</div>
+        <div class="import-msg" id="ddbMsg"></div>
+      </div>
+
+      <div class="import-pane" id="pane-pdf">
+        <label class="file-drop" id="pdfDrop">
+          <input type="file" id="pdfInput" accept="application/pdf">
+          <span id="pdfDropLabel">Click to choose a character sheet PDF, or drag one here</span>
+        </label>
+        <div class="import-hint">Works best with a fillable PDF (like the official 5e character sheet). Anything that can't be confidently matched gets added to that character's Notes instead of being dropped.</div>
+        <div class="import-msg" id="pdfMsg"></div>
+      </div>
+    </div>
+
     <div class="char-grid" id="charGrid"></div>
   </div>
 
-  <!-- Editor sub-view -->
+  <!-- ================= EDITOR VIEW ================= -->
   <div id="char-edit-view" style="display:none;">
     <div class="sheet-header">
-      <div>
-        <button class="btn secondary small" id="backToListBtn">← Back</button>
-      </div>
+      <button class="btn secondary small" id="backToListBtn">← Back</button>
       <div class="btn-group">
         <button class="btn blue small" id="sendToCombatBtn">Send to Combat Tracker</button>
         <button class="btn secondary small" id="deleteCharBtn">Delete</button>
       </div>
     </div>
 
-    <div class="panel">
-      <div class="sheet-grid-top">
-        <div class="field"><label>Character name</label><input id="csName" type="text" placeholder="e.g. Elowen Brightwood"></div>
-        <div class="field"><label>Race</label><input id="csRace" type="text" placeholder="Elf"></div>
-        <div class="field"><label>Class</label><input id="csClass" type="text" placeholder="Ranger"></div>
-        <div class="field"><label>Level</label><input id="csLevel" type="number" min="1" max="20" value="1"></div>
-        <div class="field"><label>Background</label><input id="csBackground" type="text" placeholder="Outlander"></div>
+    <!-- hero: portrait + identity -->
+    <div class="panel hero">
+      <div class="portrait-col">
+        <button type="button" class="portrait" id="portraitBtn" title="Change portrait">
+          <img id="portraitImg" alt="" style="display:none;">
+          <span id="portraitPh">Add<br>portrait</span>
+        </button>
+        <input type="file" id="portraitInput" accept="image/*" style="display:none;">
+        <button type="button" class="link-btn" id="portraitRemove" style="display:none;">Remove</button>
       </div>
-      <div class="sheet-grid-top">
-        <div class="field"><label>Alignment</label><input id="csAlignment" type="text" placeholder="Neutral Good"></div>
-        <div class="field"><label>Armor Class</label><input id="csAC" type="number" placeholder="14"></div>
-        <div class="field"><label>Speed (ft)</label><input id="csSpeed" type="number" placeholder="30"></div>
-        <div class="field"><label>Prof. bonus</label><input id="csProf" type="number" value="2" readonly style="opacity:0.75;"></div>
-        <div class="field"><label>Hit dice</label><input id="csHitDice" type="text" placeholder="1d10"></div>
+      <div class="hero-main">
+        <input id="csName" class="name-input" type="text" placeholder="Character name" maxlength="60">
+        <div class="hero-fields">
+          <div class="field"><label>Race</label><input id="csRace" type="text" placeholder="Elf"></div>
+          <div class="field"><label>Class</label><input id="csClass" type="text" placeholder="Ranger"></div>
+          <div class="field"><label>Level</label><input id="csLevel" type="number" min="1" max="20" value="1"></div>
+          <div class="field"><label>Background</label><input id="csBackground" type="text" placeholder="Outlander"></div>
+          <div class="field"><label>Alignment</label><input id="csAlignment" type="text" placeholder="Neutral Good"></div>
+        </div>
       </div>
     </div>
 
+    <!-- vitals -->
+    <div class="vitals">
+      <div class="tile"><div class="tile-val" id="csProf">+2</div><div class="tile-label">Proficiency</div></div>
+      <div class="tile"><div class="tile-val" id="initTile">+0</div><div class="tile-label">Initiative</div></div>
+      <div class="tile"><input id="csSpeed" class="bare" type="number" placeholder="30"><div class="tile-label">Speed (ft)</div></div>
+      <div class="tile ac"><input id="csAC" class="bare" type="number" placeholder="10"><div class="tile-label">Armor Class</div></div>
+      <div class="tile"><input id="csHitDice" class="sm" type="text" placeholder="1d8"><div class="tile-label">Hit Dice</div></div>
+    </div>
+
     <div class="panel">
-      <div class="subhead">Ability scores</div>
-      <div class="abilities-grid" id="abilitiesGrid"></div>
+      <div class="subhead">Hit points</div>
       <div class="hp-editor">
-        <div class="field"><label>Max HP</label><input id="csHpMax" type="number" value="10"></div>
-        <div class="field"><label>Current HP</label><input id="csHpCur" type="number" value="10"></div>
-        <div class="field"><label>Temp HP</label><input id="csHpTemp" type="number" value="0"></div>
+        <div class="field"><label>Current</label><input id="csHpCur" type="number" value="10"></div>
+        <div class="field"><label>Max</label><input id="csHpMax" type="number" value="10"></div>
+        <div class="field"><label>Temp</label><input id="csHpTemp" type="number" value="0"></div>
+      </div>
+      <div class="hpbar" style="margin-top:12px;"><div class="fill" id="hpFill"></div></div>
+    </div>
+
+    <!-- tabs -->
+    <div class="tabs" id="sheetTabs">
+      <button class="tab-btn active" data-tab="stats">Stats</button>
+      <button class="tab-btn" data-tab="equipment">Equipment</button>
+      <button class="tab-btn" data-tab="features">Features</button>
+      <button class="tab-btn" data-tab="notes">Notes</button>
+    </div>
+
+    <div class="tab-pane active" id="tab-stats">
+      <div class="abilities-grid" id="abilitiesGrid"></div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="subhead">Saving throws</div>
+          <div class="check-list" id="savesList"></div>
+        </div>
+        <div class="panel">
+          <div class="subhead">Skills</div>
+          <div class="check-list" id="skillsList"></div>
+        </div>
       </div>
     </div>
 
-    <div class="two-col">
+    <div class="tab-pane" id="tab-equipment">
       <div class="panel">
-        <div class="subhead">Saving throws</div>
-        <div class="check-list" id="savesList"></div>
+        <div class="subhead">Equipment &amp; inventory</div>
+        <div id="equipList"></div>
+        <div class="item-add">
+          <input id="equipAdd" type="text" placeholder="Add an item — e.g. Arrows x20">
+          <button class="btn" id="equipAddBtn">Add</button>
+        </div>
       </div>
+    </div>
+
+    <div class="tab-pane" id="tab-features">
       <div class="panel">
-        <div class="subhead">Skills</div>
-        <div class="check-list" id="skillsList"></div>
+        <div class="subhead">Features, traits &amp; spells</div>
+        <div id="featList"></div>
+        <div class="item-add">
+          <input id="featAdd" type="text" placeholder="Add a feature, trait or spell">
+          <button class="btn" id="featAddBtn">Add</button>
+        </div>
       </div>
     </div>
 
-    <div class="panel">
-      <div class="subhead">Equipment & inventory</div>
-      <div class="field"><textarea id="csEquipment" class="big" placeholder="Longbow, quiver of 20 arrows, leather armor, explorer's pack..."></textarea></div>
-    </div>
-
-    <div class="panel">
-      <div class="subhead">Features, traits & spells</div>
-      <div class="field"><textarea id="csFeatures" class="big" placeholder="Favored Enemy, Natural Explorer, Hunter's Mark..."></textarea></div>
-    </div>
-
-    <div class="panel">
-      <div class="subhead">Notes</div>
-      <div class="field"><textarea id="csNotes" class="big" placeholder="Backstory, personality, bonds, allies..."></textarea></div>
+    <div class="tab-pane" id="tab-notes">
+      <div class="panel">
+        <div class="subhead">Notes</div>
+        <div class="field"><textarea id="csNotes" class="big" placeholder="Backstory, personality, bonds, allies..."></textarea></div>
+      </div>
     </div>
   </div>
 
@@ -200,9 +392,11 @@
 
 <script>
 (function() {
+  const $ = (id) => document.getElementById(id);
+
   const ABILITIES = [
-    ['str', 'STR'], ['dex', 'DEX'], ['con', 'CON'],
-    ['int', 'INT'], ['wis', 'WIS'], ['cha', 'CHA']
+    ['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'],
+    ['int', 'Intelligence'], ['wis', 'Wisdom'], ['cha', 'Charisma']
   ];
   const SKILLS = [
     ['Acrobatics', 'dex'], ['Animal Handling', 'wis'], ['Arcana', 'int'],
@@ -228,6 +422,37 @@
     return 2;
   }
   function findChar(id) { return characters.find(c => c.id === id); }
+  function cur() { return findChar(activeCharId); }
+
+  function debounce(fn, ms) {
+    let t;
+    return function (...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), ms); };
+  }
+
+  /* ---------------- pending-edit tracking ----------------
+     When you type, the change is sent after a short debounce, and the
+     server then echoes the full state back. An echo caused by an
+     EARLIER edit can arrive while a newer edit is still unsent, so
+     without care it would overwrite what you just typed. We remember
+     which fields were touched in the last couple of seconds and keep
+     the local value for those when new state arrives. */
+  const TOUCH_TTL = 2500;
+  const touched = new Map();            // key -> timestamp
+  function touch(key) { touched.set(key, Date.now()); }
+  function isRecent(key) {
+    const t = touched.get(key);
+    return t !== undefined && Date.now() - t < TOUCH_TTL;
+  }
+  function mergePending(prev, next) {
+    for (const [key] of touched) {
+      if (!isRecent(key)) { touched.delete(key); continue; }
+      const [kind, name] = [key.slice(0, key.indexOf(':')), key.slice(key.indexOf(':') + 1)];
+      if (kind === 'f') next[name] = prev[name];
+      else if (kind === 'a') next.abilities[name] = prev.abilities[name];
+      else if (kind === 'save') next.saveProf[name] = prev.saveProf[name];
+      else if (kind === 'skill') next.skillProf[name] = prev.skillProf[name];
+    }
+  }
 
   /* ---------------- websocket ---------------- */
   let ws;
@@ -238,35 +463,30 @@
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
       if (msg.type === 'charState') {
+        const prev = activeCharId ? findChar(activeCharId) : null;
         characters = msg.characters;
+        const now = activeCharId ? findChar(activeCharId) : null;
+        if (prev && now) mergePending(prev, now);
         renderCharGrid();
         if (activeCharId) refreshEditorFromServer();
       }
     };
   }
   function setConn(live) {
-    document.getElementById('connDot').classList.toggle('live', live);
-    document.getElementById('connLabel').textContent = live ? 'Live' : 'Connecting…';
+    $('connDot').classList.toggle('live', live);
+    $('connLabel').textContent = live ? 'Live' : 'Connecting…';
   }
   function send(type, payload = {}) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type, payload }));
-    }
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type, payload }));
+  }
+  function patchChar(patch) {
+    if (activeCharId) send('updateCharacter', { id: activeCharId, patch });
   }
   connect();
 
-  /* small debounce so we're not sending a message on every keystroke */
-  function debounce(fn, ms) {
-    let t;
-    return function (...args) {
-      clearTimeout(t);
-      t = setTimeout(() => fn.apply(this, args), ms);
-    };
-  }
-
   function blankCharacter(id) {
     return {
-      id,
+      id, portrait: '',
       name: '', race: '', class: '', level: 1, background: '', alignment: '',
       ac: 10, speed: 30, hitDice: '1d8',
       abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
@@ -277,14 +497,29 @@
   }
 
   /* ---------------- list view ---------------- */
+  function avatarNode(ch) {
+    const d = document.createElement('div');
+    d.className = 'avatar';
+    if (ch.portrait) {
+      const img = document.createElement('img');
+      img.src = ch.portrait; img.alt = '';
+      d.appendChild(img);
+    } else {
+      d.textContent = ((ch.name || '?').trim().charAt(0) || '?').toUpperCase();
+    }
+    return d;
+  }
+
+  function hpClass(pct) { return pct <= 25 ? ' low' : pct <= 55 ? ' mid' : ''; }
+
   function renderCharGrid() {
-    const grid = document.getElementById('charGrid');
+    const grid = $('charGrid');
     grid.innerHTML = '';
     if (characters.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'empty-lg';
       empty.style.gridColumn = '1 / -1';
-      empty.innerHTML = '<div class="big-icon">📜</div>No character sheets yet — click "New character" to create one.';
+      empty.innerHTML = '<div class="big-icon">📜</div>No character sheets yet — create one or import from D&amp;D Beyond.';
       grid.appendChild(empty);
       return;
     }
@@ -293,240 +528,532 @@
       card.className = 'char-card';
       card.addEventListener('click', () => openCharEditor(ch.id));
 
+      card.appendChild(avatarNode(ch));
+
+      const body = document.createElement('div');
+      body.className = 'char-card-body';
+
       const top = document.createElement('div');
       top.className = 'char-card-top';
       const name = document.createElement('div');
       name.className = 'char-card-name';
       name.textContent = ch.name || 'Unnamed character';
       top.appendChild(name);
-      const lvl = document.createElement('div');
-      lvl.className = 'ac-tag';
+      const lvl = document.createElement('span');
+      lvl.className = 'lvl-pill';
       lvl.textContent = 'Lv ' + (ch.level || 1);
       top.appendChild(lvl);
-      card.appendChild(top);
+      body.appendChild(top);
 
       const sub = document.createElement('div');
       sub.className = 'char-card-sub';
-      sub.textContent = [ch.race, ch.class].filter(Boolean).join(' ') || 'No race/class set';
-      card.appendChild(sub);
+      sub.textContent = [ch.race, ch.class].filter(Boolean).join(' · ') || 'No race/class set';
+      body.appendChild(sub);
 
       const stats = document.createElement('div');
       stats.className = 'char-card-stats';
       stats.innerHTML =
-        '<span><b>AC</b> ' + (ch.ac || 10) + '</span>' +
+        '<span><b>' + (ch.ac || 10) + '</b> AC</span>' +
         '<span><b>' + Math.max(0, ch.hpCurrent) + '</b>/' + ch.hpMax + ' HP</span>' +
         '<span><b>' + (ch.speed || 30) + '</b> ft</span>';
-      card.appendChild(stats);
+      body.appendChild(stats);
 
-      const hpBarTrack = document.createElement('div');
-      hpBarTrack.className = 'char-card-hpbar';
+      const bar = document.createElement('div');
+      bar.className = 'hpbar';
       const fill = document.createElement('div');
       const pct = ch.hpMax > 0 ? Math.max(0, Math.min(100, (ch.hpCurrent / ch.hpMax) * 100)) : 0;
-      fill.className = 'fill' + (pct <= 25 ? ' low' : pct <= 55 ? ' mid' : '');
+      fill.className = 'fill' + hpClass(pct);
       fill.style.width = pct + '%';
-      hpBarTrack.appendChild(fill);
-      card.appendChild(hpBarTrack);
+      bar.appendChild(fill);
+      body.appendChild(bar);
 
+      card.appendChild(body);
       grid.appendChild(card);
     });
   }
 
-  /* ---------------- editor view ---------------- */
+  /* ---------------- editor: derived bits ---------------- */
+  function updateDerived(c) {
+    $('initTile').textContent = fmtMod(abilityMod(c.abilities.dex));
+    $('csProf').textContent = '+' + profBonusForLevel(c.level);
+  }
+
+  function updateHpBar() {
+    const max = parseInt($('csHpMax').value, 10) || 0;
+    const now = parseInt($('csHpCur').value, 10) || 0;
+    const pct = max > 0 ? Math.max(0, Math.min(100, (now / max) * 100)) : 0;
+    const f = $('hpFill');
+    f.style.width = pct + '%';
+    f.className = 'fill' + hpClass(pct);
+  }
+
+  function setPortrait(src) {
+    const img = $('portraitImg');
+    if (src) {
+      img.src = src; img.style.display = 'block';
+      $('portraitPh').style.display = 'none';
+      $('portraitRemove').style.display = 'inline';
+    } else {
+      img.removeAttribute('src'); img.style.display = 'none';
+      $('portraitPh').style.display = 'inline';
+      $('portraitRemove').style.display = 'none';
+    }
+  }
+
+  /* ---------------- editor: abilities / saves / skills ---------------- */
   function renderAbilitiesGrid(ch) {
-    const grid = document.getElementById('abilitiesGrid');
+    const grid = $('abilitiesGrid');
     grid.innerHTML = '';
     ABILITIES.forEach(([key, label]) => {
       const box = document.createElement('div');
-      box.className = 'ability-box';
-      const lab = document.createElement('label');
+      box.className = 'ability';
+
+      const lab = document.createElement('div');
+      lab.className = 'ab-label';
       lab.textContent = label;
       box.appendChild(lab);
+
+      const modEl = document.createElement('div');
+      modEl.className = 'ab-mod';
+      modEl.textContent = fmtMod(abilityMod(ch.abilities[key]));
+      box.appendChild(modEl);
+
       const input = document.createElement('input');
-      input.type = 'number';
+      input.type = 'number'; input.className = 'ab-score bare';
       input.min = '1'; input.max = '30';
       input.value = ch.abilities[key];
       input.dataset.ability = key;
+      input.dataset.modEl = key;
+      input.setAttribute('aria-label', label + ' score');
       box.appendChild(input);
-      const modEl = document.createElement('div');
-      modEl.className = 'mod';
-      modEl.textContent = fmtMod(abilityMod(ch.abilities[key]));
-      modEl.id = 'mod-' + key;
-      box.appendChild(modEl);
 
       const commit = debounce(() => {
-        const val = parseInt(input.value, 10) || 10;
-        send('updateCharacter', { id: ch.id, patch: { abilities: { [key]: val } } });
+        patchChar({ abilities: { [key]: parseInt(input.value, 10) || 10 } });
       }, 300);
 
       input.addEventListener('input', () => {
-        modEl.textContent = fmtMod(abilityMod(parseInt(input.value, 10) || 10));
+        const val = parseInt(input.value, 10) || 10;
+        modEl.textContent = fmtMod(abilityMod(val));
+        const c = cur();
+        if (c) {           // update locally right away so saves/skills recompute instantly
+          c.abilities[key] = val; touch('a:' + key);
+          updateDerived(c); renderSaves(c); renderSkills(c);
+        }
         commit();
       });
+      modEl.id = 'mod-' + key;
       grid.appendChild(box);
     });
   }
 
+  function profRow(label, tag, isProf, bonus, onToggle) {
+    const row = document.createElement('label');
+    row.className = 'check-row' + (isProf ? ' prof' : '');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = isProf;
+    cb.addEventListener('change', () => onToggle(cb.checked));
+    const dot = document.createElement('span'); dot.className = 'prof-dot';
+    const b = document.createElement('span'); b.className = 'bonus'; b.textContent = fmtMod(bonus);
+    const nm = document.createElement('span'); nm.className = 'sname'; nm.textContent = label;
+    if (tag) {
+      const t = document.createElement('span'); t.className = 'ability-tag'; t.textContent = tag;
+      nm.appendChild(document.createTextNode(' ')); nm.appendChild(t);
+    }
+    row.append(cb, dot, b, nm);
+    return row;
+  }
+
   function renderSaves(ch) {
-    const wrap = document.getElementById('savesList');
+    const wrap = $('savesList');
     wrap.innerHTML = '';
     const prof = profBonusForLevel(ch.level);
     ABILITIES.forEach(([key, label]) => {
       const isProf = !!ch.saveProf[key];
-      const bonus = abilityMod(ch.abilities[key]) + (isProf ? prof : 0);
-      const row = document.createElement('label');
-      row.className = 'check-row' + (isProf ? ' prof' : '');
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = isProf;
-      cb.addEventListener('change', () => {
-        send('updateCharacter', { id: ch.id, patch: { saveProf: { [key]: cb.checked } } });
-      });
-      row.appendChild(cb);
-      const sname = document.createElement('span');
-      sname.className = 'sname';
-      sname.textContent = label + ' save';
-      row.appendChild(sname);
-      const b = document.createElement('span');
-      b.className = 'bonus';
-      b.textContent = fmtMod(bonus);
-      row.appendChild(b);
-      wrap.appendChild(row);
+      wrap.appendChild(profRow(label, '', isProf, abilityMod(ch.abilities[key]) + (isProf ? prof : 0), (checked) => {
+        const c = cur(); if (c) { c.saveProf[key] = checked; touch('save:' + key); renderSaves(c); }
+        patchChar({ saveProf: { [key]: checked } });
+      }));
     });
   }
 
   function renderSkills(ch) {
-    const wrap = document.getElementById('skillsList');
+    const wrap = $('skillsList');
     wrap.innerHTML = '';
     const prof = profBonusForLevel(ch.level);
     SKILLS.forEach(([name, abilKey]) => {
       const isProf = !!ch.skillProf[name];
-      const bonus = abilityMod(ch.abilities[abilKey]) + (isProf ? prof : 0);
-      const row = document.createElement('label');
-      row.className = 'check-row' + (isProf ? ' prof' : '');
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = isProf;
-      cb.addEventListener('change', () => {
-        send('updateCharacter', { id: ch.id, patch: { skillProf: { [name]: cb.checked } } });
-      });
-      row.appendChild(cb);
-      const sname = document.createElement('span');
-      sname.className = 'sname';
-      sname.textContent = name + ' ';
-      const tag = document.createElement('span');
-      tag.className = 'ability-tag';
-      tag.textContent = '(' + abilKey.toUpperCase() + ')';
-      sname.appendChild(tag);
-      row.appendChild(sname);
-      const b = document.createElement('span');
-      b.className = 'bonus';
-      b.textContent = fmtMod(bonus);
-      row.appendChild(b);
-      wrap.appendChild(row);
+      wrap.appendChild(profRow(name, '(' + abilKey.toUpperCase() + ')', isProf, abilityMod(ch.abilities[abilKey]) + (isProf ? prof : 0), (checked) => {
+        const c = cur(); if (c) { c.skillProf[name] = checked; touch('skill:' + name); renderSkills(c); }
+        patchChar({ skillProf: { [name]: checked } });
+      }));
     });
   }
 
+  /* ---------------- editor: plain fields ---------------- */
   // field id -> [character prop, isNumber]
   const FIELD_MAP = {
     csName: ['name', false], csRace: ['race', false], csClass: ['class', false],
     csLevel: ['level', true], csBackground: ['background', false], csAlignment: ['alignment', false],
     csAC: ['ac', true], csSpeed: ['speed', true], csHitDice: ['hitDice', false],
     csHpMax: ['hpMax', true], csHpCur: ['hpCurrent', true], csHpTemp: ['hpTemp', true],
-    csEquipment: ['equipment', false], csFeatures: ['features', false], csNotes: ['notes', false]
+    csNotes: ['notes', false]
   };
 
   function bindFields(ch) {
     Object.entries(FIELD_MAP).forEach(([id, [prop, isNumber]]) => {
-      const el = document.getElementById(id);
+      const el = $(id);
       el.value = ch[prop];
       const commit = debounce(() => {
-        const patch = {};
-        patch[prop] = isNumber ? (parseInt(el.value, 10) || 0) : el.value;
-        send('updateCharacter', { id: ch.id, patch });
-        if (prop === 'level') {
-          document.getElementById('csProf').value = profBonusForLevel(patch.level);
-        }
+        patchChar({ [prop]: isNumber ? (parseInt(el.value, 10) || 0) : el.value });
       }, 300);
       el.oninput = () => {
-        if (prop === 'level') {
-          document.getElementById('csProf').value = profBonusForLevel(parseInt(el.value, 10) || 1);
-          renderSaves({ ...ch, level: parseInt(el.value, 10) || 1 });
-          renderSkills({ ...ch, level: parseInt(el.value, 10) || 1 });
-        }
+        const c = cur();
+        if (c) { c[prop] = isNumber ? (parseInt(el.value, 10) || 0) : el.value; touch('f:' + prop); }
+        if (prop === 'level' && c) { c.level = parseInt(el.value, 10) || 1; updateDerived(c); renderSaves(c); renderSkills(c); }
+        if (prop === 'hpMax' || prop === 'hpCurrent') updateHpBar();
         commit();
       };
     });
   }
 
+  /* ---------------- editor: item lists (equipment / features) ---------------- */
+  function parseItems(text) {
+    return String(text || '').split('\n').map(s => s.trim()).filter(Boolean);
+  }
+
+  function autosize(ta) {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  }
+
+  // Equipment and features are stored as newline-separated text on the
+  // server (so imports and older data keep working); this renders that
+  // text as an editable list of rows.
+  function makeListEditor({ listId, addId, addBtnId, prop, withQty, multiline }) {
+    const list = $(listId);
+    const addInput = $(addId);
+
+    function collect() {
+      return [...list.querySelectorAll('.item')].map(row => {
+        const nm = row.querySelector('.nm').value.replace(/\n/g, ' ').trim();
+        if (!nm) return '';
+        if (withQty) {
+          const q = parseInt(row.querySelector('.qty').value, 10) || 1;
+          return q > 1 ? nm + ' x' + q : nm;
+        }
+        return nm;
+      }).filter(Boolean).join('\n');
+    }
+
+    function localSync() {
+      const c = cur();
+      if (c) { c[prop] = collect(); touch('f:' + prop); }
+    }
+    const send_ = debounce(() => patchChar({ [prop]: collect() }), 300);
+    const commit = () => { localSync(); send_(); };
+
+    function refreshEmpty() {
+      const hint = list.querySelector('.empty-mini');
+      const has = list.querySelector('.item');
+      if (!has && !hint) {
+        const d = document.createElement('div');
+        d.className = 'empty-mini';
+        d.textContent = 'Nothing here yet.';
+        list.appendChild(d);
+      } else if (has && hint) {
+        hint.remove();
+      }
+    }
+
+    function addRow(line) {
+      let name = line, qty = 1;
+      if (withQty) {
+        const m = line.match(/^(.*?)\s+x(\d+)$/i);
+        if (m) { name = m[1]; qty = parseInt(m[2], 10); }
+      }
+      const row = document.createElement('div');
+      row.className = 'item';
+
+      const nm = document.createElement(multiline ? 'textarea' : 'input');
+      nm.className = 'nm';
+      if (multiline) nm.rows = 1; else nm.type = 'text';
+      nm.value = name;
+      nm.addEventListener('input', () => { if (multiline) autosize(nm); commit(); });
+      if (multiline) nm.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); nm.blur(); } });
+      row.appendChild(nm);
+
+      if (withQty) {
+        const x = document.createElement('span'); x.className = 'qty-x'; x.textContent = '×';
+        const q = document.createElement('input');
+        q.type = 'number'; q.min = '1'; q.className = 'qty bare'; q.value = qty;
+        q.setAttribute('aria-label', 'Quantity');
+        q.addEventListener('input', commit);
+        row.append(x, q);
+      }
+
+      const del = document.createElement('button');
+      del.type = 'button'; del.className = 'del'; del.textContent = '×';
+      del.setAttribute('aria-label', 'Remove');
+      del.addEventListener('click', () => {
+        row.remove(); refreshEmpty();
+        localSync();
+        patchChar({ [prop]: collect() });
+      });
+      row.appendChild(del);
+
+      list.appendChild(row);
+      if (multiline) autosize(nm);
+    }
+
+    function render(text) {
+      list.innerHTML = '';
+      parseItems(text).forEach(addRow);
+      refreshEmpty();
+    }
+
+    function addFromInput() {
+      const v = addInput.value.trim();
+      if (!v) return;
+      addRow(v);
+      refreshEmpty();
+      addInput.value = '';
+      localSync();
+      patchChar({ [prop]: collect() });
+    }
+    $(addBtnId).addEventListener('click', addFromInput);
+    addInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addFromInput(); } });
+
+    return {
+      render,
+      busy: () => list.contains(document.activeElement),
+      resize: () => list.querySelectorAll('textarea.nm').forEach(autosize),
+    };
+  }
+
+  const equipEd = makeListEditor({ listId: 'equipList', addId: 'equipAdd', addBtnId: 'equipAddBtn', prop: 'equipment', withQty: true, multiline: false });
+  const featEd = makeListEditor({ listId: 'featList', addId: 'featAdd', addBtnId: 'featAddBtn', prop: 'features', withQty: false, multiline: true });
+
+  /* ---------------- editor: tabs ---------------- */
+  function showTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+    if (name === 'features') featEd.resize();   // textareas can't measure while hidden
+  }
+  document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+  /* ---------------- editor: portrait ---------------- */
+  // Crop to a centred square and shrink to 256px JPEG so it stays
+  // small enough to sync over the WebSocket to everyone at the table.
+  function resizeToDataUrl(file, size) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#2a2c2f';
+        ctx.fillRect(0, 0, size, size);
+        const scale = Math.max(size / img.width, size / img.height);
+        const w = img.width * scale, h = img.height * scale;
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')); };
+      img.src = url;
+    });
+  }
+
+  $('portraitBtn').addEventListener('click', () => $('portraitInput').click());
+  $('portraitInput').addEventListener('change', async () => {
+    const file = $('portraitInput').files[0];
+    $('portraitInput').value = '';
+    if (!file) return;
+    try {
+      const dataUrl = await resizeToDataUrl(file, 256);
+      setPortrait(dataUrl);
+      const c = cur(); if (c) { c.portrait = dataUrl; touch('f:portrait'); }
+      patchChar({ portrait: dataUrl });
+    } catch (e) {
+      alert('Could not read that image.');
+    }
+  });
+  $('portraitRemove').addEventListener('click', () => {
+    setPortrait('');
+    const c = cur(); if (c) { c.portrait = ''; touch('f:portrait'); }
+    patchChar({ portrait: '' });
+  });
+
+  /* ---------------- editor: open / refresh / close ---------------- */
   function openCharEditor(id) {
+    if (id !== activeCharId) touched.clear();
     activeCharId = id;
     const ch = findChar(id);
     if (!ch) return;
 
     bindFields(ch);
-    document.getElementById('csProf').value = profBonusForLevel(ch.level);
+    setPortrait(ch.portrait || '');
+    updateDerived(ch);
+    updateHpBar();
     renderAbilitiesGrid(ch);
     renderSaves(ch);
     renderSkills(ch);
+    equipEd.render(ch.equipment);
+    featEd.render(ch.features);
+    showTab('stats');
 
-    document.getElementById('char-list-view').style.display = 'none';
-    document.getElementById('char-edit-view').style.display = 'block';
+    $('char-list-view').style.display = 'none';
+    $('char-edit-view').style.display = 'block';
+    window.scrollTo(0, 0);
   }
 
-  // Called whenever a fresh charState arrives from the server while
-  // the editor is open (e.g. someone else at the table is also
-  // looking at / editing this sheet). Only touches fields the user
-  // isn't actively typing into, so it won't fight their cursor.
+  // Runs whenever fresh state arrives while the editor is open (e.g.
+  // someone else at the table is editing this sheet too). Skips any
+  // field you're currently typing in so it never fights your cursor.
   function refreshEditorFromServer() {
-    const ch = findChar(activeCharId);
+    const ch = cur();
     if (!ch) { closeCharEditor(); return; }
 
     Object.entries(FIELD_MAP).forEach(([id, [prop]]) => {
-      const el = document.getElementById(id);
+      const el = $(id);
       if (document.activeElement !== el) el.value = ch[prop];
     });
-    document.getElementById('csProf').value = profBonusForLevel(ch.level);
-
-    document.querySelectorAll('#abilitiesGrid input').forEach(input => {
+    document.querySelectorAll('#abilitiesGrid .ab-score').forEach(input => {
       if (document.activeElement !== input) {
         const key = input.dataset.ability;
         input.value = ch.abilities[key];
-        document.getElementById('mod-' + key).textContent = fmtMod(abilityMod(ch.abilities[key]));
+        $('mod-' + key).textContent = fmtMod(abilityMod(ch.abilities[key]));
       }
     });
-
+    setPortrait(ch.portrait || '');
+    updateDerived(ch);
+    updateHpBar();
     renderSaves(ch);
     renderSkills(ch);
+    if (!equipEd.busy()) equipEd.render(ch.equipment);
+    if (!featEd.busy()) featEd.render(ch.features);
   }
 
   function closeCharEditor() {
     activeCharId = null;
     renderCharGrid();
-    document.getElementById('char-edit-view').style.display = 'none';
-    document.getElementById('char-list-view').style.display = 'block';
+    $('char-edit-view').style.display = 'none';
+    $('char-list-view').style.display = 'block';
   }
 
-  document.getElementById('newCharBtn').addEventListener('click', () => {
+  $('newCharBtn').addEventListener('click', () => {
     const id = uid();
-    characters.unshift(blankCharacter(id)); // optimistic, server will confirm
+    characters.unshift(blankCharacter(id)); // optimistic; the server confirms
     send('addCharacter', { id });
     openCharEditor(id);
   });
 
-  document.getElementById('backToListBtn').addEventListener('click', closeCharEditor);
+  $('backToListBtn').addEventListener('click', closeCharEditor);
 
-  document.getElementById('deleteCharBtn').addEventListener('click', () => {
-    const ch = findChar(activeCharId);
+  $('deleteCharBtn').addEventListener('click', () => {
+    const ch = cur();
     if (!ch) return;
     if (!confirm('Delete "' + (ch.name || 'this character') + '"? This can\'t be undone.')) return;
     send('deleteCharacter', { id: activeCharId });
     closeCharEditor();
   });
 
-  document.getElementById('sendToCombatBtn').addEventListener('click', () => {
+  $('sendToCombatBtn').addEventListener('click', () => {
     if (!activeCharId) return;
     send('sendToCombat', { id: activeCharId });
     window.location.href = 'combat.html';
+  });
+
+  /* ---------------- import ---------------- */
+  const importPanel = $('importPanel');
+  $('importToggleBtn').addEventListener('click', () => {
+    importPanel.style.display = importPanel.style.display === 'none' ? 'block' : 'none';
+  });
+
+  document.querySelectorAll('.import-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.import-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.import-pane').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      $('pane-' + tab.dataset.pane).classList.add('active');
+    });
+  });
+
+  // On success, adopt the character the server handed back and jump
+  // straight into its editor so the user can review what got mapped.
+  function onImported(ch) {
+    if (!findChar(ch.id)) characters.unshift(ch);
+    renderCharGrid();
+    openCharEditor(ch.id);
+    importPanel.style.display = 'none';
+  }
+
+  function showImportMsg(el, kind, text) {
+    el.className = 'import-msg ' + kind;
+    el.textContent = text;
+  }
+
+  $('ddbImportBtn').addEventListener('click', async () => {
+    const input = $('ddbInput').value.trim();
+    const msg = $('ddbMsg');
+    if (!input) { showImportMsg(msg, 'error', 'Paste a D&D Beyond character URL or ID first.'); return; }
+    const btn = $('ddbImportBtn');
+    btn.disabled = true; btn.textContent = 'Importing…';
+    showImportMsg(msg, 'ok', 'Fetching character…');
+    try {
+      const resp = await fetch('/api/import/dndbeyond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        showImportMsg(msg, 'error', data.error || 'Import failed.');
+      } else {
+        showImportMsg(msg, 'warn', 'Imported — please double-check AC and proficiencies.');
+        $('ddbInput').value = '';
+        onImported(data.character);
+      }
+    } catch (err) {
+      showImportMsg(msg, 'error', 'Could not reach the server.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Import';
+    }
+  });
+
+  async function uploadPdf(file) {
+    const msg = $('pdfMsg');
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      showImportMsg(msg, 'error', 'That doesn\'t look like a PDF.');
+      return;
+    }
+    showImportMsg(msg, 'ok', 'Reading PDF…');
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const resp = await fetch('/api/import/pdf', { method: 'POST', body: formData });
+      const data = await resp.json();
+      if (!resp.ok) {
+        showImportMsg(msg, 'error', data.error || 'Import failed.');
+      } else {
+        showImportMsg(msg, 'warn', data.warning || 'Imported — please review the sheet.');
+        onImported(data.character);
+      }
+    } catch (err) {
+      showImportMsg(msg, 'error', 'Could not reach the server.');
+    }
+  }
+
+  const pdfInput = $('pdfInput');
+  const pdfDrop = $('pdfDrop');
+  pdfInput.addEventListener('change', () => uploadPdf(pdfInput.files[0]));
+  ['dragover', 'dragenter'].forEach(evt => pdfDrop.addEventListener(evt, (e) => { e.preventDefault(); pdfDrop.classList.add('drag'); }));
+  ['dragleave', 'drop'].forEach(evt => pdfDrop.addEventListener(evt, (e) => { e.preventDefault(); pdfDrop.classList.remove('drag'); }));
+  pdfDrop.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) uploadPdf(file);
   });
 
 })();

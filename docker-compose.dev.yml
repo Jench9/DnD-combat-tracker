@@ -1,0 +1,10 @@
+# docker-compose.dev.yml
+services:
+  combat-tracker:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules   # keeps the container's installed packages from being hidden by your folder
+    command: node --watch server.js
