@@ -7,7 +7,7 @@ Paste or attach this at the start of a new conversation. It describes what exist
 A small self-hosted web app for running D&D 5e sessions. Everyone at the table opens it in a browser and sees the same live state.
 
 - **Home** (`index.html`): landing page with a card per tool (generated from the tool registry).
-- **Combat Tracker** (`combat.html`): initiative order, HP, AC, conditions, death saves, rounds. Saved characters are added from here ("Add characters" panel, filtered by campaign, with each player's initiative roll); every combatant's initiative is editable.
+- **Combat Tracker** (`combat.html`): initiative order, HP, AC, conditions, death saves, rounds. Saved characters are added from here ("Add characters" panel, grouped by campaign with an "Add all" per campaign, with each player's initiative roll); every combatant's initiative is editable.
 - **Character Sheets** (`characters.html`): create, edit and store full character sheets with portraits, import from D&D Beyond or a PDF, and send a character into the combat tracker.
 
 All state is shared live over a WebSocket. There are no accounts, no auth and no database.

@@ -43,27 +43,33 @@
   letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-soft);
   margin-bottom: 10px;
 }
-.party-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-.party-head .panel-title { margin: 0; flex: 1 1 auto; }
-.party-head select {
-  padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px;
-  background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; max-width: 220px;
+.party-list { display: flex; flex-direction: column; gap: 14px; }
+.party-group-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding-bottom: 6px; border-bottom: 2px solid var(--line);
 }
-.party-list { display: flex; flex-direction: column; }
+.party-group-name { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
+.party-group-count {
+  margin-left: 8px; font-size: 11.5px; font-weight: 700; color: var(--ink-soft);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 0 7px;
+}
 .party-list .empty { padding: 14px 10px; }
 .party-row {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
   padding: 8px 0; border-top: 1px solid var(--line);
 }
-.party-row:first-child { border-top: none; }
+.party-group-head + .party-row { border-top: none; }
 .party-who { min-width: 0; flex: 1 1 200px; }
 .party-name { font-weight: 600; font-size: 15px; }
 .party-sub { color: var(--ink-soft); font-size: 12px; }
-.party-controls { display: flex; align-items: center; gap: 6px; }
+.party-controls { display: flex; align-items: center; gap: 8px; }
 .party-init {
-  width: 72px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px;
-  background: var(--bg); color: var(--ink); font: inherit; font-size: 14px; text-align: center;
+  width: 104px; height: 40px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--bg); color: var(--ink); font: inherit; font-size: 18px; font-weight: 600; text-align: center;
 }
+.party-init::placeholder { font-size: 14px; font-weight: 400; }
+.party-init:focus { outline: none; border-color: var(--gold); }
+.party-controls .btn { height: 40px; }
 .party-in { color: var(--good); font-size: 12.5px; font-weight: 600; }
 .party-hint { color: var(--ink-soft); font-size: 12px; margin-top: 8px; }
 
