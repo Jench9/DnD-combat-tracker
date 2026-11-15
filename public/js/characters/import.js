@@ -1,6 +1,7 @@
 // The import panel (D&D Beyond + PDF). `onImported(character)` is called
 // with the character the server created.
 import { $ } from '../core/dom.js';
+import { campaignForNew } from './campaigns.js';
 
 function showImportMsg(el, kind, text) {
   el.className = 'import-msg ' + kind;
@@ -41,7 +42,7 @@ export function initImport({ onImported }) {
       const resp = await fetch('/api/import/dndbeyond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input }),
+        body: JSON.stringify({ input, campaignId: campaignForNew() }),
       });
       const data = await resp.json();
       if (!resp.ok) {
@@ -69,6 +70,7 @@ export function initImport({ onImported }) {
     }
     showImportMsg(msg, 'ok', 'Reading PDF…');
     const formData = new FormData();
+    formData.append('campaignId', campaignForNew());
     formData.append('file', file);
     try {
       const resp = await fetch('/api/import/pdf', { method: 'POST', body: formData });

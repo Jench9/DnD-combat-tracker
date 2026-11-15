@@ -25,8 +25,8 @@ async function loadDdbCharacter(ddbId) {
   return { mapped: mapDndBeyondData(json.data, ddbId) };
 }
 
-// POST /api/import/dndbeyond          { input: <character URL or numeric id> }
-//   Creates a new character.
+// POST /api/import/dndbeyond          { input: <character URL or numeric id>, campaignId? }
+//   Creates a new character (in campaignId, if given).
 // POST /api/import/dndbeyond/refresh  { characterId, input? }
 //   Re-imports into an existing character (e.g. after leveling up).
 //   Uses the character's stored D&D Beyond id; `input` links or re-links it.
@@ -41,7 +41,7 @@ function createDndBeyondRouter({ onCharactersChanged }) {
     try {
       const { mapped, status, error } = await loadDdbCharacter(ddbId);
       if (error) return res.status(status).json({ error });
-      const ch = characters.addImported(mapped.patch, mapped.notesPrefix);
+      const ch = characters.addImported({ ...mapped.patch, campaignId: req.body.campaignId }, mapped.notesPrefix);
       onCharactersChanged();
       res.json({ character: ch });
     } catch (err) {

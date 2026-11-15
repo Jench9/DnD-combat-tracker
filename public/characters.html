@@ -31,6 +31,16 @@
       </div>
     </header>
 
+    <div class="campaign-bar">
+      <div class="field">
+        <label for="campaignSelect">Campaign</label>
+        <select id="campaignSelect"><option value="all">All characters</option></select>
+      </div>
+      <button class="btn secondary small" id="campaignNewBtn">+ New campaign</button>
+      <button class="btn secondary small" id="campaignRenameBtn" hidden>Rename</button>
+      <button class="btn secondary small" id="campaignDeleteBtn" hidden>Delete campaign</button>
+    </div>
+
     <div class="panel" id="importPanel" style="display:none;">
       <div class="import-tabs">
         <button class="import-tab active" data-pane="ddb">D&amp;D Beyond</button>
@@ -91,6 +101,7 @@
           <div class="field"><label>Level</label><input id="csLevel" type="number" min="1" max="20" value="1"></div>
           <div class="field"><label>Background</label><input id="csBackground" type="text" placeholder="Outlander"></div>
           <div class="field"><label>Alignment</label><input id="csAlignment" type="text" placeholder="Neutral Good"></div>
+          <div class="field"><label for="csCampaign">Campaign</label><select id="csCampaign"><option value="">No campaign</option></select></div>
         </div>
       </div>
     </div>

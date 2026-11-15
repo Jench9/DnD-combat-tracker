@@ -5,7 +5,7 @@ const characters = require('../../characters/service');
 const { mapPdfFormFields } = require('./mapper');
 const { readFormFields, readText } = require('./reader');
 
-// POST /api/import/pdf  (multipart field "file")
+// POST /api/import/pdf  (multipart field "file", optional field "campaignId")
 function createPdfRouter({ onCharactersChanged }) {
   const router = express.Router();
   const upload = multer({
@@ -17,6 +17,7 @@ function createPdfRouter({ onCharactersChanged }) {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded.' });
     }
+    const campaignId = req.body && req.body.campaignId;
     try {
       const fields = await readFormFields(req.file.buffer);
 
@@ -24,7 +25,7 @@ function createPdfRouter({ onCharactersChanged }) {
         const { patch, leftover } = mapPdfFormFields(fields);
         const notesPrefix = 'Imported from a PDF form. Please double-check everything below.'
           + (leftover ? `\n\nOther fields found in the PDF that weren't auto-mapped:\n${leftover}` : '');
-        const ch = characters.addImported(patch, notesPrefix);
+        const ch = characters.addImported({ ...patch, campaignId }, notesPrefix);
         onCharactersChanged();
         return res.json({ character: ch, warning: 'Some fields may need manual review.' });
       }
@@ -34,7 +35,7 @@ function createPdfRouter({ onCharactersChanged }) {
       const text = await readText(req.file.buffer);
       const notesPrefix = 'Imported from a PDF with no fillable form fields, so nothing could be auto-mapped. '
         + "Here's the raw text Claude extracted — copy what you need into the fields above:\n\n" + text.slice(0, 3500);
-      const ch = characters.addImported({}, notesPrefix);
+      const ch = characters.addImported({ campaignId }, notesPrefix);
       onCharactersChanged();
       res.json({ character: ch, warning: 'No fillable fields found — pasted raw text into Notes instead.' });
     } catch (err) {

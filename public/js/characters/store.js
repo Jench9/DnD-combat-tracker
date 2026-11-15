@@ -14,9 +14,15 @@ const touched = new Map(); // key -> timestamp
 export const store = {
   characters: [],
   activeCharId: null,
+  campaigns: [],
+  // Campaign filter on the list view: ALL, NONE, or a campaign id.
+  campaignFilter: 'all',
   // Set by main.js once the socket exists.
   send: () => {},
 };
+
+export const ALL = 'all';
+export const NONE = 'none';
 
 export function findChar(id) { return store.characters.find((c) => c.id === id); }
 export function cur() { return findChar(store.activeCharId); }
@@ -56,5 +62,6 @@ export function blankCharacter(id) {
     saveProf: {}, skillProf: {},
     equipment: '', features: '', notes: '',
     ddbId: '',
+    campaignId: '',
   };
 }

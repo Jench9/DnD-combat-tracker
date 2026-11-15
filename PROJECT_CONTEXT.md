@@ -63,6 +63,7 @@ services:
 
 - No volumes: code is baked into the image, so **every change needs `docker compose up -d --build`**, including edits to `public/*` and `src/*`.
 - Dockerfile (`node:20-alpine`, `WORKDIR /app`): copies `package.json` + `package-lock.json`, runs `npm ci --omit=dev`, then copies `server.js`, `src/` and `public/`. **A new top-level source folder must be added with another `COPY`.** `npm ci` fails if the lock file is out of sync; after adding a dependency run `npm install` locally before rebuilding.
+- **Campaigns** (`src/features/campaigns/`, wire `campaignState`/`campaigns`, saved to `campaigns.json`): `{ id, name }`; characters reference one via `campaignId` (`''` = none). Actions `addCampaign {id,name}`, `renameCampaign`, `deleteCampaign` (moves its characters to no campaign, also broadcasts `characters`). The characters page filters by a campaign dropdown (choice kept in localStorage); new characters and imports (`campaignId` in the D&D Beyond body / PDF form field) go into the selected campaign; D&D Beyond sync keeps the campaign.
 - **Characters persist to `DATA_DIR/characters.json`** (default `./data`, Docker volume `./data:/app/data`). `characters/service` loads it at require time (re-sanitized) and calls `persist()` after every mutation; `server.js` flushes pending writes on SIGINT/SIGTERM. Tests point `DATA_DIR` at a temp dir in `test/helpers.js`. **Combat state is still memory-only.**
 - `docker-compose.dev.yml` bind-mounts the project and runs `node --watch server.js`.
 - Logs: `docker compose logs -f combat-tracker`.

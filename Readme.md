@@ -46,6 +46,8 @@ Runs the server tests (`node:test`, no extra dependencies): WebSocket flows for 
 
 Character sheets are saved to `data/characters.json` (half a second after each change, and on shutdown) and loaded again on startup, so they survive restarts. With Docker, `docker-compose.yaml` mounts `./data` into the container, so they also survive rebuilds. Set `DATA_DIR` to store the file somewhere else. Back up that folder to back up your characters.
 
+Campaigns are saved the same way (`data/campaigns.json`).
+
 Combat state is still **only in memory** and resets on restart.
 
 ## How it works

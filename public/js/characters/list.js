@@ -1,7 +1,8 @@
 // The character grid (list view).
 import { $ } from '../core/dom.js';
 import { hpClass } from './rules.js';
-import { store } from './store.js';
+import { store, ALL, NONE } from './store.js';
+import { charactersInView, campaignName } from './campaigns.js';
 
 function avatarNode(ch) {
   const d = document.createElement('div');
@@ -43,6 +44,14 @@ function renderCard(ch, onOpen) {
   sub.textContent = [ch.race, ch.class].filter(Boolean).join(' · ') || 'No race/class set';
   body.appendChild(sub);
 
+  // When viewing every campaign at once, say which one each card is in.
+  if (store.campaignFilter === ALL && campaignName(ch.campaignId)) {
+    const tag = document.createElement('div');
+    tag.className = 'campaign-tag';
+    tag.textContent = campaignName(ch.campaignId);
+    body.appendChild(tag);
+  }
+
   const stats = document.createElement('div');
   stats.className = 'char-card-stats';
   stats.innerHTML =
@@ -67,13 +76,18 @@ function renderCard(ch, onOpen) {
 export function renderCharGrid(onOpen) {
   const grid = $('charGrid');
   grid.innerHTML = '';
-  if (store.characters.length === 0) {
+  const shown = charactersInView();
+  if (shown.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'empty-lg';
     empty.style.gridColumn = '1 / -1';
-    empty.innerHTML = '<div class="big-icon">📜</div>No character sheets yet — create one or import from D&amp;D Beyond.';
+    const where = store.campaignFilter === ALL ? ''
+      : store.campaignFilter === NONE ? ' without a campaign'
+        : ' in this campaign';
+    empty.innerHTML = '<div class="big-icon">📜</div>No character sheets' + where
+      + ' yet — create one or import from D&amp;D Beyond.';
     grid.appendChild(empty);
     return;
   }
-  store.characters.forEach((ch) => grid.appendChild(renderCard(ch, onOpen)));
+  shown.forEach((ch) => grid.appendChild(renderCard(ch, onOpen)));
 }

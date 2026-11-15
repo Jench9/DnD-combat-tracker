@@ -10,7 +10,7 @@ module.exports = {
   // register it.
   addCharacter(payload) {
     const id = (payload && typeof payload.id === 'string' && payload.id) || uid();
-    characters.addBlank(id);
+    characters.addBlank(id, payload && payload.campaignId);
   },
 
   updateCharacter(payload) {

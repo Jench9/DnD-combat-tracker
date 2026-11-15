@@ -27,9 +27,9 @@ function find(id) {
 }
 
 // Returns false if the id already exists.
-function addBlank(id) {
+function addBlank(id, campaignId) {
   if (find(id)) return false;
-  characters.unshift(blankCharacter(id));
+  characters.unshift(sanitizeCharacterPatch(blankCharacter(id), { campaignId }));
   persist();
   return true;
 }
@@ -63,15 +63,18 @@ function addImported(mappedPatch, notesPrefix) {
 
 // Re-sync an existing character from a fresh import. The table's own
 // state wins for things the source doesn't own or that change mid-session:
-// portrait, notes, temp HP, and damage taken (so a level-up adds the new
+// portrait, notes, campaign, temp HP, and damage taken (so a level-up adds the new
 // max HP without healing anyone). Returns the updated character, or null.
 function refreshImported(id, mappedPatch) {
   const idx = characters.findIndex((c) => c.id === id);
   if (idx === -1) return null;
   const old = characters[idx];
   const damage = Math.max(0, old.hpMax - old.hpCurrent);
-  const { portrait, notes, hpTemp, ...patch } = mappedPatch;
-  const fresh = { ...blankCharacter(id), portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp };
+  const { portrait, notes, hpTemp, campaignId, ...patch } = mappedPatch;
+  const fresh = {
+    ...blankCharacter(id),
+    portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp, campaignId: old.campaignId,
+  };
   let ch = sanitizeCharacterPatch(fresh, patch);
   ch.hpCurrent = Math.max(0, ch.hpMax - damage);
   characters[idx] = ch;
@@ -79,4 +82,13 @@ function refreshImported(id, mappedPatch) {
   return ch;
 }
 
-module.exports = { all, find, addBlank, update, remove, addImported, refreshImported };
+// A campaign was deleted: move its characters to "No campaign".
+function clearCampaign(campaignId) {
+  let changed = false;
+  characters.forEach((c) => {
+    if (c.campaignId === campaignId) { c.campaignId = ''; changed = true; }
+  });
+  if (changed) persist();
+}
+
+module.exports = { all, find, addBlank, update, remove, addImported, refreshImported, clearCampaign };

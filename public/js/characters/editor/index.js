@@ -5,6 +5,7 @@ import { updateDerived, renderAbilitiesGrid, renderSaves, renderSkills, refreshA
 import { bindFields, refreshFields, updateHpBar } from './fields.js';
 import { makeListEditor } from './listEditor.js';
 import { setPortrait, initPortrait } from './portrait.js';
+import { refreshEditorCampaign } from '../campaigns.js';
 
 let equipEd;
 let featEd;
@@ -30,6 +31,7 @@ export function openEditor(id) {
   if (!ch) return;
 
   bindFields(ch);
+  refreshEditorCampaign();
   setPortrait(ch.portrait || '');
   updateDerived(ch);
   updateHpBar();
@@ -54,6 +56,7 @@ export function refreshEditorFromServer() {
   if (!ch) return false;
 
   refreshFields(ch);
+  refreshEditorCampaign();
   refreshAbilityInputs(ch);
   setPortrait(ch.portrait || '');
   updateDerived(ch);

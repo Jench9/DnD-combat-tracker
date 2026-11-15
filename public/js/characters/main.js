@@ -6,6 +6,7 @@ import { store, findChar, cur, mergePending, blankCharacter, clearTouched } from
 import { renderCharGrid } from './list.js';
 import { initEditor, openEditor, refreshEditorFromServer, showListView } from './editor/index.js';
 import { initImport } from './import.js';
+import { initCampaigns, renderCampaignControls, markCampaignsLoaded, campaignForNew } from './campaigns.js';
 
 renderNav();
 
@@ -25,6 +26,12 @@ const socket = connectSocket({
       renderCharGrid(openEditor);
       if (store.activeCharId && !refreshEditorFromServer()) closeEditor();
     },
+    campaignState: (msg) => {
+      store.campaigns = msg.campaigns;
+      markCampaignsLoaded();
+      renderCampaignControls();
+      renderCharGrid(openEditor);
+    },
   },
 });
 store.send = socket.send;
@@ -36,11 +43,14 @@ function closeEditor() {
 }
 
 initEditor();
+initCampaigns({ onFilterChange: () => renderCharGrid(openEditor) });
+renderCampaignControls();
 
 $('newCharBtn').addEventListener('click', () => {
   const id = uid();
-  store.characters.unshift(blankCharacter(id)); // optimistic; the server confirms
-  store.send('addCharacter', { id });
+  const campaignId = campaignForNew();
+  store.characters.unshift({ ...blankCharacter(id), campaignId }); // optimistic; the server confirms
+  store.send('addCharacter', { id, campaignId });
   openEditor(id);
 });
 
