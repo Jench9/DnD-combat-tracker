@@ -1,8 +1,22 @@
-// Character storage (in memory, newest first). No WebSocket knowledge here.
+// Character storage (newest first). Kept in memory and saved to
+// data/characters.json after every change so it survives restarts.
+// No WebSocket knowledge here.
 const { uid } = require('../../core/ids');
+const { createJsonStore } = require('../../core/jsonStore');
 const { blankCharacter, sanitizeCharacterPatch } = require('./model');
 
-let characters = [];
+const store = createJsonStore('characters', []);
+
+// Run saved data back through the sanitizer so an old or hand-edited
+// file can't load a malformed character.
+const saved = store.load();
+let characters = (Array.isArray(saved) ? saved : [])
+  .filter((c) => c && typeof c.id === 'string')
+  .map((c) => sanitizeCharacterPatch(blankCharacter(c.id), c));
+
+function persist() {
+  store.save(characters);
+}
 
 function all() {
   return characters;
@@ -16,6 +30,7 @@ function find(id) {
 function addBlank(id) {
   if (find(id)) return false;
   characters.unshift(blankCharacter(id));
+  persist();
   return true;
 }
 
@@ -23,10 +38,12 @@ function update(id, patch) {
   const idx = characters.findIndex((c) => c.id === id);
   if (idx === -1) return;
   characters[idx] = sanitizeCharacterPatch(characters[idx], patch);
+  persist();
 }
 
 function remove(id) {
   characters = characters.filter((c) => c.id !== id);
+  persist();
 }
 
 // Used by both importers: builds a blank character, applies a mapped
@@ -40,6 +57,7 @@ function addImported(mappedPatch, notesPrefix) {
     ch.notes = (notesPrefix + (ch.notes ? '\n\n' + ch.notes : '')).slice(0, 4000);
   }
   characters.unshift(ch);
+  persist();
   return ch;
 }
 
@@ -57,6 +75,7 @@ function refreshImported(id, mappedPatch) {
   let ch = sanitizeCharacterPatch(fresh, patch);
   ch.hpCurrent = Math.max(0, ch.hpMax - damage);
   characters[idx] = ch;
+  persist();
   return ch;
 }
 

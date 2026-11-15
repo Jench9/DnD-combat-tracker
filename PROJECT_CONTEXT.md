@@ -23,6 +23,7 @@ adventurers-kit/
 │   ├── config.js              PORT, PUBLIC_DIR, JSON_BODY_LIMIT, MAX_PDF_BYTES
 │   ├── app.js                 Express + HTTP server + realtime hub; registers features and /api/import
 │   ├── core/ids.js            uid()
+│   ├── core/jsonStore.js      createJsonStore(name, fallback) → { load, save (debounced, atomic), flush }; flushAllStores()
 │   ├── realtime/hub.js        the only WebSocket code (feature plug-in contract documented at the top)
 │   └── features/
 │       ├── combat/            service.js (state), actions.js (handlers), index.js (descriptor)
@@ -62,7 +63,7 @@ services:
 
 - No volumes: code is baked into the image, so **every change needs `docker compose up -d --build`**, including edits to `public/*` and `src/*`.
 - Dockerfile (`node:20-alpine`, `WORKDIR /app`): copies `package.json` + `package-lock.json`, runs `npm ci --omit=dev`, then copies `server.js`, `src/` and `public/`. **A new top-level source folder must be added with another `COPY`.** `npm ci` fails if the lock file is out of sync; after adding a dependency run `npm install` locally before rebuilding.
-- **All state is in server memory.** Every restart or rebuild wipes combat state and all character sheets.
+- **Characters persist to `DATA_DIR/characters.json`** (default `./data`, Docker volume `./data:/app/data`). `characters/service` loads it at require time (re-sanitized) and calls `persist()` after every mutation; `server.js` flushes pending writes on SIGINT/SIGTERM. Tests point `DATA_DIR` at a temp dir in `test/helpers.js`. **Combat state is still memory-only.**
 - `docker-compose.dev.yml` bind-mounts the project and runs `node --watch server.js`.
 - Logs: `docker compose logs -f combat-tracker`.
 

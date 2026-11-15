@@ -2,7 +2,7 @@
 
 A self-hosted D&D 5e toolkit for the table: a **Combat Tracker** and **Character Sheets** (with D&D Beyond and PDF import), synced live across every device connected to the server. One player bumps a monster's HP and everyone's screen updates instantly.
 
-A small Node server holds all state in memory and pushes updates to every browser over WebSocket. No accounts, no database, no build step.
+A small Node server holds all state in memory (character sheets are also saved to disk) and pushes updates to every browser over WebSocket. No accounts, no database, no build step.
 
 ## Run it
 
@@ -44,7 +44,9 @@ Runs the server tests (`node:test`, no extra dependencies): WebSocket flows for 
 
 ## Data persistence
 
-Everything lives **only in server memory**. Restarting or rebuilding the container wipes combat state and all character sheets.
+Character sheets are saved to `data/characters.json` (half a second after each change, and on shutdown) and loaded again on startup, so they survive restarts. With Docker, `docker-compose.yaml` mounts `./data` into the container, so they also survive rebuilds. Set `DATA_DIR` to store the file somewhere else. Back up that folder to back up your characters.
+
+Combat state is still **only in memory** and resets on restart.
 
 ## How it works
 
@@ -66,6 +68,7 @@ adventurers-kit/
 │   ├── config.js                  port, paths, size limits
 │   ├── app.js                     wires Express + HTTP server + realtime hub + features
 │   ├── core/ids.js                id generation
+│   ├── core/jsonStore.js          small JSON-file persistence (data/<name>.json)
 │   ├── realtime/hub.js            the only WebSocket code: routes actions to features, broadcasts slices
 │   └── features/
 │       ├── combat/                state + actions for the combat tracker
@@ -74,7 +77,7 @@ adventurers-kit/
 │       │   └── index.js           feature descriptor registered with the hub
 │       ├── characters/
 │       │   ├── model.js           blank character, ability modifier, patch sanitizer
-│       │   ├── service.js         in-memory character list
+│       │   ├── service.js         character list, persisted via core/jsonStore
 │       │   ├── actions.js         add / update / delete / sendToCombat
 │       │   └── index.js
 │       └── imports/               REST importers, mounted at /api/import/<source>

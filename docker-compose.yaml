@@ -4,3 +4,5 @@ services:
       ports:
         - "3000:3000"
       restart: unless-stopped
+      volumes:
+        - ./data:/app/data   # saved characters survive restarts and rebuilds

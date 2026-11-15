@@ -1,3 +1,9 @@
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+// Keep tests from touching the real data/ folder. Must be set before
+// anything loads src/config.
+process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-test-'));
 const WebSocket = require('ws');
 const { createApp } = require('../src/app');
 

@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Saved app state
+data/
+
 # Logs
 npm-debug.log*
 *.log
