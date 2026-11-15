@@ -80,7 +80,7 @@ adventurers-kit/
 │       ├── characters/
 │       │   ├── model.js           blank character, ability modifier, patch sanitizer
 │       │   ├── service.js         character list, persisted via core/jsonStore
-│       │   ├── actions.js         add / update / delete / sendToCombat
+│       │   ├── actions.js         add / update / delete
 │       │   └── index.js
 │       └── imports/               REST importers, mounted at /api/import/<source>
 │           ├── dndbeyond/         constants, mapper (pure), client (network), route

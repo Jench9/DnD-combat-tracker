@@ -70,9 +70,19 @@ function renderRow(c, idx, state, send, rerender) {
   const row = document.createElement('div');
   row.className = 'row' + (idx === state.activeIndex ? ' active' : '') + (c.hp <= 0 ? ' down' : '');
 
-  const badge = document.createElement('div');
+  // Initiative is editable: fix a typo or apply a re-roll; the list re-sorts.
+  const badge = document.createElement('input');
+  badge.type = 'number';
   badge.className = 'init-badge';
-  badge.textContent = c.init;
+  badge.value = c.init;
+  badge.title = 'Initiative — click to change';
+  badge.setAttribute('aria-label', 'Initiative for ' + c.name);
+  badge.addEventListener('change', () => {
+    const init = parseInt(badge.value, 10);
+    if (Number.isFinite(init)) send('setInitiative', { id: c.id, init });
+    else badge.value = c.init;
+  });
+  badge.addEventListener('keydown', (e) => { if (e.key === 'Enter') badge.blur(); });
   row.appendChild(badge);
 
   const main = document.createElement('div');
@@ -161,7 +171,7 @@ export function renderCombat(state, { send, rerender }) {
   if (state.combatants.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'empty';
-    empty.textContent = 'No combatants yet — add your party and any monsters above, then hit "Next turn" to start.';
+    empty.textContent = 'No combatants yet — add characters and monsters above, then hit "Next turn" to start.';
     list.appendChild(empty);
     return;
   }

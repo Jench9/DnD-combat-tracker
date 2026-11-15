@@ -5,7 +5,9 @@ function freshState() {
   return {
     round: 1,
     activeIndex: 0,
-    combatants: [], // { id, name, init, ac, hp, maxHp, type, conditions: [], deathSuccess, deathFail }
+    // { id, name, init, ac, hp, maxHp, type, conditions: [], deathSuccess, deathFail,
+    //   characterId ('' unless added from a character sheet) }
+    combatants: [],
   };
 }
 
@@ -37,9 +39,10 @@ function sortByInitiative() {
 
 // Builds the canonical combatant shape. Callers do their own input
 // validation/defaulting (the combat form and "send character" differ).
-function addCombatant({ name, init, ac, hp, maxHp, type }) {
+function addCombatant({ name, init, ac, hp, maxHp, type, characterId = '' }) {
   state.combatants.push({
     id: uid(),
+    characterId,
     name,
     init,
     ac,

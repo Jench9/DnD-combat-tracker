@@ -1,5 +1,10 @@
 // Client -> server combat actions. Each takes a payload and mutates state.
 const svc = require('./service');
+const characters = require('../characters/service');
+const { mod } = require('../characters/model');
+
+const clampInit = (n) => Math.max(-10, Math.min(99, Math.round(n)));
+const rollD20 = () => 1 + Math.floor(Math.random() * 20);
 
 module.exports = {
   addCombatant(payload) {
@@ -13,6 +18,35 @@ module.exports = {
       maxHp: typeof hp === 'number' ? hp : 1,
       type: type === 'monster' ? 'monster' : 'pc',
     });
+  },
+
+  // Add a saved character as a PC. `init` is the initiative roll result;
+  // leave it out to have the server roll d20 + DEX modifier. A character
+  // can only be in the fight once.
+  addCharacterToCombat(payload) {
+    const ch = characters.find(payload.characterId);
+    if (!ch) return;
+    if (svc.getState().combatants.some((c) => c.characterId === ch.id)) return;
+    const init = typeof payload.init === 'number' && Number.isFinite(payload.init)
+      ? payload.init
+      : rollD20() + mod(ch.abilities.dex);
+    svc.addCombatant({
+      name: (ch.name || 'Unnamed').slice(0, 30),
+      init: clampInit(init),
+      ac: typeof ch.ac === 'number' ? ch.ac : 10,
+      hp: typeof ch.hpCurrent === 'number' ? ch.hpCurrent : (ch.hpMax || 1),
+      maxHp: ch.hpMax || 1,
+      type: 'pc',
+      characterId: ch.id,
+    });
+  },
+
+  // Change a combatant's initiative (e.g. a re-roll or a typo) and re-sort.
+  setInitiative(payload) {
+    const c = svc.findCombatant(payload.id);
+    if (!c || typeof payload.init !== 'number' || !Number.isFinite(payload.init)) return;
+    c.init = clampInit(payload.init);
+    svc.sortByInitiative();
   },
 
   removeCombatant(payload) {

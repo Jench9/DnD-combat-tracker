@@ -64,12 +64,6 @@ $('deleteCharBtn').addEventListener('click', () => {
   closeEditor();
 });
 
-$('sendToCombatBtn').addEventListener('click', () => {
-  if (!store.activeCharId) return;
-  store.send('sendToCombat', { id: store.activeCharId });
-  window.location.href = 'combat.html';
-});
-
 // Re-import the open character from D&D Beyond (e.g. after leveling up).
 // Characters not yet linked ask for their URL first.
 $('ddbSyncBtn').addEventListener('click', async () => {

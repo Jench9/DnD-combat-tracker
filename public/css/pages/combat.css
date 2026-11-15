@@ -37,6 +37,36 @@
 .type-toggle button.active.pc { background: var(--good); color: #fff; }
 .type-toggle button.active.monster { background: var(--wax); color: #fff; }
 
+/* ---- add characters panel ---- */
+.panel-title {
+  font-family: var(--font-display); font-weight: 700; font-size: 13px;
+  letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-soft);
+  margin-bottom: 10px;
+}
+.party-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.party-head .panel-title { margin: 0; flex: 1 1 auto; }
+.party-head select {
+  padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px;
+  background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; max-width: 220px;
+}
+.party-list { display: flex; flex-direction: column; }
+.party-list .empty { padding: 14px 10px; }
+.party-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 8px 0; border-top: 1px solid var(--line);
+}
+.party-row:first-child { border-top: none; }
+.party-who { min-width: 0; flex: 1 1 200px; }
+.party-name { font-weight: 600; font-size: 15px; }
+.party-sub { color: var(--ink-soft); font-size: 12px; }
+.party-controls { display: flex; align-items: center; gap: 6px; }
+.party-init {
+  width: 72px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px;
+  background: var(--bg); color: var(--ink); font: inherit; font-size: 14px; text-align: center;
+}
+.party-in { color: var(--good); font-size: 12.5px; font-weight: 600; }
+.party-hint { color: var(--ink-soft); font-size: 12px; margin-top: 8px; }
+
 .list { display: flex; flex-direction: column; gap: 8px; }
 .empty {
   text-align: center;
@@ -69,7 +99,18 @@
   font-size: 20px;
   text-align: center;
   color: var(--ink-soft);
+  width: 100%;
+  padding: 2px 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
+.init-badge::-webkit-inner-spin-button,
+.init-badge::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.init-badge:hover { border-color: var(--line); }
+.init-badge:focus { outline: none; border-color: var(--gold); background: var(--bg); color: var(--ink); }
 .row.active .init-badge { color: var(--gold); }
 
 .row-main { min-width: 0; }

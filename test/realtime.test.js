@@ -65,9 +65,10 @@ test('bad input is ignored, server stays up', async () => {
   await s.close();
 });
 
-test('characters: add, update (sanitized), send to combat, delete', async () => {
+test('characters: add, update (sanitized), add to combat with initiative, delete', async (t) => {
   const s = await startServer();
   const c = connect(s.port);
+  t.after(async () => { c.close(); await s.close(); });
   await c.opened;
   await c.next('state');
   await c.next('charState');
@@ -81,15 +82,36 @@ test('characters: add, update (sanitized), send to combat, delete', async () => 
   assert.ok(ch.level <= 20, 'level clamped');
   assert.strictEqual(ch.bogus, undefined);
 
-  c.send('sendToCombat', { id: 'abc' });
+  c.send('addCharacterToCombat', { characterId: 'abc', init: 17 });
+  c.send('addCharacterToCombat', { characterId: 'abc', init: 3 }); // already in combat: ignored
+  c.send('addCharacterToCombat', { characterId: 'missing' }); // ignored
   const combat = await c.next('state', (m) => m.state.combatants.length === 1);
-  assert.strictEqual(combat.state.combatants[0].name, 'Thorin');
-  assert.strictEqual(combat.state.combatants[0].init, 12); // 10 + mod(14)
-  assert.strictEqual(combat.state.combatants[0].hp, 25);
-  assert.strictEqual(combat.state.combatants[0].type, 'pc');
+  const pc = combat.state.combatants[0];
+  assert.strictEqual(pc.name, 'Thorin');
+  assert.strictEqual(pc.init, 17);
+  assert.strictEqual(pc.hp, 25);
+  assert.strictEqual(pc.maxHp, 30);
+  assert.strictEqual(pc.type, 'pc');
+  assert.strictEqual(pc.characterId, 'abc');
+
+  // No roll given: the server rolls d20 + DEX mod (+2 for DEX 14).
+  c.send('addCharacter', { id: 'def' });
+  c.send('updateCharacter', { id: 'def', patch: { name: 'Lyra', abilities: { dex: 14 } } });
+  c.send('addCharacterToCombat', { characterId: 'def' });
+  const rolled = await c.next('state', (m) => m.state.combatants.length === 2);
+  const lyra = rolled.state.combatants.find((x) => x.characterId === 'def');
+  assert.ok(lyra.init >= 3 && lyra.init <= 22, `rolled ${lyra.init}`);
+
+  // Editing initiative re-sorts; bad values are ignored.
+  c.send('setInitiative', { id: lyra.id, init: 30 });
+  const sorted = await c.next('state', (m) => m.state.combatants[0]?.init === 30);
+  assert.strictEqual(sorted.state.combatants[0].id, lyra.id);
+  c.send('setInitiative', { id: lyra.id, init: 'abc' });
+  c.send('setInitiative', { id: lyra.id, init: 1 });
+  const resorted = await c.next('state', (m) => m.state.combatants[1]?.init === 1);
+  assert.strictEqual(resorted.state.combatants[0].id, pc.id);
+  c.send('deleteCharacter', { id: 'def' });
 
   c.send('deleteCharacter', { id: 'abc' });
   await c.next('charState', (m) => m.characters.length === 0);
-  c.close();
-  await s.close();
 });

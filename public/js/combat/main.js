@@ -3,6 +3,7 @@ import { renderNav } from '../core/nav.js';
 import { connectSocket } from '../core/socket.js';
 import { CONDITIONS } from './conditions.js';
 import { renderCombat } from './render.js';
+import { initParty, setPartyData } from './party.js';
 
 renderNav();
 
@@ -18,14 +19,25 @@ let state = { round: 1, activeIndex: 0, combatants: [] };
 
 const socket = connectSocket({
   handlers: {
-    state: (msg) => { state = msg.state; render(); },
+    state: (msg) => { state = msg.state; render(); setPartyData({ combatants: state.combatants }); },
+    charState: (msg) => setPartyData({ characters: msg.characters }),
+    campaignState: (msg) => setPartyData({ campaigns: msg.campaigns }),
   },
 });
 const send = socket.send;
 
+// Don't rebuild the list while someone is typing in it (initiative or
+// name); catch up as soon as they leave the field.
+let stale = false;
 function render() {
+  const el = document.activeElement;
+  if (el && el.tagName === 'INPUT' && $('list').contains(el)) { stale = true; return; }
+  stale = false;
   renderCombat(state, { send, rerender: render });
 }
+$('list').addEventListener('focusout', () => setTimeout(() => { if (stale) render(); }, 0));
+
+initParty(send);
 
 // ---- add combatant
 let selectedType = 'pc';
