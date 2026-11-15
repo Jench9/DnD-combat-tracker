@@ -1,4 +1,5 @@
-# docker-compose.dev.yml
+# docker-compose.dev.yml — bind-mounts the project and restarts on changes.
+#   docker compose -f docker-compose.dev.yml up --build
 services:
   combat-tracker:
     build: .

@@ -7,69 +7,26 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-<style>
-  .hero { text-align: center; padding: 30px 10px 10px; }
-  .hero h1 { font-size: 36px; }
-  .hero .tagline { font-size: 15px; margin-top: 8px; }
-
-  .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
-  @media (max-width: 620px) { .tool-grid { grid-template-columns: 1fr; } }
-
-  .tool-card {
-    display: block;
-    text-decoration: none;
-    color: inherit;
-    background: var(--bg-panel);
-    border: 1px solid var(--line);
-    border-left: 4px solid var(--wax);
-    border-radius: 10px;
-    padding: 22px 20px;
-    box-shadow: 0 1px 3px var(--card-shadow);
-    transition: border-color 0.15s ease, transform 0.08s ease;
-  }
-  .tool-card:hover { border-color: var(--gold); }
-  .tool-card:active { transform: scale(0.99); }
-  .tool-card .ic { font-size: 30px; margin-bottom: 10px; display: block; }
-  .tool-card h2 {
-    font-family: var(--font-display); font-size: 20px; margin: 0 0 6px; font-weight: 700;
-  }
-  .tool-card p { margin: 0; color: var(--ink-soft); font-size: 13.5px; }
-
-  .live-note {
-    margin-top: 26px; text-align: center; font-size: 12.5px; color: var(--ink-soft);
-  }
-</style>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/home.css">
 </head>
 <body>
 <div class="wrap">
 
-  <nav class="app-nav">
-    <a class="nav-btn active" href="index.html"><span class="ic">🏠</span> Home</a>
-    <a class="nav-btn" href="combat.html"><span class="ic">⚔️</span> Combat Tracker</a>
-    <a class="nav-btn" href="characters.html"><span class="ic">📜</span> Character Sheets</a>
-  </nav>
+  <nav class="app-nav" data-active="home"></nav>
 
   <div class="hero">
     <h1>Adventurer's Kit</h1>
     <div class="tagline">Everything you need at the table, synced live across every device.</div>
   </div>
 
-  <div class="tool-grid">
-    <a class="tool-card" href="combat.html">
-      <span class="ic">⚔️</span>
-      <h2>Combat Tracker</h2>
-      <p>Initiative order, HP, AC, and conditions — shared live with everyone connected.</p>
-    </a>
-    <a class="tool-card" href="characters.html">
-      <span class="ic">📜</span>
-      <h2>Character Sheets</h2>
-      <p>Build and store full character sheets, with ability scores, saves, and skills.</p>
-    </a>
-  </div>
+  <div class="tool-grid" id="toolGrid"></div>
 
   <div class="live-note">Open on any device on the same server — everyone sees the same live state.</div>
 
 </div>
+<script type="module" src="js/home/main.js"></script>
 </body>
 </html>

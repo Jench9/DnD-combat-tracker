@@ -1,107 +1,113 @@
-# Combat Tracker
+# Adventurer's Kit
 
-A shared D&D combat tracker: initiative, HP, conditions, and death saves,
-synced live across every device connected to it. One player can bump a
-monster's HP and everyone else's screen updates instantly.
+A self-hosted D&D 5e toolkit for the table: a **Combat Tracker** and **Character Sheets** (with D&D Beyond and PDF import), synced live across every device connected to the server. One player bumps a monster's HP and everyone's screen updates instantly.
 
-Unlike the very first version of this, it's no longer a single static HTML
-file — there's a small Node server that holds the combat state in memory
-and pushes updates to all connected browsers over WebSocket.
-
-## How it works
-
-- `server.js` is the source of truth. It holds one state object
-  (`{ round, activeIndex, combatants }`) in memory.
-- Every action (add a combatant, adjust HP, toggle a condition, advance the
-  turn...) is sent from the browser to the server as a small WebSocket
-  message. The server applies it and broadcasts the new state to *all*
-  connected clients, including whoever sent it.
-- The browser (`public/index.html`) never trusts its own local copy of the
-  state — it only ever renders whatever the server last sent it. That's
-  what keeps two people clicking at once from producing conflicting results.
+A small Node server holds all state in memory and pushes updates to every browser over WebSocket. No accounts, no database, no build step.
 
 ## Run it
 
 ### With Docker (recommended)
 
 ```bash
-docker compose up --build
+docker compose up -d --build
 ```
 
-Open **http://localhost:3000**
+Open **http://localhost:3000**. Stop with `docker compose down`, follow logs with `docker compose logs -f combat-tracker`.
 
-Stop it with `docker compose down`.
+The image bakes the code in, so **any change needs a rebuild** (`docker compose up -d --build`). For live reload while developing:
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
 
 ### Without Docker
 
 ```bash
-npm install
-node server.js
+npm ci
+npm start
 ```
 
-Same URL, same behavior — Docker just packages the Node runtime and
-dependencies so you don't need Node installed locally, and gives you
-`restart: unless-stopped` for free.
+Requires Node 18+.
+
+### Tests
+
+```bash
+npm test
+```
+
+Runs the server tests (`node:test`, no extra dependencies): WebSocket flows for both features, input sanitising, and the importers' mapping logic.
 
 ## Letting friends connect
 
-`docker compose up` only binds to your machine. For others to reach it:
-
-- **Same wifi**: they open `http://<your-laptop's-LAN-IP>:3000` in their
-  browser. Find your IP with `ipconfig getifaddr en0` (Mac) or `ipconfig`
-  (Windows, look for IPv4 Address).
-- **Different networks**: you'd need a tunnel (`ngrok`, `cloudflared`) to
-  get a public URL without configuring your router.
+- **Same wifi**: they open `http://<your-LAN-IP>:3000`. Find your IP with `ipconfig getifaddr en0` (Mac) or `ipconfig` (Windows).
+- **Different networks**: use a tunnel (`ngrok`, `cloudflared`) or deploy to a VPS / container platform behind a reverse proxy with HTTPS.
 
 ## Data persistence
 
-Combat state lives **only in memory** in the running server process. That
-means:
+Everything lives **only in server memory**. Restarting or rebuilding the container wipes combat state and all character sheets.
 
-- Everyone sees the same live state while the server is running — that's
-  the whole point.
-- Restarting the container (`docker compose down` / a crash / your laptop
-  sleeping if Docker isn't set to keep running) wipes it. There's currently
-  no database or file backing it.
-- If you want state to survive a restart, that's a follow-up step (writing
-  state to a JSON file or SQLite and mounting it as a Docker volume) — not
-  needed for a normal session, since you'd typically just start a fresh
-  combat each time anyway.
+## How it works
 
-## Updating the app
+The server is the single source of truth. A client sends an action `{ type, payload }`; the server applies it and broadcasts the updated slice of state to **all** clients, including the sender. Clients only render what the server last sent them.
 
-Edit `server.js` (server-side logic/actions) or `public/index.html`
-(everything the browser renders and how it sends messages), then:
+There are two state slices, both sent to every client on connect:
 
-```bash
-docker compose up --build
-```
+| Feature | Broadcast message |
+|---|---|
+| combat | `{ type: 'state', state }` |
+| characters | `{ type: 'charState', characters }` |
 
 ## Project structure
 
 ```
-combat-tracker-app/
-├── server.js            # WebSocket server + shared state + static file serving
+adventurers-kit/
+├── server.js                      entry point: builds the app and listens
+├── src/
+│   ├── config.js                  port, paths, size limits
+│   ├── app.js                     wires Express + HTTP server + realtime hub + features
+│   ├── core/ids.js                id generation
+│   ├── realtime/hub.js            the only WebSocket code: routes actions to features, broadcasts slices
+│   └── features/
+│       ├── combat/                state + actions for the combat tracker
+│       │   ├── service.js         state and helpers (no message handling)
+│       │   ├── actions.js         client -> server action handlers
+│       │   └── index.js           feature descriptor registered with the hub
+│       ├── characters/
+│       │   ├── model.js           blank character, ability modifier, patch sanitizer
+│       │   ├── service.js         in-memory character list
+│       │   ├── actions.js         add / update / delete / sendToCombat
+│       │   └── index.js
+│       └── imports/               REST importers, mounted at /api/import/<source>
+│           ├── dndbeyond/         constants, mapper (pure), client (network), route
+│           └── pdf/               aliases, mapper (pure), reader (pdf-lib / pdf-parse), route
 ├── public/
-│   └── index.html        # the frontend — sends actions, renders whatever the server sends back
-├── package.json
-├── package-lock.json
-├── Dockerfile
-├── docker-compose.yml
-├── .dockerignore
-├── .gitignore
-└── README.md
+│   ├── index.html, combat.html, characters.html
+│   ├── css/
+│   │   ├── tokens.css             colors, fonts, light/dark themes
+│   │   ├── base.css               reset, body, page header
+│   │   ├── components.css         nav, buttons, panels, form fields
+│   │   └── pages/                 home.css, combat.css, characters.css
+│   └── js/                        ES modules, no build step
+│       ├── core/                  socket (reconnecting WebSocket), dom helpers, nav, tool registry
+│       ├── home/
+│       ├── combat/                main, render, conditions data
+│       └── characters/            main, store (state + pending-edit tracking), list, import, rules, editor/
+├── test/                          node:test suites
+├── package.json, package-lock.json
+├── Dockerfile, docker-compose.yaml, docker-compose.dev.yml
+└── Readme.md
 ```
 
-## Deploying beyond your laptop
+## Adding things
 
-Since this now runs a persistent Node process (not just static files), you
-have a couple of paths if you outgrow "my laptop on game night":
+**A new tool** (e.g. a dice roller with shared history)
+1. Server: create `src/features/<name>/` with `service.js`, `actions.js` and an `index.js` exporting `{ name, wire: { type, key }, snapshot, actions }`, then add it to the `createHub` list in `src/app.js`. The hub handles routing, broadcasting and sending the slice on connect. If an action also changes another feature, list it in `alsoBroadcast`.
+2. Client: add `public/<name>.html`, `public/js/<name>/main.js`, `public/css/pages/<name>.css`, and one entry in `public/js/core/tools.js` (the nav bar and the home cards are generated from it).
 
-- **A VPS** (DigitalOcean, Linode, Hetzner, etc.): copy this repo over, run
-  `docker compose up -d --build`, open the port in the firewall. Add a
-  reverse proxy (Caddy or nginx + Let's Encrypt) for a real domain and
-  HTTPS.
-- **A platform that runs containers for you** (Fly.io, Railway, Render):
-  point it at this repo — the Dockerfile is already set up to build and run
-  as-is.
+**A new importer**: add a folder under `src/features/imports/` with a router factory, and register it in `src/features/imports/index.js`. Keep the mapper (pure function) separate from the code that touches the network or files so it stays easy to test.
+
+**A new character field**: add it to `blankCharacter` and `sanitizeCharacterPatch` in `src/features/characters/model.js`, then bind it in `public/js/characters/editor/` (`FIELD_MAP` in `fields.js` for simple inputs).
+
+## Notes on the D&D Beyond importer
+
+It uses D&D Beyond's unofficial character endpoint, so the character's sharing must be set to **Public**. AC and proficiencies are a best-effort estimate. Non-OK and unusable responses are logged on the server (`docker compose logs`) with the status and the start of the response body.

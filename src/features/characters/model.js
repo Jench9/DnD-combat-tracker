@@ -1,0 +1,91 @@
+// Character shape, validation and small rules helpers. Pure functions.
+//
+// { id, portrait (data URL), name, race, class, level, background, alignment,
+//   ac, speed, hitDice,
+//   abilities: { str, dex, con, int, wis, cha },
+//   hpMax, hpCurrent, hpTemp,
+//   saveProf: { str: bool, ... }, skillProf: { 'Stealth': bool, ... },
+//   equipment, features, notes }
+
+const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+
+function blankCharacter(id) {
+  return {
+    id,
+    portrait: '',
+    name: '', race: '', class: '', level: 1, background: '', alignment: '',
+    ac: 10, speed: 30, hitDice: '1d8',
+    abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+    hpMax: 10, hpCurrent: 10, hpTemp: 0,
+    saveProf: {}, skillProf: {},
+    equipment: '', features: '', notes: '',
+  };
+}
+
+function mod(score) {
+  return Math.floor(((parseInt(score, 10) || 10) - 10) / 2);
+}
+
+// Merge an incoming patch onto an existing character, keeping the
+// shape sane. Only known fields are copied over; everything is
+// coerced/clamped so a malformed client message can't corrupt state
+// for everyone else at the table.
+function sanitizeCharacterPatch(existing, patch) {
+  const next = { ...existing };
+
+  // Portrait: a small base64 image data URL (the client downsizes to
+  // ~256px before sending), or '' to remove it. Anything else is ignored.
+  if (typeof patch.portrait === 'string') {
+    if (patch.portrait === '') {
+      next.portrait = '';
+    } else if (
+      patch.portrait.length <= 200000 &&
+      /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(patch.portrait)
+    ) {
+      next.portrait = patch.portrait;
+    }
+  }
+
+  if (typeof patch.name === 'string') next.name = patch.name.slice(0, 60);
+  if (typeof patch.race === 'string') next.race = patch.race.slice(0, 40);
+  if (typeof patch.class === 'string') next.class = patch.class.slice(0, 40);
+  if (patch.level !== undefined) {
+    next.level = Math.max(1, Math.min(20, parseInt(patch.level, 10) || 1));
+  }
+  if (typeof patch.background === 'string') next.background = patch.background.slice(0, 60);
+  if (typeof patch.alignment === 'string') next.alignment = patch.alignment.slice(0, 40);
+  if (patch.ac !== undefined) next.ac = parseInt(patch.ac, 10) || 10;
+  if (patch.speed !== undefined) next.speed = parseInt(patch.speed, 10) || 30;
+  if (typeof patch.hitDice === 'string') next.hitDice = patch.hitDice.slice(0, 20);
+  if (patch.hpMax !== undefined) next.hpMax = Math.max(1, parseInt(patch.hpMax, 10) || 1);
+  if (patch.hpCurrent !== undefined) next.hpCurrent = Math.max(0, parseInt(patch.hpCurrent, 10) || 0);
+  if (patch.hpTemp !== undefined) next.hpTemp = Math.max(0, parseInt(patch.hpTemp, 10) || 0);
+  if (typeof patch.equipment === 'string') next.equipment = patch.equipment.slice(0, 4000);
+  if (typeof patch.features === 'string') next.features = patch.features.slice(0, 4000);
+  if (typeof patch.notes === 'string') next.notes = patch.notes.slice(0, 4000);
+
+  if (patch.abilities && typeof patch.abilities === 'object') {
+    next.abilities = { ...existing.abilities };
+    ABILITY_KEYS.forEach((k) => {
+      if (patch.abilities[k] !== undefined) {
+        next.abilities[k] = Math.max(1, Math.min(30, parseInt(patch.abilities[k], 10) || 10));
+      }
+    });
+  }
+  if (patch.saveProf && typeof patch.saveProf === 'object') {
+    next.saveProf = { ...existing.saveProf };
+    ABILITY_KEYS.forEach((k) => {
+      if (patch.saveProf[k] !== undefined) next.saveProf[k] = !!patch.saveProf[k];
+    });
+  }
+  if (patch.skillProf && typeof patch.skillProf === 'object') {
+    next.skillProf = { ...existing.skillProf };
+    Object.keys(patch.skillProf).forEach((k) => {
+      next.skillProf[String(k).slice(0, 40)] = !!patch.skillProf[k];
+    });
+  }
+
+  return next;
+}
+
+module.exports = { ABILITY_KEYS, blankCharacter, mod, sanitizeCharacterPatch };
