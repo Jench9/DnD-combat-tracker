@@ -28,12 +28,51 @@ test('mapDndBeyondData maps core fields', () => {
   assert.strictEqual(patch.abilities.cha, 20);
   assert.strictEqual(patch.level, 3);
   assert.strictEqual(patch.class, 'Rogue 3');
-  assert.strictEqual(patch.hpCurrent, 15);
+  // CON 13 (+1) x level 3 added to base 20
+  assert.strictEqual(patch.hpMax, 23);
+  assert.strictEqual(patch.hpCurrent, 18);
   assert.ok(patch.skillProf.Stealth);
   assert.ok(patch.saveProf.dex);
   assert.strictEqual(patch.equipment, 'Dagger x3');
   assert.strictEqual(patch.features, 'Sneak Attack');
   assert.match(notesPrefix, /best-effort/);
+});
+
+test('mapDndBeyondData HP: per-level bonuses and override', () => {
+  const base = {
+    stats: [1, 2, 3, 4, 5, 6].map((id) => ({ id, value: id === 3 ? 16 : 10 })),
+    classes: [{ level: 4, definition: { name: 'Fighter', hitDice: 10 } }],
+    baseHitPoints: 34,
+    modifiers: { feat: [{ type: 'bonus', subType: 'hit-points-per-level', value: 2 }] },
+  };
+  // 34 + (CON +3 + Tough 2) * 4
+  assert.strictEqual(mapDndBeyondData(base).patch.hpMax, 54);
+  assert.strictEqual(mapDndBeyondData({ ...base, overrideHitPoints: 40 }).patch.hpMax, 40);
+});
+
+test('refreshImported updates stats but keeps table state', () => {
+  const service = require('../src/features/characters/service');
+  const lvl = (level, base) => mapDndBeyondData({
+    name: 'Brann',
+    stats: [1, 2, 3, 4, 5, 6].map((id) => ({ id, value: id === 3 ? 14 : 10 })),
+    classes: [{ level, definition: { name: 'Fighter', hitDice: 10 } }],
+    baseHitPoints: base,
+  }, '555').patch;
+  const ch = service.addImported(lvl(3, 28), 'Imported.');
+  assert.strictEqual(ch.ddbId, '555');
+  assert.strictEqual(ch.hpMax, 34);
+  service.update(ch.id, { hpCurrent: 24, hpTemp: 5, notes: 'my notes' });
+
+  const up = service.refreshImported(ch.id, lvl(4, 34));
+  assert.strictEqual(up.id, ch.id);
+  assert.strictEqual(up.level, 4);
+  assert.strictEqual(up.hpMax, 42);
+  assert.strictEqual(up.hpCurrent, 32); // 10 damage carried over
+  assert.strictEqual(up.hpTemp, 5);
+  assert.strictEqual(up.notes, 'my notes');
+  assert.strictEqual(up.class, 'Fighter 4');
+  assert.strictEqual(service.refreshImported('missing', lvl(4, 34)), null);
+  service.remove(ch.id);
 });
 
 test('mapPdfFormFields uses aliases, level fallback and leftovers', () => {
@@ -60,6 +99,11 @@ test('REST import validation errors', async () => {
   let r = await fetch(`${base}/api/import/dndbeyond`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input: 'nope' }) });
   assert.strictEqual(r.status, 400);
   assert.strictEqual((await r.json()).error, 'Paste a D&D Beyond character URL or ID.');
+  r = await fetch(`${base}/api/import/dndbeyond/refresh`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ characterId: 'nope' }) });
+  assert.strictEqual(r.status, 404);
+  const ch = require('../src/features/characters/service').addImported({ name: 'Unlinked' });
+  r = await fetch(`${base}/api/import/dndbeyond/refresh`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ characterId: ch.id }) });
+  assert.strictEqual(r.status, 400);
   r = await fetch(`${base}/api/import/pdf`, { method: 'POST', body: new FormData() });
   assert.strictEqual(r.status, 400);
   assert.strictEqual((await r.json()).error, 'No file uploaded.');

@@ -79,7 +79,21 @@ function estimateArmorClass(data, abilities) {
   return ac;
 }
 
-function mapDndBeyondData(data) {
+// D&D Beyond's baseHitPoints is only the rolled/fixed hit-die total;
+// the Constitution modifier (per level) and per-level bonuses such as
+// the Tough feat are applied client-side. overrideHitPoints wins outright.
+function computeMaxHitPoints(data, abilities, level) {
+  if (typeof data.overrideHitPoints === 'number') return data.overrideHitPoints;
+  const conMod = Math.floor((abilities.con - 10) / 2);
+  const perLevelBonus = (data.modifiers && typeof data.modifiers === 'object'
+    ? Object.values(data.modifiers).flat()
+    : [])
+    .filter((m) => m && m.type === 'bonus' && m.subType === 'hit-points-per-level')
+    .reduce((sum, m) => sum + (Number(m.value) || 0), 0);
+  return Math.max(1, (data.baseHitPoints || 0) + (data.bonusHitPoints || 0) + (conMod + perLevelBonus) * level);
+}
+
+function mapDndBeyondData(data, ddbId) {
   const abilities = {};
   ABILITY_KEYS.forEach((key, i) => {
     abilities[key] = ddbStatValue(data, i + 1);
@@ -93,6 +107,7 @@ function mapDndBeyondData(data) {
 
   const { saveProf, skillProf } = mapProficiencies(data);
   const ac = estimateArmorClass(data, abilities);
+  const hpMax = computeMaxHitPoints(data, abilities, level);
 
   const inventory = Array.isArray(data.inventory) ? data.inventory : [];
   const equipmentText = inventory
@@ -121,13 +136,14 @@ function mapDndBeyondData(data) {
       speed: (data.race && data.race.weightSpeeds && data.race.weightSpeeds.normal && data.race.weightSpeeds.normal.walk) || 30,
       hitDice: classes[0] ? `${level}d${(classes[0].definition && classes[0].definition.hitDice) || 8}` : '',
       abilities,
-      hpMax: (data.baseHitPoints || 0) + (data.bonusHitPoints || 0),
-      hpCurrent: Math.max(0, (data.baseHitPoints || 0) + (data.bonusHitPoints || 0) - (data.removedHitPoints || 0)),
+      hpMax,
+      hpCurrent: Math.max(0, hpMax - (data.removedHitPoints || 0)),
       hpTemp: data.temporaryHitPoints || 0,
       saveProf,
       skillProf,
       equipment: equipmentText,
       features: features.join('\n'),
+      ddbId: String(ddbId || data.id || ''),
     },
     notesPrefix: 'Imported from D&D Beyond. AC and proficiencies are best-effort — please double-check them.',
   };

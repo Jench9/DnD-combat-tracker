@@ -2,7 +2,7 @@
 import { $, uid } from '../core/dom.js';
 import { renderNav } from '../core/nav.js';
 import { connectSocket } from '../core/socket.js';
-import { store, findChar, cur, mergePending, blankCharacter } from './store.js';
+import { store, findChar, cur, mergePending, blankCharacter, clearTouched } from './store.js';
 import { renderCharGrid } from './list.js';
 import { initEditor, openEditor, refreshEditorFromServer, showListView } from './editor/index.js';
 import { initImport } from './import.js';
@@ -58,6 +58,47 @@ $('sendToCombatBtn').addEventListener('click', () => {
   if (!store.activeCharId) return;
   store.send('sendToCombat', { id: store.activeCharId });
   window.location.href = 'combat.html';
+});
+
+// Re-import the open character from D&D Beyond (e.g. after leveling up).
+// Characters not yet linked ask for their URL first.
+$('ddbSyncBtn').addEventListener('click', async () => {
+  const ch = cur();
+  if (!ch) return;
+  let input;
+  if (!ch.ddbId) {
+    input = prompt('Paste the D&D Beyond character URL or ID to link "' + (ch.name || 'this character') + '":');
+    if (!input || !input.trim()) return;
+  } else if (!confirm('Update "' + (ch.name || 'this character') + '" from D&D Beyond?\n\n'
+    + 'Stats, proficiencies, equipment and features will be replaced with what\'s on D&D Beyond. '
+    + 'Portrait, notes, temp HP and damage taken are kept.')) {
+    return;
+  }
+  const btn = $('ddbSyncBtn');
+  btn.disabled = true;
+  btn.textContent = 'Syncing…';
+  try {
+    const resp = await fetch('/api/import/dndbeyond/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ characterId: ch.id, input }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      alert(data.error || 'Update failed.');
+    } else {
+      const idx = store.characters.findIndex((c) => c.id === data.character.id);
+      if (idx !== -1) store.characters[idx] = data.character;
+      clearTouched();
+      refreshEditorFromServer();
+      renderCharGrid(openEditor);
+    }
+  } catch (err) {
+    alert('Could not reach the server.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sync from D&D Beyond';
+  }
 });
 
 // On import success, adopt the character the server handed back and jump

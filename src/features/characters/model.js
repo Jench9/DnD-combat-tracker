@@ -5,7 +5,8 @@
 //   abilities: { str, dex, con, int, wis, cha },
 //   hpMax, hpCurrent, hpTemp,
 //   saveProf: { str: bool, ... }, skillProf: { 'Stealth': bool, ... },
-//   equipment, features, notes }
+//   equipment, features, notes,
+//   ddbId (D&D Beyond character id, '' if not linked) }
 
 const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
@@ -19,6 +20,7 @@ function blankCharacter(id) {
     hpMax: 10, hpCurrent: 10, hpTemp: 0,
     saveProf: {}, skillProf: {},
     equipment: '', features: '', notes: '',
+    ddbId: '',
   };
 }
 
@@ -63,6 +65,7 @@ function sanitizeCharacterPatch(existing, patch) {
   if (typeof patch.equipment === 'string') next.equipment = patch.equipment.slice(0, 4000);
   if (typeof patch.features === 'string') next.features = patch.features.slice(0, 4000);
   if (typeof patch.notes === 'string') next.notes = patch.notes.slice(0, 4000);
+  if (typeof patch.ddbId === 'string' && /^\d{0,20}$/.test(patch.ddbId)) next.ddbId = patch.ddbId;
 
   if (patch.abilities && typeof patch.abilities === 'object') {
     next.abilities = { ...existing.abilities };

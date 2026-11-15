@@ -55,5 +55,6 @@ export function blankCharacter(id) {
     hpMax: 10, hpCurrent: 10, hpTemp: 0,
     saveProf: {}, skillProf: {},
     equipment: '', features: '', notes: '',
+    ddbId: '',
   };
 }

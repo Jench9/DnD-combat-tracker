@@ -43,4 +43,21 @@ function addImported(mappedPatch, notesPrefix) {
   return ch;
 }
 
-module.exports = { all, find, addBlank, update, remove, addImported };
+// Re-sync an existing character from a fresh import. The table's own
+// state wins for things the source doesn't own or that change mid-session:
+// portrait, notes, temp HP, and damage taken (so a level-up adds the new
+// max HP without healing anyone). Returns the updated character, or null.
+function refreshImported(id, mappedPatch) {
+  const idx = characters.findIndex((c) => c.id === id);
+  if (idx === -1) return null;
+  const old = characters[idx];
+  const damage = Math.max(0, old.hpMax - old.hpCurrent);
+  const { portrait, notes, hpTemp, ...patch } = mappedPatch;
+  const fresh = { ...blankCharacter(id), portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp };
+  let ch = sanitizeCharacterPatch(fresh, patch);
+  ch.hpCurrent = Math.max(0, ch.hpMax - damage);
+  characters[idx] = ch;
+  return ch;
+}
+
+module.exports = { all, find, addBlank, update, remove, addImported, refreshImported };
