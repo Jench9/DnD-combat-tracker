@@ -9,7 +9,12 @@
 //   ddbId (D&D Beyond character id, '' if not linked),
 //   campaignId ('' = no campaign) }
 
+const { MAX_PORTRAIT_BYTES } = require('../../config');
+
 const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+// Base64 length of a MAX_PORTRAIT_BYTES image plus room for the
+// "data:image/jpeg;base64," prefix.
+const MAX_PORTRAIT_CHARS = Math.ceil(MAX_PORTRAIT_BYTES / 3) * 4 + 32;
 
 function blankCharacter(id) {
   return {
@@ -43,7 +48,7 @@ function sanitizeCharacterPatch(existing, patch) {
     if (patch.portrait === '') {
       next.portrait = '';
     } else if (
-      patch.portrait.length <= 200000 &&
+      patch.portrait.length <= MAX_PORTRAIT_CHARS &&
       /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(patch.portrait)
     ) {
       next.portrait = patch.portrait;
@@ -94,4 +99,4 @@ function sanitizeCharacterPatch(existing, patch) {
   return next;
 }
 
-module.exports = { ABILITY_KEYS, blankCharacter, mod, sanitizeCharacterPatch };
+module.exports = { MAX_PORTRAIT_CHARS, ABILITY_KEYS, blankCharacter, mod, sanitizeCharacterPatch };

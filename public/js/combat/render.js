@@ -1,5 +1,6 @@
 // Pure view: draws the combatant list from a combat state.
-// `send(type, payload)` talks to the server; `rerender()` redraws the list.
+// `send(type, payload)` talks to the server; `rerender()` redraws the list;
+// `portraitFor(combatant)` returns a portrait data URL or ''.
 import { CONDITIONS, conditionDescription } from './conditions.js';
 
 function mkHpBtn(label, fn) {
@@ -66,7 +67,7 @@ function renderConditions(c, send, rerender) {
   return condWrap;
 }
 
-function renderRow(c, idx, state, send, rerender) {
+function renderRow(c, idx, state, send, rerender, portraitFor) {
   const row = document.createElement('div');
   row.className = 'row' + (idx === state.activeIndex ? ' active' : '') + (c.hp <= 0 ? ' down' : '');
 
@@ -96,9 +97,18 @@ function renderRow(c, idx, state, send, rerender) {
     marker.textContent = '▶';
     nameLine.appendChild(marker);
   }
-  const dot = document.createElement('span');
-  dot.className = c.type === 'pc' ? 'pc-dot' : 'mon-dot';
-  nameLine.appendChild(dot);
+  const portrait = portraitFor(c);
+  if (portrait) {
+    const img = document.createElement('img');
+    img.className = 'c-portrait' + (c.type === 'pc' ? ' pc' : ' mon');
+    img.src = portrait;
+    img.alt = '';
+    nameLine.appendChild(img);
+  } else {
+    const dot = document.createElement('span');
+    dot.className = c.type === 'pc' ? 'pc-dot' : 'mon-dot';
+    nameLine.appendChild(dot);
+  }
 
   const nameInput = document.createElement('input');
   nameInput.className = 'cname';
@@ -163,7 +173,7 @@ function renderRow(c, idx, state, send, rerender) {
   return row;
 }
 
-export function renderCombat(state, { send, rerender }) {
+export function renderCombat(state, { send, rerender, portraitFor = () => '' }) {
   document.getElementById('roundNum').textContent = state.round;
   const list = document.getElementById('list');
   list.innerHTML = '';
@@ -179,6 +189,6 @@ export function renderCombat(state, { send, rerender }) {
   if (state.activeIndex >= state.combatants.length) state.activeIndex = 0;
 
   state.combatants.forEach((c, idx) => {
-    list.appendChild(renderRow(c, idx, state, send, rerender));
+    list.appendChild(renderRow(c, idx, state, send, rerender, portraitFor));
   });
 }

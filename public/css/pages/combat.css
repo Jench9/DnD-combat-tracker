@@ -143,6 +143,13 @@
   display: inline-block;
 }
 .pc-dot { background: var(--good); }
+.c-portrait {
+  width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+  border: 2px solid var(--line); background: var(--bg);
+}
+.c-portrait.pc { border-color: var(--good); }
+.c-portrait.mon { border-color: var(--wax); }
+.row.active .c-portrait { border-color: var(--gold); }
 .mon-dot { background: var(--wax); }
 .ac-tag {
   font-size: 12px;

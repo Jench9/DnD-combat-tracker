@@ -44,14 +44,6 @@ function renderCard(ch, onOpen) {
   sub.textContent = [ch.race, ch.class].filter(Boolean).join(' · ') || 'No race/class set';
   body.appendChild(sub);
 
-  // When viewing every campaign at once, say which one each card is in.
-  if (store.campaignFilter === ALL && campaignName(ch.campaignId)) {
-    const tag = document.createElement('div');
-    tag.className = 'campaign-tag';
-    tag.textContent = campaignName(ch.campaignId);
-    body.appendChild(tag);
-  }
-
   const stats = document.createElement('div');
   stats.className = 'char-card-stats';
   stats.innerHTML =
@@ -89,5 +81,29 @@ export function renderCharGrid(onOpen) {
     grid.appendChild(empty);
     return;
   }
-  shown.forEach((ch) => grid.appendChild(renderCard(ch, onOpen)));
+  if (store.campaignFilter !== ALL) {
+    shown.forEach((ch) => grid.appendChild(renderCard(ch, onOpen)));
+    return;
+  }
+
+  // "All characters": one section per campaign, characters without one
+  // first. Empty sections are skipped.
+  const groups = [
+    { name: 'No campaign', characters: shown.filter((ch) => !campaignName(ch.campaignId)) },
+    ...store.campaigns.map((c) => ({ name: c.name, characters: shown.filter((ch) => ch.campaignId === c.id) })),
+  ].filter((g) => g.characters.length);
+  const showHeaders = store.campaigns.length > 0;
+  groups.forEach((g) => {
+    if (showHeaders) {
+      const head = document.createElement('div');
+      head.className = 'char-group-head';
+      head.textContent = g.name;
+      const count = document.createElement('span');
+      count.className = 'char-group-count';
+      count.textContent = g.characters.length;
+      head.appendChild(count);
+      grid.appendChild(head);
+    }
+    g.characters.forEach((ch) => grid.appendChild(renderCard(ch, onOpen)));
+  });
 }

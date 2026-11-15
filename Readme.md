@@ -27,7 +27,7 @@ npm ci
 npm start
 ```
 
-Requires Node 18+.
+Requires Node 20.9+ (for `sharp`, which resizes imported avatars; on older Node the app still runs but D&D Beyond avatars are skipped).
 
 ### Tests
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const characters = require('../../characters/service');
 const { extractDdbCharacterId, mapDndBeyondData } = require('./mapper');
-const { fetchCharacter } = require('./client');
+const { fetchCharacter, fetchAvatar } = require('./client');
 
 // Fetches and maps a D&D Beyond character. Resolves to { mapped } or
 // { status, error } ready to send back to the client.
@@ -22,7 +22,10 @@ async function loadDdbCharacter(ddbId) {
     };
   }
 
-  return { mapped: mapDndBeyondData(json.data, ddbId) };
+  const mapped = mapDndBeyondData(json.data, ddbId);
+  const portrait = mapped.avatarUrl ? await fetchAvatar(mapped.avatarUrl) : '';
+  if (portrait) mapped.patch.portrait = portrait;
+  return { mapped };
 }
 
 // POST /api/import/dndbeyond          { input: <character URL or numeric id>, campaignId? }
@@ -63,6 +66,8 @@ function createDndBeyondRouter({ onCharactersChanged }) {
     try {
       const { mapped, status, error } = await loadDdbCharacter(ddbId);
       if (error) return res.status(status).json({ error });
+      // A portrait set in the app wins; D&D Beyond's only fills an empty one.
+      if (existing.portrait) delete mapped.patch.portrait;
       const ch = characters.refreshImported(existing.id, mapped.patch);
       onCharactersChanged();
       res.json({ character: ch });

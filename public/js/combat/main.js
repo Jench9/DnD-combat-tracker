@@ -16,11 +16,16 @@ CONDITIONS.forEach(([name, desc]) => {
 });
 
 let state = { round: 1, activeIndex: 0, combatants: [] };
+let characters = []; // saved sheets, for portraits of PCs added from them
 
 const socket = connectSocket({
   handlers: {
     state: (msg) => { state = msg.state; render(); setPartyData({ combatants: state.combatants }); },
-    charState: (msg) => setPartyData({ characters: msg.characters }),
+    charState: (msg) => {
+      characters = msg.characters;
+      render(); // portraits may have changed
+      setPartyData({ characters });
+    },
     campaignState: (msg) => setPartyData({ campaigns: msg.campaigns }),
   },
 });
@@ -29,11 +34,15 @@ const send = socket.send;
 // Don't rebuild the list while someone is typing in it (initiative or
 // name); catch up as soon as they leave the field.
 let stale = false;
+function portraitFor(c) {
+  const ch = c.characterId && characters.find((x) => x.id === c.characterId);
+  return (ch && ch.portrait) || '';
+}
 function render() {
   const el = document.activeElement;
   if (el && el.tagName === 'INPUT' && $('list').contains(el)) { stale = true; return; }
   stale = false;
-  renderCombat(state, { send, rerender: render });
+  renderCombat(state, { send, rerender: render, portraitFor });
 }
 $('list').addEventListener('focusout', () => setTimeout(() => { if (stale) render(); }, 0));
 

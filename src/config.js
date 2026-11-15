@@ -8,4 +8,7 @@ module.exports = {
   DATA_DIR: process.env.DATA_DIR || path.join(__dirname, '..', 'data'),
   JSON_BODY_LIMIT: '2mb',
   MAX_PDF_BYTES: 15 * 1024 * 1024, // 15MB
+  // Largest portrait image (uploaded or imported). Stored as a base64 data
+  // URL, which is ~4/3 the size; see MAX_PORTRAIT_CHARS in characters/model.
+  MAX_PORTRAIT_BYTES: 200 * 1024, // 200KB
 };

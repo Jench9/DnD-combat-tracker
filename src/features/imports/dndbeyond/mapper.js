@@ -124,7 +124,11 @@ function mapDndBeyondData(data, ddbId) {
     if (f.definition && f.definition.name) features.push(f.definition.name);
   });
 
+  // v5 payloads keep it under decorations; older ones at the top level.
+  const avatarUrl = (data.decorations && data.decorations.avatarUrl) || data.avatarUrl || '';
+
   return {
+    avatarUrl: typeof avatarUrl === 'string' ? avatarUrl : '',
     patch: {
       name: data.name || '',
       race: (data.race && (data.race.fullName || data.race.baseRaceName)) || '',

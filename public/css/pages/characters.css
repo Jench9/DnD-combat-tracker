@@ -9,7 +9,16 @@ input[type=number].bare::-webkit-outer-spin-button { -webkit-appearance: none; m
 .campaign-bar { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .campaign-bar .field { flex: 1 1 220px; max-width: 320px; margin: 0; }
 .campaign-bar .btn { height: 34px; }
-.campaign-tag { color: var(--ink-soft); font-size: 11.5px; font-style: italic; margin-top: 2px; }
+.char-group-head {
+  grid-column: 1 / -1;
+  font-family: var(--font-display); font-weight: 700; font-size: 17px;
+  padding-bottom: 4px; border-bottom: 2px solid var(--line); margin-top: 10px;
+}
+.char-group-head:first-child { margin-top: 0; }
+.char-group-count {
+  margin-left: 8px; font-size: 11.5px; color: var(--ink-soft); vertical-align: middle;
+  background: var(--bg-panel); border: 1px solid var(--line); border-radius: 10px; padding: 0 7px;
+}
 
 .char-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 620px) { .char-grid { grid-template-columns: 1fr; } }
