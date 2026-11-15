@@ -1,6 +1,7 @@
 // Client -> server combat actions. Each takes a payload and mutates state.
 const svc = require('./service');
 const characters = require('../characters/service');
+const monsters = require('../monsters/service');
 const { mod } = require('../characters/model');
 
 const clampInit = (n) => Math.max(-10, Math.min(99, Math.round(n)));
@@ -39,6 +40,31 @@ module.exports = {
       type: 'pc',
       characterId: ch.id,
     });
+  },
+
+  // Add `count` (1–20) copies of a library monster, each with its own
+  // initiative roll (d20 + bonus) unless `init` is given. Copies are
+  // numbered ("Goblin 1", "Goblin 2"…) when there's more than one of it.
+  addMonsterToCombat(payload) {
+    const m = monsters.find(payload.monsterId);
+    if (!m) return;
+    const count = Math.max(1, Math.min(20, parseInt(payload.count, 10) || 1));
+    const already = svc.getState().combatants.filter((c) => c.monsterId === m.id).length;
+    const name = (m.name || 'Monster').slice(0, 26);
+    for (let i = 0; i < count; i++) {
+      const init = typeof payload.init === 'number' && Number.isFinite(payload.init)
+        ? payload.init
+        : rollD20() + m.initBonus;
+      svc.addCombatant({
+        name: already + count > 1 ? `${name} ${already + i + 1}` : name,
+        init: clampInit(init),
+        ac: m.ac,
+        hp: m.hpMax,
+        maxHp: m.hpMax,
+        type: 'monster',
+        monsterId: m.id,
+      });
+    }
   },
 
   // Change a combatant's initiative (e.g. a re-roll or a typo) and re-sort.

@@ -10,6 +10,7 @@ const { createApp } = require('../src/app');
 // Starts the app on a random port. Returns { port, close }.
 async function startServer() {
   require('../src/features/combat/service').reset(); // state is module-level; start each test clean
+  require('../src/features/map/service').reset();
   const { server, hub } = createApp();
   await new Promise((resolve) => server.listen(0, resolve));
   const { port } = server.address();

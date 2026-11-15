@@ -1,0 +1,88 @@
+/* map.css — styles specific to the battle map page. */
+
+.wrap.wide { max-width: 1100px; }
+
+.round-box { display: flex; align-items: center; gap: 14px; }
+.turn-info { text-align: right; }
+.turn-info .lbl { font-size: 12px; color: var(--ink-soft); }
+.turn-info .lbl b { color: var(--wax); font-family: var(--font-display); font-size: 15px; }
+.turn-name { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--gold); }
+
+.panel-title {
+  font-family: var(--font-display); font-weight: 700; font-size: 13px;
+  letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink-soft);
+}
+.tray-panel { padding: 14px 18px; }
+.tray-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.map-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.size-field { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); }
+.size-field input {
+  width: 58px; padding: 5px 6px; border: 1px solid var(--line); border-radius: 4px;
+  background: var(--bg); color: var(--ink); font: inherit; text-align: center;
+}
+
+.tray {
+  display: flex; flex-wrap: wrap; gap: 12px; min-height: 64px; padding: 8px;
+  border: 2px dashed var(--line); border-radius: 8px;
+}
+.tray.drop-hover { border-color: var(--gold); background: rgba(212, 174, 76, 0.08); }
+.tray-item { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 64px; }
+.tray-item .token { width: 46px; height: 46px; }
+.tray-name { font-size: 11.5px; text-align: center; line-height: 1.2; overflow-wrap: anywhere; }
+.tray-empty { color: var(--ink-soft); font-size: 13px; align-self: center; padding: 0 6px; }
+
+/* ---- board ---- */
+.board-scroll { overflow-x: auto; padding-bottom: 6px; }
+.board {
+  --cell: 40px;
+  display: grid;
+  grid-template-columns: 26px repeat(var(--cols), var(--cell));
+  grid-auto-rows: var(--cell);
+  grid-template-rows: 20px;
+  width: max-content;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  user-select: none;
+}
+.board .lbl {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 11px; color: var(--ink-soft);
+}
+.cell {
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.cell.drop-hover { background: rgba(212, 174, 76, 0.22); }
+.map-hint { color: var(--ink-soft); font-size: 12px; margin-top: 8px; }
+
+/* ---- tokens ---- */
+.token {
+  width: calc(var(--cell, 40px) - 6px); height: calc(var(--cell, 40px) - 6px);
+  border-radius: 50%; position: relative; flex-shrink: 0;
+  border: 3px solid var(--line); background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  cursor: grab; touch-action: none; outline: none;
+  box-shadow: 0 1px 3px var(--card-shadow);
+}
+.token.pc { border-color: var(--good); }
+.token.mon { border-color: var(--wax); }
+.token img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; pointer-events: none; }
+.token .ini { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--ink); pointer-events: none; }
+.token.active { box-shadow: 0 0 0 3px var(--gold-glow), 0 0 10px var(--gold-glow); }
+.token.selected { outline: 2px dashed var(--blue); outline-offset: 3px; }
+.token.down { filter: grayscale(1); opacity: 0.55; }
+.token.dragging { opacity: 0.25; }
+.token.ghost {
+  position: fixed; z-index: 100; pointer-events: none; cursor: grabbing;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.tok-hp {
+  position: absolute; left: 10%; right: 10%; bottom: -5px; height: 4px;
+  background: var(--line); border-radius: 2px; overflow: hidden; pointer-events: none;
+}
+.tok-hp span { display: block; height: 100%; background: var(--good); }
+.tok-hp span.mid { background: var(--gold); }
+.tok-hp span.low { background: var(--wax); }

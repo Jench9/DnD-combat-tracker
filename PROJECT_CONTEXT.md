@@ -8,7 +8,9 @@ A small self-hosted web app for running D&D 5e sessions. Everyone at the table o
 
 - **Home** (`index.html`): landing page with a card per tool (generated from the tool registry).
 - **Combat Tracker** (`combat.html`): initiative order, HP, AC, conditions, death saves, rounds. PCs added from a sheet show its portrait (the client looks it up by `characterId` in `charState` rather than copying the image into combat state, which is broadcast on every HP click). Saved characters are added from here ("Add characters" panel, grouped by campaign with an "Add all" per campaign, with each player's initiative roll); every combatant's initiative is editable.
-- **Character Sheets** (`characters.html`): create, edit and store full character sheets with portraits, import from D&D Beyond or a PDF, and send a character into the combat tracker.
+- **Character Sheets** (`characters.html`): create, edit and store full character sheets with portraits, grouped into campaigns, import from D&D Beyond or a PDF.
+- **Monsters** (`monsters.html`): saved monster library `{ id, name, ac, hpMax, initBonus, icon, notes }` (feature `monsters`, wire `monsterState`/`monsters`, saved to `monsters.json`; actions `addMonster {id, patch?}` with a client-made id, `updateMonster {id, patch}`, `deleteMonster`). The combat page's "Add monsters" panel sends `addMonsterToCombat { monsterId, count (1–20), init? }`: each copy rolls d20 + bonus, copies are numbered ("Goblin 1"…) when there's more than one, combatants keep `monsterId`.
+- **Battle Map** (`map.html`): feature `map` (wire `mapState`/`map`, **memory only**): `{ cols, rows, positions: { [combatantId]: { x, y } } }`. Actions `placeToken { id, x, y }` (place or move; integer, in bounds, existing combatant, one token per cell), `removeToken`, `setMapSize { cols, rows }` (5–50; tokens outside go back to the tray), `clearMap`. `snapshot()` prunes positions of combatants that no longer exist; combat's `removeCombatant`/`clearAll` also broadcast `map`. Client: drag with pointer events (mouse + touch), click a token then a cell, arrow keys / Delete / Esc for the selected token; moves are optimistic, the server echo wins; redraws are held during a drag. Tokens show the combatant's picture via `public/js/core/portraits.js` (character portrait by `characterId`, else monster icon by `monsterId`) — the combat list uses the same lookup.
 
 All state is shared live over a WebSocket. There are no accounts, no auth and no database.
 
@@ -23,22 +25,28 @@ adventurers-kit/
 │   ├── config.js              PORT, PUBLIC_DIR, JSON_BODY_LIMIT, MAX_PDF_BYTES
 │   ├── app.js                 Express + HTTP server + realtime hub; registers features and /api/import
 │   ├── core/ids.js            uid()
+│   ├── core/images.js         MAX_PORTRAIT_CHARS, isImageDataUrl, sanitizeImage (portraits + monster icons)
 │   ├── core/jsonStore.js      createJsonStore(name, fallback) → { load, save (debounced, atomic), flush }; flushAllStores()
 │   ├── realtime/hub.js        the only WebSocket code (feature plug-in contract documented at the top)
 │   └── features/
 │       ├── combat/            service.js (state), actions.js (handlers), index.js (descriptor)
 │       ├── characters/        model.js (blankCharacter, mod, sanitizeCharacterPatch), service.js, actions.js, index.js
+│       ├── campaigns/         service.js, actions.js, index.js
+│       ├── monsters/          model.js, service.js, actions.js, index.js
+│       ├── map/               service.js, actions.js, index.js
 │       └── imports/
 │           ├── index.js       mounts importers at /api/import/<source>
 │           ├── dndbeyond/     constants.js, mapper.js (pure), client.js (network), route.js
 │           └── pdf/           aliases.js, mapper.js (pure), reader.js (pdf-lib/pdf-parse), route.js
 ├── public/
-│   ├── index.html, combat.html, characters.html
-│   ├── css/ tokens.css, base.css, components.css, pages/{home,combat,characters}.css
+│   ├── index.html, combat.html, characters.html, monsters.html, map.html
+│   ├── css/ tokens.css, base.css, components.css, pages/{home,combat,characters,monsters,map}.css
 │   └── js/
-│       ├── core/              socket.js, dom.js, nav.js, tools.js (tool registry: drives nav + home cards)
+│       ├── core/              socket.js, dom.js, nav.js, tools.js (tool registry: drives nav + home cards), image.js (resizeToDataUrl), portraits.js
 │       ├── home/main.js
-│       ├── combat/            main.js, render.js, conditions.js, party.js (add-characters panel)
+│       ├── combat/            main.js, render.js, conditions.js, party.js (add characters), bestiary.js (add monsters)
+│       ├── monsters/main.js
+│       ├── map/               main.js, render.js, interact.js
 │       └── characters/        main.js, store.js, list.js, import.js, rules.js, editor/{index,fields,abilities,listEditor,portrait}.js
 ├── test/                      realtime, imports tests + helpers
 ├── package.json, package-lock.json   lock must stay in sync (see Docker)
@@ -64,7 +72,7 @@ services:
 - No volumes: code is baked into the image, so **every change needs `docker compose up -d --build`**, including edits to `public/*` and `src/*`.
 - Dockerfile (`node:20-alpine`, `WORKDIR /app`): copies `package.json` + `package-lock.json`, runs `npm ci --omit=dev`, then copies `server.js`, `src/` and `public/`. **A new top-level source folder must be added with another `COPY`.** `npm ci` fails if the lock file is out of sync; after adding a dependency run `npm install` locally before rebuilding.
 - **Campaigns** (`src/features/campaigns/`, wire `campaignState`/`campaigns`, saved to `campaigns.json`): `{ id, name }`; characters reference one via `campaignId` (`''` = none). Actions `addCampaign {id,name}`, `renameCampaign`, `deleteCampaign` (moves its characters to no campaign, also broadcasts `characters`). The characters page filters by a campaign dropdown (choice kept in localStorage; "All characters" shows sections, no campaign first); new characters and imports (`campaignId` in the D&D Beyond body / PDF form field) go into the selected campaign; D&D Beyond sync keeps the campaign.
-- **Characters persist to `DATA_DIR/characters.json`** (default `./data`, Docker volume `./data:/app/data`). `characters/service` loads it at require time (re-sanitized) and calls `persist()` after every mutation; `server.js` flushes pending writes on SIGINT/SIGTERM. Tests point `DATA_DIR` at a temp dir in `test/helpers.js`. **Combat state is still memory-only.**
+- **Characters persist to `DATA_DIR/characters.json`** (default `./data`, Docker volume `./data:/app/data`). `characters/service` loads it at require time (re-sanitized) and calls `persist()` after every mutation; `server.js` flushes pending writes on SIGINT/SIGTERM. Tests point `DATA_DIR` at a temp dir in `test/helpers.js`. **Combat state and map positions are still memory-only.**
 - `docker-compose.dev.yml` bind-mounts the project and runs `node --watch server.js`.
 - Logs: `docker compose logs -f combat-tracker`.
 
@@ -81,7 +89,7 @@ On every new connection the server sends both. Each page ignores the message typ
 
 `src/realtime/hub.js` takes a list of **features**. A feature is `{ name, wire: { type, key }, snapshot(), actions: { actionType(payload) }, alsoBroadcast?: { actionType: [featureNames] } }`. The hub builds an action → feature index (duplicate action names throw at startup), parses and validates incoming messages (non-JSON, non-object and unknown types are ignored), runs the action, then broadcasts that feature's slice plus any `alsoBroadcast` slices. REST routes can trigger a broadcast through `hub.broadcast(name)` (the importers do this via an `onCharactersChanged` callback).
 
-Layering inside a feature: `service.js` owns the state and plain operations; `actions.js` validates payloads and calls the service; `index.js` is the descriptor. Cross-feature dependencies: `combat/actions.js` → `characters/service.js` (for `addCharacterToCombat`) and `campaigns/actions.js` → `characters/service.js` (un-assigning on delete).
+Layering inside a feature: `service.js` owns the state and plain operations; `actions.js` validates payloads and calls the service; `index.js` is the descriptor. Cross-feature dependencies: `combat/actions.js` → `characters/service.js` + `monsters/service.js` (adding them to combat), `map/service.js` → `combat/service.js` (pruning tokens) and `campaigns/actions.js` → `characters/service.js` (un-assigning on delete).
 
 ### Combat state
 
@@ -131,18 +139,11 @@ Both importers create the character via `characters/service.addImported` using t
 
 **Design system** — D&D Beyond-inspired: dark top nav with a red underline on the active page, red accent (`--wax`), amber secondary (`--gold`), Roboto Condensed uppercase headings, Roboto body (Google Fonts), light/dark following the OS (`prefers-color-scheme`, `data-theme` overrides). Tokens live in `css/tokens.css` (`--bg`, `--bg-panel`, `--ink`, `--ink-soft`, `--line`, `--wax`, `--gold`, `--good`, `--blue`, `--nav-bg`); `base.css` and `components.css` are shared; each page has its own `css/pages/*.css`. Pages link the three shared sheets plus their own.
 
-## What has been verified
-
-- Refactor equivalence: the original single-file server and the refactored one were driven with the same scripted WebSocket sequence (combat, characters, sanitizer edge cases, sendToCombat, malformed messages) and produced identical broadcasts.
-- `npm test`: 9 tests (WebSocket flows for both features, bad input, importers' mappers, REST validation errors).
-- Headless Chromium run of all three pages: nav and home cards, adding/sorting combatants, HP, conditions, next turn, second client sync, character create/edit/derived values/equipment/features/portrait persisted on the server, PDF import with a generated fillable PDF, send to combat, dark theme on a phone-width viewport.
-
 ## Known gaps and caveats
 
 - **The D&D Beyond importer has never run against the real service** (the sandbox can't reach `dndbeyond.com`). Mapping logic and the bad-input path are tested; the live fetch is not. The user reported an error importing from D&D Beyond; with the new logging, `docker compose logs` should show the status/body. Cause not yet known.
 - D&D Beyond **AC is a best-effort estimate** from equipped armor and shield; skill/save proficiencies come from scanning `modifiers` arrays and may miss sources. The import adds a note saying so.
 - PDF alias table is heuristic; the official sheet's exact field names were not verified. Flattened/scanned PDFs only yield raw text.
-- No persistence: restarts wipe everything.
 - No authentication or per-user ownership.
 - Mobile layout got one dark-mode phone-width look at the character list only.
 - Fonts come from Google Fonts at runtime; offline they fall back to system fonts.

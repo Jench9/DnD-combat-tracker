@@ -9,15 +9,18 @@
   padding: 0 6px;
   margin-bottom: 22px;
   box-shadow: 0 2px 6px var(--card-shadow);
+  overflow-x: auto; /* phones: scroll the tabs rather than wrap them */
+  scrollbar-width: none;
 }
 .nav-btn {
-  flex: 1;
+  flex: 1 0 auto;
+  white-space: nowrap;
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 13.5px;
-  letter-spacing: 0.9px;
+  letter-spacing: 0.6px;
   text-transform: uppercase;
-  padding: 14px 12px 11px;
+  padding: 14px 10px 11px;
   color: var(--nav-ink);
   text-decoration: none;
   border-bottom: 3px solid transparent;

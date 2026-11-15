@@ -6,4 +6,6 @@ module.exports = {
   wire: { type: 'state', key: 'state' },
   snapshot: service.getState,
   actions,
+  // Removing combatants also takes their tokens off the map.
+  alsoBroadcast: { removeCombatant: ['map'], clearAll: ['map'] },
 };

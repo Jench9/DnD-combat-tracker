@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monsters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/monsters.css">
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="app-nav" data-active="monsters"></nav>
+
+  <header>
+    <div>
+      <h1>Monsters</h1>
+      <div class="tagline">Your saved monsters, ready to drop into a fight from the Combat Tracker</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <span class="conn-status"><span class="conn-dot" id="connDot"></span><span id="connLabel">Connecting…</span></span>
+      <button class="btn" id="newMonsterBtn">+ New monster</button>
+    </div>
+  </header>
+
+  <div class="panel mon-editor" id="editor" hidden>
+    <div class="mon-editor-main">
+      <div class="icon-col">
+        <button type="button" class="mon-icon big" id="iconBtn" title="Change icon">
+          <img id="iconImg" alt="" hidden>
+          <span id="iconPh">Add<br>icon</span>
+        </button>
+        <input type="file" id="iconInput" accept="image/*" hidden>
+        <button type="button" class="link-btn" id="iconRemove" hidden>Remove</button>
+      </div>
+      <div class="mon-fields">
+        <div class="field wide"><label for="mName">Name</label><input id="mName" type="text" maxlength="40" placeholder="Goblin"></div>
+        <div class="field"><label for="mAC">AC</label><input id="mAC" type="number" min="0" max="40"></div>
+        <div class="field"><label for="mHP">Max HP</label><input id="mHP" type="number" min="1" max="9999"></div>
+        <div class="field"><label for="mInit">Initiative bonus</label><input id="mInit" type="number" min="-10" max="20"></div>
+        <div class="field wide"><label for="mNotes">Notes</label><textarea id="mNotes" rows="3" maxlength="2000" placeholder="Attacks, abilities, tactics…"></textarea></div>
+      </div>
+    </div>
+    <div class="mon-editor-actions">
+      <button class="btn secondary small" id="deleteMonsterBtn">Delete</button>
+      <button class="btn small" id="doneBtn">Done</button>
+    </div>
+  </div>
+
+  <div class="mon-grid" id="monGrid"></div>
+</div>
+
+<script type="module" src="js/monsters/main.js"></script>
+</body>
+</html>

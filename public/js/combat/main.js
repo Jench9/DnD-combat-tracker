@@ -4,6 +4,8 @@ import { connectSocket } from '../core/socket.js';
 import { CONDITIONS } from './conditions.js';
 import { renderCombat } from './render.js';
 import { initParty, setPartyData } from './party.js';
+import { initBestiary, setBestiary } from './bestiary.js';
+import { createPortraitLookup } from '../core/portraits.js';
 
 renderNav();
 
@@ -16,15 +18,20 @@ CONDITIONS.forEach(([name, desc]) => {
 });
 
 let state = { round: 1, activeIndex: 0, combatants: [] };
-let characters = []; // saved sheets, for portraits of PCs added from them
+const pics = createPortraitLookup();
 
 const socket = connectSocket({
   handlers: {
     state: (msg) => { state = msg.state; render(); setPartyData({ combatants: state.combatants }); },
     charState: (msg) => {
-      characters = msg.characters;
+      pics.setCharacters(msg.characters);
       render(); // portraits may have changed
-      setPartyData({ characters });
+      setPartyData({ characters: msg.characters });
+    },
+    monsterState: (msg) => {
+      pics.setMonsters(msg.monsters);
+      render();
+      setBestiary(msg.monsters);
     },
     campaignState: (msg) => setPartyData({ campaigns: msg.campaigns }),
   },
@@ -34,10 +41,7 @@ const send = socket.send;
 // Don't rebuild the list while someone is typing in it (initiative or
 // name); catch up as soon as they leave the field.
 let stale = false;
-function portraitFor(c) {
-  const ch = c.characterId && characters.find((x) => x.id === c.characterId);
-  return (ch && ch.portrait) || '';
-}
+const { portraitFor } = pics;
 function render() {
   const el = document.activeElement;
   if (el && el.tagName === 'INPUT' && $('list').contains(el)) { stale = true; return; }
@@ -47,6 +51,7 @@ function render() {
 $('list').addEventListener('focusout', () => setTimeout(() => { if (stale) render(); }, 0));
 
 initParty(send);
+initBestiary(send);
 
 // ---- add combatant
 let selectedType = 'pc';

@@ -71,6 +71,19 @@
 .party-init:focus { outline: none; border-color: var(--gold); }
 .party-controls .btn { height: 40px; }
 .party-in { color: var(--good); font-size: 12.5px; font-weight: 600; }
+.title-link { float: right; text-transform: none; letter-spacing: 0; font-weight: 400; font-family: var(--font-body); font-size: 12.5px; color: var(--blue); }
+.title-note { text-transform: none; letter-spacing: 0; font-weight: 400; font-family: var(--font-body); }
+.party-who.with-pic { display: flex; align-items: center; gap: 10px; }
+.mini-pic {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  border: 2px solid var(--line); background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 700; color: var(--ink-soft);
+}
+.mini-pic.mon { border-color: var(--wax); }
+.mini-pic img { width: 100%; height: 100%; object-fit: cover; }
+.count-field { display: flex; align-items: center; gap: 4px; color: var(--ink-soft); font-weight: 600; }
+.party-init.count { width: 64px; }
 .party-hint { color: var(--ink-soft); font-size: 12px; margin-top: 8px; }
 
 .list { display: flex; flex-direction: column; gap: 8px; }

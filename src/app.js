@@ -12,6 +12,8 @@ const { createImportsRouter } = require('./features/imports');
 const combat = require('./features/combat');
 const characters = require('./features/characters');
 const campaigns = require('./features/campaigns');
+const map = require('./features/map');
+const monsters = require('./features/monsters');
 
 function createApp() {
   const app = express();
@@ -19,7 +21,7 @@ function createApp() {
   app.use(express.static(PUBLIC_DIR));
 
   const server = http.createServer(app);
-  const hub = createHub(server, [combat, characters, campaigns]);
+  const hub = createHub(server, [combat, characters, campaigns, map, monsters]);
 
   app.use('/api/import', createImportsRouter({
     onCharactersChanged: () => hub.broadcast('characters'),

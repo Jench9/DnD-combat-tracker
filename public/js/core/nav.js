@@ -17,4 +17,7 @@ export function renderNav() {
     a.append(ic, ' ' + t.title);
     nav.appendChild(a);
   });
+  // On narrow screens the tabs scroll sideways: bring the current one into view.
+  const current = nav.querySelector('.nav-btn.active');
+  if (current) nav.scrollLeft = current.offsetLeft - (nav.clientWidth - current.offsetWidth) / 2;
 }

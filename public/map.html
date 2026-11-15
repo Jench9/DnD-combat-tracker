@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Battle Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/map.css">
+</head>
+<body>
+<div class="wrap wide">
+
+  <nav class="app-nav" data-active="map"></nav>
+
+  <header>
+    <div>
+      <h1>Battle Map</h1>
+      <div class="tagline">Where everyone is in the fight — drag tokens to move them</div>
+    </div>
+    <div class="round-box">
+      <div class="turn-info">
+        <div class="lbl">Round <b id="roundNum">1</b></div>
+        <div class="turn-name" id="turnName">—</div>
+      </div>
+      <button class="btn" id="nextTurnBtn">Next turn →</button>
+    </div>
+  </header>
+
+  <div class="panel tray-panel">
+    <div class="tray-head">
+      <div class="panel-title">Not on the map</div>
+      <div class="map-tools">
+        <label class="size-field">Grid
+          <input id="colsInput" type="number" min="5" max="50" aria-label="Columns"> ×
+          <input id="rowsInput" type="number" min="5" max="50" aria-label="Rows">
+        </label>
+        <button class="btn secondary small" id="clearMapBtn">Clear map</button>
+      </div>
+    </div>
+    <div class="tray" id="tray" data-drop="tray"></div>
+  </div>
+
+  <div class="board-scroll" id="boardScroll">
+    <div class="board" id="board"></div>
+  </div>
+  <div class="map-hint">Drag a token onto the grid, or click it and then click a cell. With a token selected: arrow keys move it, Delete puts it back in the tray, Esc deselects.</div>
+</div>
+
+<script type="module" src="js/map/main.js"></script>
+</body>
+</html>

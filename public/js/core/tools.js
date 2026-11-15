@@ -16,4 +16,18 @@ export const TOOLS = [
     title: 'Character Sheets',
     description: 'Build and store full character sheets, with ability scores, saves, and skills.',
   },
+  {
+    id: 'monsters',
+    href: 'monsters.html',
+    icon: '🐉',
+    title: 'Monsters',
+    description: 'Save monsters with their stats and an icon, then add them to fights in a click.',
+  },
+  {
+    id: 'map',
+    href: 'map.html',
+    icon: '🗺️',
+    title: 'Battle Map',
+    description: 'A grid with a token for everyone in the fight — drag them around to track positions.',
+  },
 ];

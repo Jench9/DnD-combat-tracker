@@ -1,6 +1,6 @@
 # Adventurer's Kit
 
-A self-hosted D&D 5e toolkit for the table: a **Combat Tracker** and **Character Sheets** (with D&D Beyond and PDF import), synced live across every device connected to the server. One player bumps a monster's HP and everyone's screen updates instantly.
+A self-hosted D&D 5e toolkit for the table: a **Combat Tracker**, **Character Sheets** (with D&D Beyond and PDF import), a **Monsters** library and a grid **Battle Map**, synced live across every device connected to the server. One player bumps a monster's HP and everyone's screen updates instantly.
 
 A small Node server holds all state in memory (character sheets are also saved to disk) and pushes updates to every browser over WebSocket. No accounts, no database, no build step.
 
@@ -46,9 +46,9 @@ Runs the server tests (`node:test`, no extra dependencies): WebSocket flows for 
 
 Character sheets are saved to `data/characters.json` (half a second after each change, and on shutdown) and loaded again on startup, so they survive restarts. With Docker, `docker-compose.yaml` mounts `./data` into the container, so they also survive rebuilds. Set `DATA_DIR` to store the file somewhere else. Back up that folder to back up your characters.
 
-Campaigns are saved the same way (`data/campaigns.json`).
+Campaigns and the monster library are saved the same way (`data/campaigns.json`, `data/monsters.json`).
 
-Combat state is still **only in memory** and resets on restart.
+Combat state and token positions on the battle map are still **only in memory** and reset on restart.
 
 ## How it works
 
@@ -71,6 +71,7 @@ adventurers-kit/
 │   ├── app.js                     wires Express + HTTP server + realtime hub + features
 │   ├── core/ids.js                id generation
 │   ├── core/jsonStore.js          small JSON-file persistence (data/<name>.json)
+│   ├── core/images.js             validation for inline image data URLs (portraits, monster icons)
 │   ├── realtime/hub.js            the only WebSocket code: routes actions to features, broadcasts slices
 │   └── features/
 │       ├── combat/                state + actions for the combat tracker
@@ -82,20 +83,25 @@ adventurers-kit/
 │       │   ├── service.js         character list, persisted via core/jsonStore
 │       │   ├── actions.js         add / update / delete
 │       │   └── index.js
+│       ├── campaigns/             campaign list (characters reference one)
+│       ├── monsters/              monster library (model, service, actions), persisted
+│       ├── map/                   battle map: grid size + token positions (memory only)
 │       └── imports/               REST importers, mounted at /api/import/<source>
 │           ├── dndbeyond/         constants, mapper (pure), client (network), route
 │           └── pdf/               aliases, mapper (pure), reader (pdf-lib / pdf-parse), route
 ├── public/
-│   ├── index.html, combat.html, characters.html
+│   ├── index.html, combat.html, characters.html, monsters.html, map.html
 │   ├── css/
 │   │   ├── tokens.css             colors, fonts, light/dark themes
 │   │   ├── base.css               reset, body, page header
 │   │   ├── components.css         nav, buttons, panels, form fields
-│   │   └── pages/                 home.css, combat.css, characters.css
+│   │   └── pages/                 one stylesheet per page
 │   └── js/                        ES modules, no build step
-│       ├── core/                  socket (reconnecting WebSocket), dom helpers, nav, tool registry
+│       ├── core/                  socket (reconnecting WebSocket), dom helpers, nav, tool registry, image resize, portrait lookup
 │       ├── home/
-│       ├── combat/                main, render, conditions data
+│       ├── combat/                main, render, conditions data, party (add characters), bestiary (add monsters)
+│       ├── monsters/              monster library page
+│       ├── map/                   main, render (grid + tokens), interact (drag, click, keyboard)
 │       └── characters/            main, store (state + pending-edit tracking), list, import, rules, editor/
 ├── test/                          node:test suites
 ├── package.json, package-lock.json
