@@ -1,6 +1,8 @@
 // Monster library (newest first), saved to data/monsters.json.
 // No WebSocket knowledge here.
 const { createJsonStore } = require('../../core/jsonStore');
+const { uid } = require('../../core/ids');
+const { STARTER_MONSTERS } = require('./starter');
 const { ID_RE, blankMonster, sanitizeMonsterPatch } = require('./model');
 
 const store = createJsonStore('monsters', []);
@@ -42,4 +44,19 @@ function remove(id) {
   persist();
 }
 
-module.exports = { all, find, add, update, remove };
+// Add the SRD starter set, skipping names already in the library (any
+// case). They end up in CR order at the top of the list. Returns how many
+// were added.
+function addStarters() {
+  const have = new Set(monsters.map((m) => m.name.trim().toLowerCase()));
+  const fresh = STARTER_MONSTERS
+    .filter((m) => !have.has(m.name.toLowerCase()))
+    .map((m) => sanitizeMonsterPatch(blankMonster(uid()), m));
+  if (fresh.length) {
+    monsters = [...fresh, ...monsters];
+    persist();
+  }
+  return fresh.length;
+}
+
+module.exports = { all, find, add, update, remove, addStarters };

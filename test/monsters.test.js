@@ -59,3 +59,32 @@ test('monsters: add to combat with count, numbering and initiative', async (t) =
   const names = many.state.combatants.filter((x) => x.monsterId === 'gob').map((x) => x.name);
   assert.ok(names.includes('Goblin 4') && names.includes('Goblin 23'));
 });
+
+test('monsters: starter set is added once, keeping existing ones', async (t) => {
+  const s = await startServer();
+  const c = connect(s.port);
+  t.after(async () => { c.close(); await s.close(); });
+  await c.opened;
+  const { STARTER_MONSTERS } = require('../src/features/monsters/starter');
+  const start = (await c.next('monsterState')).monsters.length; // earlier tests in this file left some
+
+  c.send('addMonster', { id: 'mygob', patch: { name: 'goblin', ac: 99 } }); // already have a goblin
+  const before = await c.next('monsterState', (m) => m.monsters.some((x) => x.id === 'mygob'));
+  const have = new Set(before.monsters.map((x) => x.name.toLowerCase()));
+  const expectedNew = STARTER_MONSTERS.filter((x) => !have.has(x.name.toLowerCase())).length;
+  assert.ok(expectedNew < STARTER_MONSTERS.length);
+
+  c.send('addStarterMonsters');
+  const after = await c.next('monsterState', (m) => m.monsters.length > start + 1);
+  assert.strictEqual(after.monsters.length, before.monsters.length + expectedNew, 'existing names skipped');
+  const goblins = (m) => m.monsters.filter((x) => x.name.toLowerCase() === 'goblin').length;
+  assert.strictEqual(goblins(after), goblins(before), 'no new goblin');
+  const ogre = after.monsters.find((x) => x.name === 'Ogre');
+  assert.deepStrictEqual([ogre.ac, ogre.hpMax, ogre.initBonus], [11, 59, -1]);
+  assert.strictEqual(after.monsters[0].name, 'Kobold', 'CR order at the top');
+
+  c.send('addStarterMonsters'); // nothing new
+  c.send('addMonster', { id: 'marker', patch: { name: 'Marker' } });
+  const again = await c.next('monsterState', (m) => m.monsters.some((x) => x.id === 'marker'));
+  assert.strictEqual(again.monsters.length, after.monsters.length + 1);
+});

@@ -11,6 +11,10 @@ module.exports = {
     monsters.update(payload.id, payload.patch);
   },
 
+  addStarterMonsters() {
+    monsters.addStarters();
+  },
+
   // Combatants already in a fight keep their stats; they just lose the icon.
   deleteMonster(payload) {
     monsters.remove(payload.id);

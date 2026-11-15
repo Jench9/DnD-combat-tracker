@@ -62,7 +62,8 @@ function renderGrid() {
   const grid = $('monGrid');
   grid.innerHTML = '';
   if (monsters.length === 0) {
-    grid.innerHTML = '<div class="empty-lg"><div class="big-icon">🐉</div>No monsters yet — create one with “+ New monster”.</div>';
+    grid.innerHTML = '<div class="empty-lg"><div class="big-icon">🐉</div>No monsters yet — create one with “+ New monster”, '
+      + 'or add a set of common ones with “+ Common monsters”.</div>';
     return;
   }
   monsters.forEach((m) => {
@@ -134,6 +135,8 @@ $('newMonsterBtn').addEventListener('click', () => {
   openEditor(id);
   $('mName').focus();
 });
+
+$('starterBtn').addEventListener('click', () => socket.send('addStarterMonsters'));
 
 $('doneBtn').addEventListener('click', closeEditor);
 

@@ -1,0 +1,46 @@
+// Common monsters from the D&D 5e SRD 5.1 (CC-BY-4.0): AC, average HP,
+// initiative bonus (= DEX modifier). Ordered by challenge rating.
+// Added to the library on request by the `addStarterMonsters` action.
+//
+// [name, ac, hp, initBonus, notes]
+const STARTER_MONSTERS = [
+  ['Kobold', 12, 5, 2, 'CR 1/8 · Small humanoid'],
+  ['Giant Rat', 12, 7, 2, 'CR 1/8 · Small beast'],
+  ['Stirge', 14, 2, 3, 'CR 1/8 · Tiny beast'],
+  ['Bandit', 12, 11, 1, 'CR 1/8 · Medium humanoid'],
+  ['Cultist', 12, 9, 1, 'CR 1/8 · Medium humanoid'],
+  ['Guard', 16, 11, 1, 'CR 1/8 · Medium humanoid'],
+  ['Goblin', 15, 7, 2, 'CR 1/4 · Small humanoid (goblinoid)'],
+  ['Skeleton', 13, 13, 2, 'CR 1/4 · Medium undead'],
+  ['Zombie', 8, 22, -2, 'CR 1/4 · Medium undead'],
+  ['Wolf', 13, 11, 2, 'CR 1/4 · Medium beast'],
+  ['Hobgoblin', 18, 11, 1, 'CR 1/2 · Medium humanoid (goblinoid)'],
+  ['Orc', 13, 15, 1, 'CR 1/2 · Medium humanoid'],
+  ['Gnoll', 15, 22, 1, 'CR 1/2 · Medium humanoid'],
+  ['Lizardfolk', 15, 22, 0, 'CR 1/2 · Medium humanoid'],
+  ['Thug', 11, 32, 0, 'CR 1/2 · Medium humanoid'],
+  ['Bugbear', 16, 27, 2, 'CR 1 · Medium humanoid (goblinoid)'],
+  ['Ghoul', 12, 22, 2, 'CR 1 · Medium undead'],
+  ['Dire Wolf', 14, 37, 2, 'CR 1 · Large beast'],
+  ['Giant Spider', 14, 26, 3, 'CR 1 · Large beast'],
+  ['Brown Bear', 11, 34, 0, 'CR 1 · Large beast'],
+  ['Bandit Captain', 15, 65, 3, 'CR 2 · Medium humanoid'],
+  ['Priest', 13, 27, 0, 'CR 2 · Medium humanoid'],
+  ['Ogre', 11, 59, -1, 'CR 2 · Large giant'],
+  ['Gargoyle', 15, 52, 0, 'CR 2 · Medium elemental'],
+  ['Gelatinous Cube', 6, 84, -4, 'CR 2 · Large ooze'],
+  ['Mimic', 12, 58, 1, 'CR 2 · Medium monstrosity (shapechanger)'],
+  ['Owlbear', 13, 59, 1, 'CR 3 · Large monstrosity'],
+  ['Minotaur', 14, 76, 0, 'CR 3 · Large monstrosity'],
+  ['Basilisk', 15, 52, -1, 'CR 3 · Medium monstrosity'],
+  ['Wight', 14, 45, 2, 'CR 3 · Medium undead'],
+  ['Veteran', 17, 58, 1, 'CR 3 · Medium humanoid'],
+  ['Ghost', 11, 45, 1, 'CR 4 · Medium undead'],
+  ['Troll', 15, 84, 1, 'CR 5 · Large giant'],
+  ['Hill Giant', 13, 105, -1, 'CR 5 · Huge giant'],
+  ['Mage', 12, 40, 2, 'CR 6 · Medium humanoid'],
+  ['Young Green Dragon', 18, 136, 1, 'CR 8 · Large dragon'],
+  ['Young Red Dragon', 18, 178, 0, 'CR 10 · Large dragon'],
+].map(([name, ac, hpMax, initBonus, notes]) => ({ name, ac, hpMax, initBonus, notes }));
+
+module.exports = { STARTER_MONSTERS };
