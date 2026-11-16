@@ -42,11 +42,15 @@ Runs the server tests (`node:test`, no extra dependencies): WebSocket flows for 
 - **Same wifi**: they open `http://<your-LAN-IP>:3000`. Find your IP with `ipconfig getifaddr en0` (Mac) or `ipconfig` (Windows).
 - **Different networks**: use a tunnel (`ngrok`, `cloudflared`) or deploy to a VPS / container platform behind a reverse proxy with HTTPS.
 
+## DM and players
+
+There are no accounts. The first time someone opens the app they pick **I'm the DM**, their character, or **Create a new character**; the badge in the top bar switches later. The DM sees and controls everything. Players control only their own character (sheet, HP and conditions in combat, map token, ending their own turn) and never receive DM-only information: monster HP/AC/stats (they see *Unhurt / Hurt / Bloodied / Near death / Down*), combatants the DM has hidden, real names behind an alias, DM notes, or the monster library. It's not a login: anyone can choose to be the DM — it just keeps secrets off the players' screens.
+
 ## Data persistence
 
 Character sheets are saved to `data/characters.json` (half a second after each change, and on shutdown) and loaded again on startup, so they survive restarts. With Docker, `docker-compose.yaml` mounts `./data` into the container, so they also survive rebuilds. Set `DATA_DIR` to store the file somewhere else. Back up that folder to back up your characters.
 
-Campaigns and the monster library are saved the same way (`data/campaigns.json`, `data/monsters.json`).
+Campaigns, the monster library and the list of battle map backgrounds are saved the same way (`data/campaigns.json`, `data/monsters.json`, `data/map-backgrounds.json`); background images themselves are files in `data/maps/`.
 
 Combat state and token positions on the battle map are still **only in memory** and reset on restart.
 
@@ -71,6 +75,7 @@ adventurers-kit/
 │   ├── app.js                     wires Express + HTTP server + realtime hub + features
 │   ├── core/ids.js                id generation
 │   ├── core/jsonStore.js          small JSON-file persistence (data/<name>.json)
+│   ├── core/identity.js           who a connection is (DM / player + character) and ownership checks
 │   ├── core/images.js             validation for inline image data URLs (portraits, monster icons)
 │   ├── realtime/hub.js            the only WebSocket code: routes actions to features, broadcasts slices
 │   └── features/
@@ -85,7 +90,7 @@ adventurers-kit/
 │       │   └── index.js
 │       ├── campaigns/             campaign list (characters reference one)
 │       ├── monsters/              monster library (model, service, actions), persisted
-│       ├── map/                   battle map: grid size + token positions (memory only)
+│       ├── map/                   battle map: grid size + token positions (memory only), background images (saved) + upload route
 │       └── imports/               REST importers, mounted at /api/import/<source>
 │           ├── dndbeyond/         constants, mapper (pure), client (network), route
 │           └── pdf/               aliases, mapper (pure), reader (pdf-lib / pdf-parse), route

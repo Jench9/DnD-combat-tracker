@@ -5,11 +5,14 @@
 //     onStatus: (live) => ...,                                       // optional
 //   });
 //   socket.send('actionName', { ...payload });
+import { identityQuery } from './identity.js';
+
 export function connectSocket({ handlers = {}, onStatus } = {}) {
   let ws;
 
   function open() {
-    ws = new WebSocket(location.origin.replace(/^http/, 'ws'));
+    // Who we are (DM / which character) decides what the server sends us.
+    ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/?' + identityQuery());
     ws.onopen = () => onStatus && onStatus(true);
     ws.onclose = () => {
       onStatus && onStatus(false);

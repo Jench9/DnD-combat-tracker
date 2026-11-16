@@ -1,6 +1,12 @@
 // Pure view: draws the combatant list from a combat state.
 // `send(type, payload)` talks to the server; `rerender()` redraws the list;
-// `portraitFor(combatant)` returns a portrait data URL or ''.
+// `portraitFor(combatant)` returns a portrait data URL or ''; `notesFor(combatant)`
+// returns its library monster's notes (stat block) or ''; `canControl(combatant)`
+// says whether this browser may change it (DM: all; player: their own);
+// `isDm` adds the DM tools (hide from players, alias, DM notes).
+//
+// Players get a filtered state from the server: hidden combatants are
+// missing and monsters carry a `health` word instead of hp/maxHp/ac.
 import { CONDITIONS, conditionDescription } from './conditions.js';
 
 function mkHpBtn(label, fn) {
@@ -11,19 +17,19 @@ function mkHpBtn(label, fn) {
   return b;
 }
 
-function deathSaveDots(c, kind, filled, send) {
+function deathSaveDots(c, kind, filled, send, canEdit) {
   const wrap = document.createElement('span');
   wrap.className = 'save-dots';
   for (let i = 0; i < 3; i++) {
     const d = document.createElement('span');
     d.className = `dot ${kind}` + (i < filled ? ' filled' : '');
-    d.addEventListener('click', () => send('toggleDeathSave', { id: c.id, kind, index: i }));
+    if (canEdit) d.addEventListener('click', () => send('toggleDeathSave', { id: c.id, kind, index: i }));
     wrap.appendChild(d);
   }
   return wrap;
 }
 
-function renderConditions(c, send, rerender) {
+function renderConditions(c, send, rerender, canEdit) {
   const condWrap = document.createElement('div');
   condWrap.className = 'conditions';
   c.conditions.forEach((cond) => {
@@ -31,10 +37,12 @@ function renderConditions(c, send, rerender) {
     chip.className = 'chip';
     chip.title = conditionDescription(cond);
     chip.textContent = cond;
-    const rm = document.createElement('button');
-    rm.textContent = '×';
-    rm.addEventListener('click', () => send('removeCondition', { id: c.id, condition: cond }));
-    chip.appendChild(rm);
+    if (canEdit) {
+      const rm = document.createElement('button');
+      rm.textContent = '×';
+      rm.addEventListener('click', () => send('removeCondition', { id: c.id, condition: cond }));
+      chip.appendChild(rm);
+    }
     condWrap.appendChild(chip);
   });
 
@@ -63,20 +71,75 @@ function renderConditions(c, send, rerender) {
     menu.focus();
     menu.addEventListener('blur', () => rerender());
   });
-  condWrap.appendChild(addCondBtn);
+  if (canEdit) condWrap.appendChild(addCondBtn);
   return condWrap;
 }
 
-function renderRow(c, idx, state, send, rerender, portraitFor) {
+// Which combatants have their stat block expanded (survives redraws).
+const openStats = new Set();
+
+function renderStats(c, notes) {
+  const det = document.createElement('details');
+  det.className = 'stat-notes';
+  det.open = openStats.has(c.id);
+  det.addEventListener('toggle', () => {
+    if (det.open) openStats.add(c.id); else openStats.delete(c.id);
+  });
+  const sum = document.createElement('summary');
+  sum.textContent = 'Stats';
+  const body = document.createElement('div');
+  body.className = 'stat-body';
+  body.textContent = notes; // plain text; CSS keeps the line breaks
+  det.append(sum, body);
+  return det;
+}
+
+const HEALTH_CLASS = { Unhurt: '', Hurt: '', Bloodied: ' mid', 'Near death': ' low', Down: ' low' };
+
+// DM tools under a row: private notes, and for monsters an alias players
+// see instead of the real name.
+function renderDmTools(c, send) {
+  const det = document.createElement('details');
+  det.className = 'stat-notes dm-tools';
+  det.open = openDm.has(c.id);
+  det.addEventListener('toggle', () => { if (det.open) openDm.add(c.id); else openDm.delete(c.id); });
+  const sum = document.createElement('summary');
+  sum.textContent = 'DM' + (c.alias ? ' · shown as “' + c.alias + '”' : '') + (c.dmNotes ? ' · notes' : '');
+  const body = document.createElement('div');
+  body.className = 'stat-body dm-fields';
+  const alias = document.createElement('input');
+  alias.placeholder = 'Name players see (blank = real name)';
+  alias.maxLength = 30;
+  alias.value = c.alias || '';
+  alias.addEventListener('change', () => send('setCombatantDm', { id: c.id, alias: alias.value }));
+  const notes = document.createElement('textarea');
+  notes.placeholder = 'Private DM notes';
+  notes.rows = 2;
+  notes.value = c.dmNotes || '';
+  notes.addEventListener('change', () => send('setCombatantDm', { id: c.id, dmNotes: notes.value }));
+  if (c.type === 'monster') body.append(alias);
+  body.append(notes);
+  det.append(sum, body);
+  return det;
+}
+const openDm = new Set();
+
+function renderRow(c, idx, state, ctx) {
+  const { send, rerender, portraitFor, notesFor, canControl, isDm } = ctx;
+  const canEdit = canControl(c);
   const row = document.createElement('div');
-  row.className = 'row' + (idx === state.activeIndex ? ' active' : '') + (c.hp <= 0 ? ' down' : '');
+  const down = c.health ? c.health === 'Down' : c.hp <= 0;
+  row.className = 'row' + (idx === state.activeIndex ? ' active' : '') + (down ? ' down' : '')
+    + (c.hidden ? ' hidden-row' : '') + (!isDm && canEdit ? ' mine' : '');
 
   // Initiative is editable: fix a typo or apply a re-roll; the list re-sorts.
   const badge = document.createElement('input');
   badge.type = 'number';
   badge.className = 'init-badge';
   badge.value = c.init;
-  badge.title = 'Initiative — click to change';
+  badge.title = canEdit ? 'Initiative — click to change' : 'Initiative';
+  badge.readOnly = !canEdit;
+  if (!canEdit) { badge.tabIndex = -1; badge.classList.add('locked'); }
   badge.setAttribute('aria-label', 'Initiative for ' + c.name);
   badge.addEventListener('change', () => {
     const init = parseInt(badge.value, 10);
@@ -113,29 +176,57 @@ function renderRow(c, idx, state, send, rerender, portraitFor) {
   const nameInput = document.createElement('input');
   nameInput.className = 'cname';
   nameInput.value = c.name;
+  nameInput.readOnly = !canEdit;
   nameInput.addEventListener('change', () => send('renameCombatant', { id: c.id, name: nameInput.value }));
   nameLine.appendChild(nameInput);
 
-  const acTag = document.createElement('span');
-  acTag.className = 'ac-tag';
-  acTag.textContent = 'AC ' + c.ac;
-  nameLine.appendChild(acTag);
+  if (c.ac !== undefined) {
+    const acTag = document.createElement('span');
+    acTag.className = 'ac-tag';
+    acTag.textContent = 'AC ' + c.ac;
+    nameLine.appendChild(acTag);
+  }
+  if (c.hidden) {
+    const tag = document.createElement('span');
+    tag.className = 'hidden-tag';
+    tag.textContent = 'Hidden from players';
+    nameLine.appendChild(tag);
+  }
   main.appendChild(nameLine);
+
+  // Players see a monster's condition, not its numbers.
+  if (c.health) {
+    const hl = document.createElement('div');
+    hl.className = 'hp-line';
+    const chip = document.createElement('span');
+    chip.className = 'health-chip' + HEALTH_CLASS[c.health];
+    chip.textContent = c.health;
+    hl.appendChild(chip);
+    main.appendChild(hl);
+    main.appendChild(renderConditions(c, send, rerender, false));
+    row.appendChild(main);
+    row.appendChild(document.createElement('div'));
+    return row;
+  }
 
   // hp line
   const adjust = (delta) => send('adjustHP', { id: c.id, delta });
   const hpLine = document.createElement('div');
   hpLine.className = 'hp-line';
-  hpLine.appendChild(mkHpBtn('−', () => adjust(-5)));
-  hpLine.appendChild(mkHpBtn('−', () => adjust(-1)));
+  if (canEdit) {
+    hpLine.appendChild(mkHpBtn('−', () => adjust(-5)));
+    hpLine.appendChild(mkHpBtn('−', () => adjust(-1)));
+  }
 
   const hpVal = document.createElement('div');
   hpVal.className = 'hp-val';
   hpVal.innerHTML = '<span class="cur">' + Math.max(c.hp, 0) + '</span><span class="max"> / ' + c.maxHp + '</span>';
   hpLine.appendChild(hpVal);
 
-  hpLine.appendChild(mkHpBtn('+', () => adjust(1)));
-  hpLine.appendChild(mkHpBtn('+', () => adjust(5)));
+  if (canEdit) {
+    hpLine.appendChild(mkHpBtn('+', () => adjust(1)));
+    hpLine.appendChild(mkHpBtn('+', () => adjust(5)));
+  }
 
   const barTrack = document.createElement('div');
   barTrack.className = 'hp-bar-track';
@@ -152,28 +243,44 @@ function renderRow(c, idx, state, send, rerender, portraitFor) {
     const ds = document.createElement('div');
     ds.className = 'death-saves';
     ds.appendChild(document.createTextNode('Death saves — S:'));
-    ds.appendChild(deathSaveDots(c, 'success', c.deathSuccess, send));
+    ds.appendChild(deathSaveDots(c, 'success', c.deathSuccess, send, canEdit));
     ds.appendChild(document.createTextNode(' F:'));
-    ds.appendChild(deathSaveDots(c, 'fail', c.deathFail, send));
+    ds.appendChild(deathSaveDots(c, 'fail', c.deathFail, send, canEdit));
     main.appendChild(ds);
   }
 
-  main.appendChild(renderConditions(c, send, rerender));
+  main.appendChild(renderConditions(c, send, rerender, canEdit));
+  const notes = notesFor(c);
+  if (notes) main.appendChild(renderStats(c, notes));
+  if (isDm) main.appendChild(renderDmTools(c, send));
   row.appendChild(main);
 
   const actions = document.createElement('div');
   actions.className = 'row-actions';
-  const rm = document.createElement('button');
-  rm.className = 'remove-btn';
-  rm.textContent = 'Remove';
-  rm.addEventListener('click', () => send('removeCombatant', { id: c.id }));
-  actions.appendChild(rm);
+  if (isDm) {
+    const eye = document.createElement('button');
+    eye.className = 'remove-btn eye-btn' + (c.hidden ? ' on' : '');
+    eye.textContent = c.hidden ? '🙈 Hidden' : '👁 Visible';
+    eye.title = c.hidden ? 'Hidden from players — click to reveal' : 'Visible to players — click to hide';
+    eye.addEventListener('click', () => send('setCombatantDm', { id: c.id, hidden: !c.hidden }));
+    actions.appendChild(eye);
+  }
+  if (canEdit) {
+    const rm = document.createElement('button');
+    rm.className = 'remove-btn';
+    rm.textContent = 'Remove';
+    rm.addEventListener('click', () => send('removeCombatant', { id: c.id }));
+    actions.appendChild(rm);
+  }
   row.appendChild(actions);
 
   return row;
 }
 
-export function renderCombat(state, { send, rerender, portraitFor = () => '' }) {
+export function renderCombat(state, {
+  send, rerender, portraitFor = () => '', notesFor = () => '', canControl = () => true, isDm = true,
+}) {
+  const ctx = { send, rerender, portraitFor, notesFor, canControl, isDm };
   document.getElementById('roundNum').textContent = state.round;
   const list = document.getElementById('list');
   list.innerHTML = '';
@@ -181,14 +288,14 @@ export function renderCombat(state, { send, rerender, portraitFor = () => '' }) 
   if (state.combatants.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'empty';
-    empty.textContent = 'No combatants yet — add characters and monsters above, then hit "Next turn" to start.';
+    empty.textContent = 'No combatants yet — add characters and monsters below, then hit "Next turn" to start.';
     list.appendChild(empty);
     return;
   }
 
-  if (state.activeIndex >= state.combatants.length) state.activeIndex = 0;
+  if (state.activeIndex >= state.combatants.length) state.activeIndex = 0; // (-1 = a hidden creature's turn)
 
   state.combatants.forEach((c, idx) => {
-    list.appendChild(renderRow(c, idx, state, send, rerender, portraitFor));
+    list.appendChild(renderRow(c, idx, state, ctx));
   });
 }

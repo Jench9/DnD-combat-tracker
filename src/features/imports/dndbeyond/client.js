@@ -20,24 +20,10 @@ async function fetchCharacter(ddbId) {
 }
 
 const { MAX_PORTRAIT_BYTES } = require('../../../config');
+const { loadSharp } = require('../../../core/sharp');
 
 const AVATAR_SIZE = 256; // px, square — same as portraits uploaded in the app
 const MAX_DOWNLOAD_BYTES = 15 * 1024 * 1024; // refuse to even decode anything bigger
-
-// sharp is loaded on first use so the rest of the app still runs where it
-// can't load (it needs Node >= 20.9); avatars are then just skipped.
-let sharp;
-function loadSharp() {
-  if (sharp === undefined) {
-    try {
-      sharp = require('sharp');
-    } catch (err) {
-      sharp = null;
-      console.warn('D&D Beyond avatar: image resizing unavailable, avatars will be skipped:', err.message.split('\n')[0]);
-    }
-  }
-  return sharp;
-}
 
 // Crops/resizes any image sharp can decode to a small square JPEG.
 // Resolves to a Buffer, or rejects if the bytes aren't an image.

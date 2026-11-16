@@ -93,19 +93,43 @@ test('mapPdfFormFields uses aliases, level fallback and leftovers', () => {
   assert.match(leftover, /Weird Field: keep me/);
 });
 
-test('REST import validation errors', async () => {
+test('REST import validation and permission errors', async (t) => {
   const s = await startServer();
+  t.after(() => s.close());
   const base = `http://localhost:${s.port}`;
-  let r = await fetch(`${base}/api/import/dndbeyond`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input: 'nope' }) });
+  const json = (body, who = { 'X-Kit-Role': 'dm' }) => ({
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...who }, body: JSON.stringify(body),
+  });
+  const player = (id) => ({ 'X-Kit-Role': 'player', 'X-Kit-Character': id });
+
+  // New imports are DM-only.
+  let r = await fetch(`${base}/api/import/dndbeyond`, json({ input: '123' }, player('x')));
+  assert.strictEqual(r.status, 403);
+  r = await fetch(`${base}/api/import/dndbeyond`, json({ input: '123' }, {}));
+  assert.strictEqual(r.status, 403, 'no identity = player');
+  r = await fetch(`${base}/api/import/pdf`, { method: 'POST', body: new FormData() });
+  assert.strictEqual(r.status, 403);
+
+  r = await fetch(`${base}/api/import/dndbeyond`, json({ input: 'nope' }));
   assert.strictEqual(r.status, 400);
   assert.strictEqual((await r.json()).error, 'Paste a D&D Beyond character URL or ID.');
-  r = await fetch(`${base}/api/import/dndbeyond/refresh`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ characterId: 'nope' }) });
+  r = await fetch(`${base}/api/import/dndbeyond/refresh`, json({ characterId: 'nope' }));
   assert.strictEqual(r.status, 404);
+
+  // Sync: the DM or the character's own player.
   const ch = require('../src/features/characters/service').addImported({ name: 'Unlinked' });
-  r = await fetch(`${base}/api/import/dndbeyond/refresh`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ characterId: ch.id }) });
+  r = await fetch(`${base}/api/import/dndbeyond/refresh`, json({ characterId: ch.id }, player('someoneelse')));
+  assert.strictEqual(r.status, 403);
+  r = await fetch(`${base}/api/import/dndbeyond/refresh`, json({ characterId: ch.id }, player(ch.id)));
+  assert.strictEqual(r.status, 400, 'owner gets past the permission check (no D&D Beyond id)');
+  r = await fetch(`${base}/api/import/dndbeyond/refresh`, json({ characterId: ch.id }));
   assert.strictEqual(r.status, 400);
-  r = await fetch(`${base}/api/import/pdf`, { method: 'POST', body: new FormData() });
+
+  r = await fetch(`${base}/api/import/pdf`, { method: 'POST', headers: { 'X-Kit-Role': 'dm' }, body: new FormData() });
   assert.strictEqual(r.status, 400);
   assert.strictEqual((await r.json()).error, 'No file uploaded.');
-  await s.close();
+
+  r = await fetch(`${base}/api/characters/summary`);
+  const summary = await r.json();
+  assert.ok(summary.characters.some((c) => c.id === ch.id && c.name === 'Unlinked'));
 });

@@ -83,8 +83,31 @@ test('monsters: starter set is added once, keeping existing ones', async (t) => 
   assert.deepStrictEqual([ogre.ac, ogre.hpMax, ogre.initBonus], [11, 59, -1]);
   assert.strictEqual(after.monsters[0].name, 'Kobold', 'CR order at the top');
 
+  // Full stat blocks in the notes.
+  const gob = after.monsters.find((x) => x.name === 'Kobold');
+  assert.match(gob.notes, /^CR 1\/8 · Small humanoid\n/);
+  assert.match(gob.notes, /Dagger: \+4, reach 5 ft, 1d4\+2 piercing\./);
+
   c.send('addStarterMonsters'); // nothing new
   c.send('addMonster', { id: 'marker', patch: { name: 'Marker' } });
   const again = await c.next('monsterState', (m) => m.monsters.some((x) => x.id === 'marker'));
   assert.strictEqual(again.monsters.length, after.monsters.length + 1);
+});
+
+test('monsters: starter button upgrades old one-line notes, keeps edited notes', async (t) => {
+  const s = await startServer();
+  const c = connect(s.port);
+  t.after(async () => { c.close(); await s.close(); });
+  await c.opened;
+  await c.next('monsterState');
+  // Libraries from the first version have the one-line summary as notes.
+  c.send('addMonster', { id: 'oldwolf', patch: { name: 'Dire Wolf', notes: 'CR 1 · Large beast' } });
+  c.send('addMonster', { id: 'mytroll', patch: { name: 'Troll', notes: 'my own notes' } });
+  const before = await c.next('monsterState', (m) => m.monsters.some((x) => x.id === 'mytroll'));
+  const wolves = (x) => x.monsters.filter((y) => y.name === 'Dire Wolf').length;
+
+  c.send('addStarterMonsters');
+  const m = await c.next('monsterState', (x) => /Pack Tactics/.test(x.monsters.find((y) => y.id === 'oldwolf')?.notes || ''));
+  assert.strictEqual(m.monsters.find((x) => x.id === 'mytroll').notes, 'my own notes');
+  assert.strictEqual(wolves(m), wolves(before), 'no extra Dire Wolf added');
 });

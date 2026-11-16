@@ -1,5 +1,6 @@
 // Client -> server map actions. Invalid input is ignored.
 const map = require('./service');
+const backgrounds = require('./backgrounds');
 
 module.exports = {
   placeToken(payload) {
@@ -16,5 +17,18 @@ module.exports = {
 
   clearMap() {
     map.clear();
+  },
+
+  // Background images (uploaded over REST, see route.js). '' = none.
+  setBackground(payload) {
+    map.setBackground(typeof payload.id === 'string' ? payload.id : '');
+  },
+
+  renameBackground(payload) {
+    backgrounds.rename(payload.id, payload.name);
+  },
+
+  deleteBackground(payload) {
+    map.deleteBackground(payload.id);
   },
 };

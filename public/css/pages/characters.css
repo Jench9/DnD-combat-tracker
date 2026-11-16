@@ -69,6 +69,11 @@ input[type=number].bare::-webkit-outer-spin-button { -webkit-appearance: none; m
 
 /* ---------- sheet header ---------- */
 .sheet-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.view-only-tag {
+  font-size: 12px; font-weight: 600; color: var(--ink-soft);
+  border: 1px dashed var(--ink-soft); border-radius: 12px; padding: 3px 10px;
+}
+#char-edit-view.readonly .item-add, #char-edit-view.readonly #portraitRemove { display: none; }
 .sheet-header .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .hero { display: flex; gap: 20px; align-items: flex-start; border-top: 3px solid var(--wax); }

@@ -10,14 +10,19 @@ export function colLabel(x) {
 }
 export const cellLabel = (x, y) => colLabel(x) + (y + 1);
 
-function tokenNode(c, { active, selected, portrait, where }) {
+// Players get monsters with a `health` word instead of hp/maxHp/ac.
+function tokenNode(c, { active, selected, portrait, where, locked }) {
+  const down = c.health ? c.health === 'Down' : c.hp <= 0;
   const t = document.createElement('div');
   t.className = 'token ' + (c.type === 'pc' ? 'pc' : 'mon')
-    + (active ? ' active' : '') + (selected ? ' selected' : '') + (c.hp <= 0 ? ' down' : '');
+    + (active ? ' active' : '') + (selected ? ' selected' : '') + (down ? ' down' : '')
+    + (c.hidden ? ' hidden-tok' : '') + (locked ? ' locked' : '');
   t.dataset.id = c.id;
-  t.tabIndex = 0;
-  const hp = Math.max(0, c.hp) + '/' + c.maxHp + ' HP';
-  t.title = [c.name, where, hp, 'AC ' + c.ac].filter(Boolean).join(' — ');
+  if (locked) t.dataset.locked = '1';
+  t.tabIndex = locked ? -1 : 0;
+  const hp = c.health || (Math.max(0, c.hp) + '/' + c.maxHp + ' HP');
+  t.title = [c.name, where, hp, c.ac !== undefined ? 'AC ' + c.ac : '', c.hidden ? 'hidden from players' : '']
+    .filter(Boolean).join(' — ');
   t.setAttribute('aria-label', t.title);
 
   if (portrait) {
@@ -33,6 +38,7 @@ function tokenNode(c, { active, selected, portrait, where }) {
     t.appendChild(ini);
   }
 
+  if (c.health) return t; // no numbers to draw a bar from
   const bar = document.createElement('span');
   bar.className = 'tok-hp';
   const fill = document.createElement('span');
@@ -44,15 +50,16 @@ function tokenNode(c, { active, selected, portrait, where }) {
   return t;
 }
 
-// view: { combat, map, selectedId, portraitFor }
+// view: { combat, map, selectedId, portraitFor, canMove(combatant) }
 export function renderMap(view) {
-  const { combat, map, selectedId, portraitFor } = view;
+  const { combat, map, selectedId, portraitFor, canMove } = view;
   const active = combat.combatants[combat.activeIndex];
   const byId = new Map(combat.combatants.map((c) => [c.id, c]));
 
   // Header
   $('roundNum').textContent = combat.round;
-  $('turnName').textContent = active ? active.name + "'s turn" : 'No combatants';
+  $('turnName').textContent = active ? active.name + "'s turn"
+    : combat.combatants.length ? '…' : 'No combatants'; // '…' = a hidden creature's turn
   ['colsInput', 'rowsInput'].forEach((id, i) => {
     const el = $(id);
     if (document.activeElement !== el) el.value = i === 0 ? map.cols : map.rows;
@@ -60,6 +67,7 @@ export function renderMap(view) {
 
   const opts = (c, where) => ({
     active: active && active.id === c.id, selected: selectedId === c.id, portrait: portraitFor(c), where,
+    locked: !canMove(c),
   });
 
   // Tray: combatants not on the map, in initiative order.
@@ -83,10 +91,42 @@ export function renderMap(view) {
     });
   }
 
+  // Background picker (DM only; players don't get the list).
+  const sel = $('bgSelect');
+  if (map.backgrounds && document.activeElement !== sel) {
+    sel.innerHTML = '';
+    [{ id: '', name: 'None' }, ...map.backgrounds].forEach((b) => {
+      const o = document.createElement('option');
+      o.value = b.id;
+      o.textContent = b.name;
+      sel.appendChild(o);
+    });
+    sel.value = map.backgroundId || '';
+  }
+  ['bgFitBtn', 'bgRenameBtn', 'bgDeleteBtn'].forEach((id) => { $(id).hidden = !map.backgroundId; });
+
   // Board: corner + column labels, then each row's label and cells.
   const board = $('board');
   board.style.setProperty('--cols', map.cols);
+  board.style.setProperty('--rows', map.rows);
+  board.classList.toggle('has-bg', !!map.backgroundId);
+  // The background image is stretched over exactly the cell area, under the
+  // cells. Keep the same <img> across redraws so a big map doesn't flicker.
+  const oldBg = board.querySelector('.board-bg');
   board.innerHTML = '';
+  if (map.backgroundId) {
+    const src = '/api/maps/backgrounds/' + encodeURIComponent(map.backgroundId);
+    let bg = oldBg && oldBg.dataset.id === map.backgroundId ? oldBg : null;
+    if (!bg) {
+      bg = document.createElement('img');
+      bg.className = 'board-bg';
+      bg.dataset.id = map.backgroundId;
+      bg.src = src;
+      bg.alt = '';
+      bg.draggable = false;
+    }
+    board.appendChild(bg);
+  }
   const corner = document.createElement('div');
   corner.className = 'lbl corner';
   board.appendChild(corner);

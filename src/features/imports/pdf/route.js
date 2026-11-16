@@ -4,6 +4,7 @@ const { MAX_PDF_BYTES } = require('../../../config');
 const characters = require('../../characters/service');
 const { mapPdfFormFields } = require('./mapper');
 const { readFormFields, readText } = require('./reader');
+const { identityFromHeaders, isDm } = require('../../../core/identity');
 
 // POST /api/import/pdf  (multipart field "file", optional field "campaignId")
 function createPdfRouter({ onCharactersChanged }) {
@@ -14,6 +15,9 @@ function createPdfRouter({ onCharactersChanged }) {
   });
 
   router.post('/', upload.single('file'), async (req, res) => {
+    if (!isDm(identityFromHeaders(req))) {
+      return res.status(403).json({ error: 'Only the DM can import new characters.' });
+    }
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded.' });
     }

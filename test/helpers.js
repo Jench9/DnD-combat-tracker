@@ -22,8 +22,9 @@ async function startServer() {
 }
 
 // Connects a client; collects messages and lets tests await a message type.
-function connect(port) {
-  const ws = new WebSocket(`ws://localhost:${port}`);
+// Connects as the DM unless `as` says otherwise, e.g. 'role=player&character=abc'.
+function connect(port, as = 'role=dm') {
+  const ws = new WebSocket(`ws://localhost:${port}/?${as}`);
   const messages = [];
   const waiters = [];
   ws.on('message', (data) => {

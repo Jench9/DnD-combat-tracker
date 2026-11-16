@@ -26,8 +26,8 @@
       </div>
       <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
         <span class="conn-status"><span class="conn-dot" id="connDot"></span><span id="connLabel">Connecting…</span></span>
-        <button class="btn secondary" id="importToggleBtn">Import</button>
-        <button class="btn" id="newCharBtn">+ New character</button>
+        <button class="btn secondary dm-only" id="importToggleBtn">Import</button>
+        <button class="btn dm-only" id="newCharBtn">+ New character</button>
       </div>
     </header>
 
@@ -36,9 +36,9 @@
         <label for="campaignSelect">Campaign</label>
         <select id="campaignSelect"><option value="all">All characters</option></select>
       </div>
-      <button class="btn secondary small" id="campaignNewBtn">+ New campaign</button>
-      <button class="btn secondary small" id="campaignRenameBtn" hidden>Rename</button>
-      <button class="btn secondary small" id="campaignDeleteBtn" hidden>Delete campaign</button>
+      <button class="btn secondary small dm-only" id="campaignNewBtn">+ New campaign</button>
+      <button class="btn secondary small dm-only" id="campaignRenameBtn" hidden>Rename</button>
+      <button class="btn secondary small dm-only" id="campaignDeleteBtn" hidden>Delete campaign</button>
     </div>
 
     <div class="panel" id="importPanel" style="display:none;">
@@ -76,6 +76,7 @@
   <div id="char-edit-view" style="display:none;">
     <div class="sheet-header">
       <button class="btn secondary small" id="backToListBtn">← Back</button>
+      <span class="view-only-tag" id="viewOnlyTag" hidden>View only — not your character</span>
       <div class="btn-group">
         <button class="btn secondary small" id="ddbSyncBtn" title="Re-import stats from D&amp;D Beyond (e.g. after leveling up)">Sync from D&amp;D Beyond</button>
         <button class="btn secondary small" id="deleteCharBtn">Delete</button>

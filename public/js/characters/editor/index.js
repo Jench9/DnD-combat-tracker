@@ -6,6 +6,7 @@ import { bindFields, refreshFields, updateHpBar } from './fields.js';
 import { makeListEditor } from './listEditor.js';
 import { setPortrait, initPortrait } from './portrait.js';
 import { refreshEditorCampaign } from '../campaigns.js';
+import { ownsCharacter } from '../../core/identity.js';
 
 let equipEd;
 let featEd;
@@ -41,6 +42,7 @@ export function openEditor(id) {
   equipEd.render(ch.equipment);
   featEd.render(ch.features);
   showTab('stats');
+  applyAccess(ch);
 
   $('char-list-view').style.display = 'none';
   $('char-edit-view').style.display = 'block';
@@ -65,7 +67,23 @@ export function refreshEditorFromServer() {
   renderSkills(ch);
   if (!equipEd.busy()) equipEd.render(ch.equipment);
   if (!featEd.busy()) featEd.render(ch.features);
+  applyAccess(ch);
   return true;
+}
+
+// Players can look at every sheet but change only their own (the server
+// enforces this too). Disables every control in the sheet otherwise.
+function applyAccess(ch) {
+  const editable = ownsCharacter(ch.id);
+  const view = $('char-edit-view');
+  view.classList.toggle('readonly', !editable);
+  $('viewOnlyTag').hidden = editable;
+  $('deleteCharBtn').hidden = !editable;
+  $('ddbSyncBtn').hidden = !editable;
+  view.querySelectorAll('input, select, textarea, button').forEach((el) => {
+    if (el.id === 'backToListBtn' || el.classList.contains('tab-btn')) return;
+    el.disabled = !editable;
+  });
 }
 
 export function showListView() {

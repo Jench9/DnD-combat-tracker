@@ -2,6 +2,7 @@ const express = require('express');
 const characters = require('../../characters/service');
 const { extractDdbCharacterId, mapDndBeyondData } = require('./mapper');
 const { fetchCharacter, fetchAvatar } = require('./client');
+const { identityFromHeaders, isDm, owns } = require('../../../core/identity');
 
 // Fetches and maps a D&D Beyond character. Resolves to { mapped } or
 // { status, error } ready to send back to the client.
@@ -37,6 +38,9 @@ function createDndBeyondRouter({ onCharactersChanged }) {
   const router = express.Router();
 
   router.post('/', async (req, res) => {
+    if (!isDm(identityFromHeaders(req))) {
+      return res.status(403).json({ error: 'Only the DM can import new characters.' });
+    }
     const ddbId = extractDdbCharacterId(req.body && req.body.input);
     if (!ddbId) {
       return res.status(400).json({ error: 'Paste a D&D Beyond character URL or ID.' });
@@ -58,6 +62,9 @@ function createDndBeyondRouter({ onCharactersChanged }) {
     const existing = characters.find(body.characterId);
     if (!existing) {
       return res.status(404).json({ error: 'That character no longer exists.' });
+    }
+    if (!owns(identityFromHeaders(req), existing.id)) {
+      return res.status(403).json({ error: 'You can only update your own character.' });
     }
     const ddbId = body.input ? extractDdbCharacterId(body.input) : existing.ddbId;
     if (!ddbId) {

@@ -1,11 +1,13 @@
 // Renders the shared top nav into <nav class="app-nav" data-active="<id>">.
 import { TOOLS } from './tools.js';
+import { isDm } from './identity.js';
+import { initIdentity } from './join.js';
 
 export function renderNav() {
   const nav = document.querySelector('nav.app-nav');
   if (!nav) return;
   const active = nav.dataset.active;
-  const items = [{ id: 'home', href: 'index.html', icon: '🏠', title: 'Home' }, ...TOOLS];
+  const items = [{ id: 'home', href: 'index.html', icon: '🏠', title: 'Home' }, ...TOOLS.filter((t) => !t.dmOnly || isDm())];
   nav.innerHTML = '';
   items.forEach((t) => {
     const a = document.createElement('a');
@@ -17,6 +19,7 @@ export function renderNav() {
     a.append(ic, ' ' + t.title);
     nav.appendChild(a);
   });
+  initIdentity(nav);
   // On narrow screens the tabs scroll sideways: bring the current one into view.
   const current = nav.querySelector('.nav-btn.active');
   if (current) nav.scrollLeft = current.offsetLeft - (nav.clientWidth - current.offsetWidth) / 2;

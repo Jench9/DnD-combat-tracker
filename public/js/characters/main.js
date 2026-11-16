@@ -6,6 +6,7 @@ import { store, findChar, cur, mergePending, blankCharacter, clearTouched } from
 import { renderCharGrid } from './list.js';
 import { initEditor, openEditor, refreshEditorFromServer, showListView } from './editor/index.js';
 import { initImport } from './import.js';
+import { identityHeaders } from '../core/identity.js';
 import { initCampaigns, renderCampaignControls, markCampaignsLoaded, campaignForNew } from './campaigns.js';
 
 renderNav();
@@ -25,6 +26,7 @@ const socket = connectSocket({
       if (prev && now) mergePending(prev, now);
       renderCharGrid(openEditor);
       if (store.activeCharId && !refreshEditorFromServer()) closeEditor();
+      openFromHash();
     },
     campaignState: (msg) => {
       store.campaigns = msg.campaigns;
@@ -35,6 +37,15 @@ const socket = connectSocket({
   },
 });
 store.send = socket.send;
+
+// characters.html#edit=<id> opens that sheet (used right after a new
+// player creates their character on the "Who are you?" screen).
+function openFromHash() {
+  const m = location.hash.match(/^#edit=([A-Za-z0-9]+)$/);
+  if (!m || !findChar(m[1])) return;
+  history.replaceState(null, '', location.pathname);
+  openEditor(m[1]);
+}
 
 function closeEditor() {
   store.activeCharId = null;
@@ -84,7 +95,7 @@ $('ddbSyncBtn').addEventListener('click', async () => {
   try {
     const resp = await fetch('/api/import/dndbeyond/refresh', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...identityHeaders() },
       body: JSON.stringify({ characterId: ch.id, input }),
     });
     const data = await resp.json();

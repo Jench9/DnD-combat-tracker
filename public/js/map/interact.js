@@ -48,7 +48,7 @@ export function initInteract({ getView, place, remove, select }) {
 
   document.addEventListener('pointerdown', (e) => {
     const tok = e.target.closest('.token');
-    if (!tok || e.button !== 0) return;
+    if (!tok || e.button !== 0 || tok.dataset.locked) return; // not this player's token
     e.preventDefault(); // no text selection / native image drag
     drag = { id: tok.dataset.id, el: tok, startX: e.clientX, startY: e.clientY, ghost: null, hover: null };
     tok.setPointerCapture(e.pointerId);

@@ -5,6 +5,7 @@ import { connectSocket } from '../core/socket.js';
 import { renderMap, sizeBoard } from './render.js';
 import { initInteract, isDragging } from './interact.js';
 import { createPortraitLookup } from '../core/portraits.js';
+import { isDm, ownsCharacter, identityHeaders } from '../core/identity.js';
 
 renderNav();
 
@@ -16,13 +17,17 @@ const view = {
 
 const pics = createPortraitLookup(); // character portraits + monster icons
 const { portraitFor } = pics;
+// The DM moves everything; a player only their own character's token.
+const canMove = (c) => isDm() || (!!c.characterId && ownsCharacter(c.characterId));
 
 // Hold redraws while a token is being dragged (it would vanish from
 // under the pointer); catch up when the drag ends.
 function render() {
   if (isDragging()) return;
   if (view.selectedId && !view.combat.combatants.some((c) => c.id === view.selectedId)) view.selectedId = null;
-  renderMap({ ...view, portraitFor });
+  renderMap({ ...view, portraitFor, canMove });
+  const active = view.combat.combatants[view.combat.activeIndex];
+  $('nextTurnBtn').disabled = !(active ? canMove(active) : isDm());
   if (view.selectedId) {
     const tok = document.querySelector('.token[data-id="' + view.selectedId + '"]');
     if (tok) tok.focus({ preventScroll: true });
@@ -74,6 +79,59 @@ $('clearMapBtn').addEventListener('click', () => {
 });
 
 $('nextTurnBtn').addEventListener('click', () => send('nextTurn'));
+
+// ---- background maps (DM)
+function bgMessage(text, isError) {
+  $('bgMsg').textContent = text;
+  $('bgMsg').classList.toggle('error', !!isError);
+}
+const currentBg = () => (view.map.backgrounds || []).find((b) => b.id === view.map.backgroundId);
+
+$('bgSelect').addEventListener('change', (e) => send('setBackground', { id: e.target.value }));
+
+$('bgUploadBtn').addEventListener('click', () => $('bgInput').click());
+$('bgInput').addEventListener('change', async () => {
+  const file = $('bgInput').files[0];
+  $('bgInput').value = '';
+  if (!file) return;
+  const name = (prompt('Name for this map:', file.name.replace(/\.[^.]+$/, '')) || '').trim();
+  if (!name) return;
+  const fd = new FormData();
+  fd.append('name', name);
+  fd.append('file', file);
+  bgMessage('Uploading…');
+  $('bgUploadBtn').disabled = true;
+  try {
+    const resp = await fetch('/api/maps/backgrounds', { method: 'POST', headers: identityHeaders(), body: fd });
+    const data = await resp.json();
+    if (!resp.ok) { bgMessage(data.error || 'Upload failed.', true); return; }
+    bgMessage('');
+    send('setBackground', { id: data.background.id }); // show it right away
+  } catch {
+    bgMessage('Could not reach the server.', true);
+  } finally {
+    $('bgUploadBtn').disabled = false;
+  }
+});
+
+// Keep the columns, pick the rows so the grid has the image's proportions.
+$('bgFitBtn').addEventListener('click', () => {
+  const img = document.querySelector('.board-bg');
+  if (!img || !img.naturalWidth) return;
+  const rows = Math.round(view.map.cols * (img.naturalHeight / img.naturalWidth));
+  send('setMapSize', { cols: view.map.cols, rows });
+});
+
+$('bgRenameBtn').addEventListener('click', () => {
+  const b = currentBg();
+  const name = b && (prompt('Rename map:', b.name) || '').trim();
+  if (name) send('renameBackground', { id: b.id, name });
+});
+
+$('bgDeleteBtn').addEventListener('click', () => {
+  const b = currentBg();
+  if (b && confirm('Delete the map "' + b.name + '"? The image file is removed.')) send('deleteBackground', { id: b.id });
+});
 
 window.addEventListener('resize', () => sizeBoard(view.map.cols));
 render();

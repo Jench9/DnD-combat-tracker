@@ -1,10 +1,11 @@
 import { renderNav } from '../core/nav.js';
 import { TOOLS } from '../core/tools.js';
+import { isDm } from '../core/identity.js';
 
 renderNav();
 
 const grid = document.getElementById('toolGrid');
-TOOLS.forEach((t) => {
+TOOLS.filter((t) => !t.dmOnly || isDm()).forEach((t) => {
   const a = document.createElement('a');
   a.className = 'tool-card';
   a.href = t.href;

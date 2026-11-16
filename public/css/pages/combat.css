@@ -86,6 +86,38 @@
 .party-init.count { width: 64px; }
 .party-hint { color: var(--ink-soft); font-size: 12px; margin-top: 8px; }
 
+.stat-notes { margin-top: 6px; font-size: 12.5px; }
+.stat-notes summary {
+  cursor: pointer; color: var(--blue); font-size: 12px; font-weight: 600; width: max-content;
+}
+.stat-body {
+  white-space: pre-line; margin-top: 6px; padding: 8px 10px; line-height: 1.45;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 5px; color: var(--ink);
+}
+
+.hidden-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); margin: -2px 0 8px; }
+.row.hidden-row { border-style: dashed; background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(128, 128, 128, 0.06) 10px 20px); }
+.row.mine { border-left-color: var(--good); }
+.hidden-tag {
+  font-size: 11px; font-weight: 700; color: var(--ink-soft); border: 1px dashed var(--ink-soft);
+  border-radius: 10px; padding: 0 7px;
+}
+.health-chip {
+  font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0.4px;
+  padding: 2px 10px; border-radius: 12px; background: rgba(46, 125, 50, 0.14); color: var(--good);
+}
+.health-chip.mid { background: rgba(183, 121, 31, 0.15); color: var(--gold); }
+.health-chip.low { background: rgba(197, 49, 49, 0.14); color: var(--wax); }
+.init-badge.locked { cursor: default; }
+.init-badge.locked:hover { border-color: transparent; }
+.eye-btn.on { color: var(--gold); border-color: var(--gold); }
+.dm-tools summary { color: var(--gold); }
+.dm-fields { display: flex; flex-direction: column; gap: 6px; }
+.dm-fields input, .dm-fields textarea {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px;
+  background: var(--bg-panel); color: var(--ink); font: inherit; font-size: 13px; resize: vertical;
+}
+
 .list { display: flex; flex-direction: column; gap: 8px; }
 .empty {
   text-align: center;

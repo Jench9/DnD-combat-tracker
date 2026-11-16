@@ -6,12 +6,16 @@
 //   const pics = createPortraitLookup();
 //   pics.setCharacters(msg.characters); pics.setMonsters(msg.monsters);
 //   pics.portraitFor(combatant)  // data URL or ''
+//   pics.monsterFor(combatant)   // its library monster, or undefined
 export function createPortraitLookup() {
   let characters = [];
   let monsters = [];
   return {
     setCharacters(list) { characters = list || []; },
     setMonsters(list) { monsters = list || []; },
+    monsterFor(c) {
+      return c.monsterId ? monsters.find((x) => x.id === c.monsterId) : undefined;
+    },
     portraitFor(c) {
       if (c.characterId) {
         const ch = characters.find((x) => x.id === c.characterId);

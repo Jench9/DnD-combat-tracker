@@ -8,6 +8,7 @@ const http = require('http');
 const { PUBLIC_DIR, JSON_BODY_LIMIT } = require('./config');
 const { createHub } = require('./realtime/hub');
 const { createImportsRouter } = require('./features/imports');
+const { createMapRouter } = require('./features/map/route');
 
 const combat = require('./features/combat');
 const characters = require('./features/characters');
@@ -22,6 +23,19 @@ function createApp() {
 
   const server = http.createServer(app);
   const hub = createHub(server, [combat, characters, campaigns, map, monsters]);
+
+  // For the "Who are you?" screen, which can open on any page (even ones
+  // without a live connection): just enough to pick a character.
+  app.get('/api/characters/summary', (req, res) => {
+    const charService = require('./features/characters/service');
+    res.json({
+      characters: charService.all().map((c) => ({
+        id: c.id, name: c.name, class: c.class, level: c.level, portrait: c.portrait, campaignId: c.campaignId,
+      })),
+    });
+  });
+
+  app.use('/api/maps', createMapRouter({ onMapChanged: () => hub.broadcast('map') }));
 
   app.use('/api/import', createImportsRouter({
     onCharactersChanged: () => hub.broadcast('characters'),

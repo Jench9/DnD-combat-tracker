@@ -55,7 +55,9 @@ function renderRow(m) {
   add.type = 'button';
   add.className = 'btn small';
   add.textContent = 'Add';
-  const go = () => send('addMonsterToCombat', { monsterId: m.id, count: parseInt(input.value, 10) || 1 });
+  const go = () => send('addMonsterToCombat', {
+    monsterId: m.id, count: parseInt(input.value, 10) || 1, hidden: $('addHidden').checked,
+  });
   add.addEventListener('click', go);
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
 

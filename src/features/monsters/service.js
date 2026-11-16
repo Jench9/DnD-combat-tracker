@@ -45,18 +45,31 @@ function remove(id) {
 }
 
 // Add the SRD starter set, skipping names already in the library (any
-// case). They end up in CR order at the top of the list. Returns how many
-// were added.
+// case). New ones go to the top of the list in CR order. A library monster
+// with a starter's name whose notes are empty or still the old one-line
+// summary gets the full stat-block notes; edited notes are left alone.
+// Returns { added, upgraded }.
 function addStarters() {
-  const have = new Set(monsters.map((m) => m.name.trim().toLowerCase()));
-  const fresh = STARTER_MONSTERS
-    .filter((m) => !have.has(m.name.toLowerCase()))
-    .map((m) => sanitizeMonsterPatch(blankMonster(uid()), m));
-  if (fresh.length) {
+  let upgraded = 0;
+  const fresh = [];
+  STARTER_MONSTERS.forEach((st) => {
+    const same = monsters.filter((m) => m.name.trim().toLowerCase() === st.name.toLowerCase());
+    if (same.length === 0) {
+      fresh.push(sanitizeMonsterPatch(blankMonster(uid()), st));
+      return;
+    }
+    same.forEach((m) => {
+      if (m.notes.trim() === '' || m.notes.trim() === st.summary) {
+        m.notes = sanitizeMonsterPatch(m, { notes: st.notes }).notes;
+        upgraded++;
+      }
+    });
+  });
+  if (fresh.length || upgraded) {
     monsters = [...fresh, ...monsters];
     persist();
   }
-  return fresh.length;
+  return { added: fresh.length, upgraded };
 }
 
 module.exports = { all, find, add, update, remove, addStarters };

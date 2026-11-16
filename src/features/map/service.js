@@ -1,12 +1,16 @@
-// Battle map: grid size + where each combatant's token is. Memory only,
-// like combat state. No WebSocket knowledge here.
+// Battle map: grid size, where each combatant's token is, and which
+// background image is shown. Memory only, like combat state (the
+// background library itself is saved, see backgrounds.js).
+// No WebSocket knowledge here.
 const combat = require('../combat/service');
+const backgrounds = require('./backgrounds');
 
 const MIN_SIZE = 5;
 const MAX_SIZE = 50;
 
 function freshState() {
-  return { cols: 20, rows: 15, positions: {} }; // positions: { [combatantId]: { x, y } }
+  // positions: { [combatantId]: { x, y } }; backgroundId: '' = plain grid
+  return { cols: 20, rows: 15, positions: {}, backgroundId: '' };
 }
 
 let state = freshState();
@@ -24,7 +28,21 @@ function prune() {
 
 function snapshot() {
   prune();
-  return state;
+  if (state.backgroundId && !backgrounds.find(state.backgroundId)) state.backgroundId = '';
+  // The DM also gets the list of maps to choose from.
+  return { ...state, backgrounds: backgrounds.all() };
+}
+
+// Players don't see tokens of hidden combatants.
+function playerView() {
+  prune();
+  const positions = {};
+  Object.entries(state.positions).forEach(([id, p]) => {
+    const c = combat.findCombatant(id);
+    if (c && combat.visibleToPlayers(c)) positions[id] = p;
+  });
+  const backgroundId = backgrounds.find(state.backgroundId) ? state.backgroundId : '';
+  return { cols: state.cols, rows: state.rows, positions, backgroundId };
 }
 
 function inBounds(x, y) {
@@ -65,4 +83,12 @@ function clear() {
   state.positions = {};
 }
 
-module.exports = { MIN_SIZE, MAX_SIZE, reset, snapshot, place, remove, resize, clear };
+function setBackground(id) {
+  if (id === '' || backgrounds.find(id)) state.backgroundId = id;
+}
+
+function deleteBackground(id) {
+  if (backgrounds.remove(id) && state.backgroundId === id) state.backgroundId = '';
+}
+
+module.exports = { MIN_SIZE, MAX_SIZE, reset, snapshot, playerView, setBackground, deleteBackground, place, remove, resize, clear };

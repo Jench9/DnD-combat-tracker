@@ -3,16 +3,25 @@
 // A "feature" plugs in by exposing:
 //   name            unique id, e.g. 'combat'
 //   wire            { type, key } — the message the clients receive,
-//                   built as { type, [key]: snapshot() }
+//                   built as { type, [key]: snapshot } with the snapshot
+//                   from snapshotFor(identity) if present, else snapshot()
 //   snapshot()      returns the feature's current state slice
-//   actions         { actionType: (payload) => void } — client -> server
+//   snapshotFor     optional (identity) => slice — what this viewer may see
+//                   (e.g. players don't receive DM-only fields)
+//   actions         { actionType: (payload, identity) => void } — client -> server
+//   permissions     optional { actionType: 'anyone' | (payload, identity) => bool }
+//                   saying what players may do. The DM may do everything;
+//                   an action with no entry is DM-only.
 //   alsoBroadcast   optional { actionType: ['otherFeatureName'] } for
 //                   actions that change more than one slice
 //
-// The hub applies the action, then broadcasts the feature's slice (and any
-// extra slices) to every connected client, including the sender. On
-// connect, a client immediately receives every slice.
+// Each connection's identity (DM or player + character, see
+// core/identity.js) comes from the WebSocket URL. The hub checks the
+// permission, applies the action, then sends the feature's slice (and any
+// extra slices) to every connected client, each filtered for that client.
+// On connect, a client immediately receives every slice.
 const { WebSocketServer } = require('ws');
+const { identityFromUrl, isDm } = require('../core/identity');
 
 function createHub(server, features) {
   const wss = new WebSocketServer({ server });
@@ -28,26 +37,40 @@ function createHub(server, features) {
     });
   });
 
-  function frame(feature) {
-    return JSON.stringify({ type: feature.wire.type, [feature.wire.key]: feature.snapshot() });
+  function frame(feature, identity) {
+    const slice = feature.snapshotFor ? feature.snapshotFor(identity) : feature.snapshot();
+    return JSON.stringify({ type: feature.wire.type, [feature.wire.key]: slice });
   }
 
-  function sendAll(msg) {
+  // Broadcast one feature's slice by name (also used by REST routes). The
+  // frame is built once per distinct identity, not once per client.
+  function broadcast(name) {
+    const feature = byName.get(name);
+    if (!feature) return;
+    const cache = new Map();
     wss.clients.forEach((client) => {
-      if (client.readyState === client.OPEN) client.send(msg);
+      if (client.readyState !== client.OPEN) return;
+      const id = client.identity;
+      const key = id.role + ':' + id.characterId;
+      if (!cache.has(key)) cache.set(key, frame(feature, id));
+      client.send(cache.get(key));
     });
   }
 
-  // Broadcast one feature's slice by name (also used by REST routes).
-  function broadcast(name) {
-    const feature = byName.get(name);
-    if (feature) sendAll(frame(feature));
+  function allowed(feature, type, payload, identity) {
+    if (isDm(identity)) return true;
+    const rule = feature.permissions && feature.permissions[type];
+    if (rule === 'anyone') return true;
+    if (typeof rule === 'function') {
+      try { return !!rule(payload, identity); } catch { return false; }
+    }
+    return false;
   }
 
-  wss.on('connection', (ws) => {
-    // Either page (combat or characters) might be the one that just
-    // opened this socket, so send every slice.
-    features.forEach((f) => ws.send(frame(f)));
+  wss.on('connection', (ws, req) => {
+    ws.identity = identityFromUrl(req.url);
+    // Any page might be the one that just opened this socket, so send every slice.
+    features.forEach((f) => ws.send(frame(f, ws.identity)));
 
     ws.on('message', (raw) => {
       let msg;
@@ -61,7 +84,9 @@ function createHub(server, features) {
       const feature = actionOwner.get(msg.type);
       if (!feature) return; // unknown action type — ignore
 
-      feature.actions[msg.type](msg.payload || {});
+      const payload = msg.payload && typeof msg.payload === 'object' ? msg.payload : {};
+      if (!allowed(feature, msg.type, payload, ws.identity)) return; // not theirs to change
+      feature.actions[msg.type](payload, ws.identity);
       broadcast(feature.name);
       const extra = (feature.alsoBroadcast && feature.alsoBroadcast[msg.type]) || [];
       extra.forEach(broadcast);

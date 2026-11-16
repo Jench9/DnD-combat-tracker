@@ -31,18 +31,30 @@
     </div>
   </header>
 
+  <div class="controls-row dm-only">
+    <button class="btn secondary small" id="sortBtn">Re-sort by initiative</button>
+    <button class="btn secondary small" id="clearBtn">Clear all</button>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <div class="footer-actions"></div>
+
+  <div style="height:18px;"></div>
+
   <div class="panel">
-    <div class="panel-title">Add characters</div>
+    <div class="panel-title"><span class="dm-only">Add characters</span><span class="player-only">Join the fight</span></div>
     <div class="party-list" id="partyList"></div>
     <div class="party-hint">Type each player's initiative roll, or leave it empty to roll d20 + DEX automatically.</div>
   </div>
 
-  <div class="panel">
+  <div class="panel dm-only">
     <div class="panel-title">Add monsters <a class="title-link" href="monsters.html">Manage monsters →</a></div>
+    <label class="hidden-check"><input type="checkbox" id="addHidden"> Add hidden from players (reveal them later with 👁)</label>
     <div class="party-list" id="bestiaryList"></div>
   </div>
 
-  <div class="panel">
+  <div class="panel dm-only">
     <div class="panel-title">Quick add <span class="title-note">(not saved to the monster library)</span></div>
     <div class="add-form">
       <div class="field">
@@ -72,16 +84,6 @@
     </div>
   </div>
 
-  <div class="controls-row">
-    <button class="btn secondary small" id="sortBtn">Re-sort by initiative</button>
-    <button class="btn secondary small" id="clearBtn">Clear all</button>
-  </div>
-
-  <div class="list" id="list"></div>
-
-  <div class="footer-actions"></div>
-
-  <div style="height:18px;"></div>
 
   <details class="ref">
     <summary>Quick reference — conditions & actions</summary>

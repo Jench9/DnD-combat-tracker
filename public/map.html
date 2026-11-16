@@ -34,7 +34,7 @@
   <div class="panel tray-panel">
     <div class="tray-head">
       <div class="panel-title">Not on the map</div>
-      <div class="map-tools">
+      <div class="map-tools dm-only">
         <label class="size-field">Grid
           <input id="colsInput" type="number" min="5" max="50" aria-label="Columns"> ×
           <input id="rowsInput" type="number" min="5" max="50" aria-label="Rows">
@@ -42,13 +42,24 @@
         <button class="btn secondary small" id="clearMapBtn">Clear map</button>
       </div>
     </div>
+    <div class="bg-tools dm-only">
+      <label class="size-field">Background
+        <select id="bgSelect" aria-label="Background map"><option value="">None</option></select>
+      </label>
+      <button class="btn secondary small" id="bgUploadBtn">Upload map…</button>
+      <input type="file" id="bgInput" accept="image/*" hidden>
+      <button class="btn secondary small" id="bgFitBtn" title="Set the number of rows so the grid has the same shape as the image" hidden>Fit grid to image</button>
+      <button class="btn secondary small" id="bgRenameBtn" hidden>Rename</button>
+      <button class="btn secondary small" id="bgDeleteBtn" hidden>Delete</button>
+      <span class="bg-msg" id="bgMsg"></span>
+    </div>
     <div class="tray" id="tray" data-drop="tray"></div>
   </div>
 
   <div class="board-scroll" id="boardScroll">
     <div class="board" id="board"></div>
   </div>
-  <div class="map-hint">Drag a token onto the grid, or click it and then click a cell. With a token selected: arrow keys move it, Delete puts it back in the tray, Esc deselects.</div>
+  <div class="map-hint"><span class="player-only">You can move your own token. </span>Drag a token onto the grid, or click it and then click a cell. With a token selected: arrow keys move it, Delete puts it back in the tray, Esc deselects.</div>
 </div>
 
 <script type="module" src="js/map/main.js"></script>

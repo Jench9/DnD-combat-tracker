@@ -6,6 +6,7 @@ import { renderCombat } from './render.js';
 import { initParty, setPartyData } from './party.js';
 import { initBestiary, setBestiary } from './bestiary.js';
 import { createPortraitLookup } from '../core/portraits.js';
+import { isDm, ownsCharacter } from '../core/identity.js';
 
 renderNav();
 
@@ -42,11 +43,20 @@ const send = socket.send;
 // name); catch up as soon as they leave the field.
 let stale = false;
 const { portraitFor } = pics;
+const notesFor = (c) => (pics.monsterFor(c) || {}).notes || '';
 function render() {
   const el = document.activeElement;
-  if (el && el.tagName === 'INPUT' && $('list').contains(el)) { stale = true; return; }
+  if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && $('list').contains(el)) { stale = true; return; }
   stale = false;
-  renderCombat(state, { send, rerender: render, portraitFor });
+  renderCombat(state, {
+    send, rerender: render, portraitFor, notesFor, isDm: isDm(),
+    canControl: (c) => isDm() || (!!c.characterId && ownsCharacter(c.characterId)),
+  });
+  // Players may only end their own turn.
+  const active = state.combatants[state.activeIndex];
+  const mayAdvance = isDm() || (!!active && !!active.characterId && ownsCharacter(active.characterId));
+  $('nextTurnBtn').disabled = !mayAdvance;
+  $('nextTurnBtn').title = mayAdvance ? '' : 'Only the DM (or the player whose turn it is) can end the turn';
 }
 $('list').addEventListener('focusout', () => setTimeout(() => { if (stale) render(); }, 0));
 

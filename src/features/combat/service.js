@@ -7,7 +7,9 @@ function freshState() {
     activeIndex: 0,
     // { id, name, init, ac, hp, maxHp, type, conditions: [], deathSuccess, deathFail,
     //   characterId ('' unless added from a character sheet),
-    //   monsterId ('' unless added from the monster library) }
+    //   monsterId ('' unless added from the monster library),
+    //   DM-only: hidden (not shown to players at all), alias (name players
+    //   see instead, '' = real name), dmNotes }
     combatants: [],
   };
 }
@@ -40,7 +42,7 @@ function sortByInitiative() {
 
 // Builds the canonical combatant shape. Callers do their own input
 // validation/defaulting (the combat form and "send character" differ).
-function addCombatant({ name, init, ac, hp, maxHp, type, characterId = '', monsterId = '' }) {
+function addCombatant({ name, init, ac, hp, maxHp, type, characterId = '', monsterId = '', hidden = false }) {
   state.combatants.push({
     id: uid(),
     characterId,
@@ -54,8 +56,53 @@ function addCombatant({ name, init, ac, hp, maxHp, type, characterId = '', monst
     conditions: [],
     deathSuccess: 0,
     deathFail: 0,
+    hidden: !!hidden,
+    alias: '',
+    dmNotes: '',
   });
   sortByInitiative();
 }
 
-module.exports = { getState, reset, findCombatant, sortByInitiative, addCombatant };
+// How hurt a monster looks, for players who don't get its HP.
+function healthWord(hp, maxHp) {
+  if (hp <= 0) return 'Down';
+  if (hp >= maxHp) return 'Unhurt';
+  const pct = hp / maxHp;
+  if (pct > 0.5) return 'Hurt';
+  if (pct > 0.25) return 'Bloodied';
+  return 'Near death';
+}
+
+const visibleToPlayers = (c) => !c.hidden;
+
+// The combat state as players see it: no hidden combatants, no DM fields,
+// and monsters show an alias (if set) and a health word instead of their
+// HP and AC. `activeIndex` is -1 while a hidden combatant has the turn.
+function playerView() {
+  const visible = state.combatants.filter(visibleToPlayers);
+  const active = state.combatants[state.activeIndex];
+  const combatants = visible.map((c) => {
+    const base = {
+      id: c.id, name: c.name, init: c.init, type: c.type, conditions: c.conditions,
+      characterId: c.characterId, monsterId: c.monsterId,
+    };
+    if (c.type !== 'monster') {
+      return { ...base, ac: c.ac, hp: c.hp, maxHp: c.maxHp, deathSuccess: c.deathSuccess, deathFail: c.deathFail };
+    }
+    return {
+      ...base,
+      name: c.alias || c.name,
+      monsterId: c.alias ? '' : c.monsterId, // its icon could give the disguise away
+      health: healthWord(c.hp, c.maxHp),
+    };
+  });
+  return {
+    round: state.round,
+    activeIndex: active && visibleToPlayers(active) ? visible.indexOf(active) : -1,
+    combatants,
+  };
+}
+
+module.exports = {
+  getState, reset, findCombatant, sortByInitiative, addCombatant, healthWord, visibleToPlayers, playerView,
+};

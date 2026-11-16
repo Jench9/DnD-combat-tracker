@@ -94,3 +94,44 @@ button { font-family: var(--font-body); cursor: pointer; border: none; }
 }
 .conn-dot.live { background: var(--good); }
 .conn-status { font-size: 12px; color: var(--ink-soft); display: flex; align-items: center; }
+
+/* ---- who-are-you: DM / player identity (core/join.js) ---- */
+body:not(.is-dm) .dm-only { display: none !important; }
+body.is-dm .player-only { display: none !important; }
+.id-badge {
+  flex: 0 0 auto; align-self: center; margin-left: 6px; white-space: nowrap;
+  background: rgba(255, 255, 255, 0.08); color: #fff; border-radius: 14px;
+  padding: 5px 12px; font-size: 12.5px; font-weight: 600;
+}
+.id-badge:hover { background: rgba(255, 255, 255, 0.16); }
+
+.join-overlay {
+  position: fixed; inset: 0; z-index: 1000; background: rgba(10, 11, 12, 0.6);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: max(40px, env(safe-area-inset-top, 0px)) 16px 24px; overflow-y: auto;
+}
+.join-box {
+  background: var(--bg-panel); color: var(--ink); border-radius: 10px;
+  width: 100%; max-width: 420px; padding: 22px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+}
+.join-title { margin: 0 0 4px; font-family: var(--font-display); font-size: 24px; }
+.join-sub { margin: 0 0 16px; color: var(--ink-soft); font-size: 13px; }
+.join-list { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; max-height: 50vh; overflow-y: auto; }
+.join-loading { color: var(--ink-soft); font-size: 13px; padding: 6px 2px; }
+.join-option {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px;
+}
+.join-option:hover { border-color: var(--wax); }
+.join-option.dm { border-color: var(--gold); }
+.join-pic {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; background: var(--bg-panel);
+  border: 2px solid var(--good); font-family: var(--font-display); font-weight: 700; color: var(--ink-soft);
+}
+.join-pic.dm { border-color: var(--gold); font-size: 18px; }
+.join-pic img { width: 100%; height: 100%; object-fit: cover; }
+.join-text { display: flex; flex-direction: column; min-width: 0; }
+.join-name { font-weight: 600; font-size: 15px; }
+.join-meta { color: var(--ink-soft); font-size: 12px; }
+.join-cancel { margin-top: 12px; }

@@ -2,6 +2,7 @@
 // with the character the server created.
 import { $ } from '../core/dom.js';
 import { campaignForNew } from './campaigns.js';
+import { identityHeaders } from '../core/identity.js';
 
 function showImportMsg(el, kind, text) {
   el.className = 'import-msg ' + kind;
@@ -41,7 +42,7 @@ export function initImport({ onImported }) {
     try {
       const resp = await fetch('/api/import/dndbeyond', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...identityHeaders() },
         body: JSON.stringify({ input, campaignId: campaignForNew() }),
       });
       const data = await resp.json();
@@ -73,7 +74,7 @@ export function initImport({ onImported }) {
     formData.append('campaignId', campaignForNew());
     formData.append('file', file);
     try {
-      const resp = await fetch('/api/import/pdf', { method: 'POST', body: formData });
+      const resp = await fetch('/api/import/pdf', { method: 'POST', headers: identityHeaders(), body: formData });
       const data = await resp.json();
       if (!resp.ok) {
         showImportMsg(msg, 'error', data.error || 'Import failed.');

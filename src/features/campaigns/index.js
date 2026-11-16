@@ -5,7 +5,7 @@ module.exports = {
   name: 'campaigns',
   wire: { type: 'campaignState', key: 'campaigns' },
   snapshot: service.all,
-  actions,
+  actions, // no permissions entry: managing campaigns is DM-only
   // Deleting a campaign also un-assigns its characters.
   alsoBroadcast: { deleteCampaign: ['characters'] },
 };

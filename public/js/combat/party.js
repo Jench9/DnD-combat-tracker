@@ -3,6 +3,7 @@
 // initiative rolls, one by one or a whole campaign at once. An empty roll
 // means the server rolls d20 + DEX.
 import { $ } from '../core/dom.js';
+import { isDm, myCharacterId } from '../core/identity.js';
 
 const view = {
   characters: [],
@@ -22,6 +23,11 @@ function campaignName(id) {
 // [{ name, characters }] in campaign order, "No campaign" last; empty
 // groups are skipped. Characters whose campaign was deleted count as none.
 function groups() {
+  // A player only adds themselves.
+  if (!isDm()) {
+    const me = view.characters.filter((ch) => ch.id === myCharacterId());
+    return me.length ? [{ name: 'Your character', characters: me, solo: true }] : [];
+  }
   const out = view.campaigns.map((c) => ({
     name: c.name,
     characters: view.characters.filter((ch) => ch.campaignId === c.id),
@@ -123,6 +129,7 @@ function renderGroup(g) {
   all.textContent = 'Add all';
   all.title = 'Add every character in ' + g.name + ' that isn\'t in combat yet';
   all.disabled = waiting.length === 0;
+  all.hidden = !!g.solo;
   all.addEventListener('click', () => waiting.forEach(addToCombat));
   head.appendChild(all);
   wrap.appendChild(head);

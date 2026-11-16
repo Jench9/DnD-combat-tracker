@@ -46,6 +46,7 @@ module.exports = {
   // initiative roll (d20 + bonus) unless `init` is given. Copies are
   // numbered ("Goblin 1", "Goblin 2"…) when there's more than one of it.
   addMonsterToCombat(payload) {
+    const hidden = payload.hidden === true; // e.g. an ambush: reveal later
     const m = monsters.find(payload.monsterId);
     if (!m) return;
     const count = Math.max(1, Math.min(20, parseInt(payload.count, 10) || 1));
@@ -63,8 +64,18 @@ module.exports = {
         maxHp: m.hpMax,
         type: 'monster',
         monsterId: m.id,
+        hidden,
       });
     }
+  },
+
+  // DM-only fields: hide from players, a disguise name, private notes.
+  setCombatantDm(payload) {
+    const c = svc.findCombatant(payload.id);
+    if (!c) return;
+    if (typeof payload.hidden === 'boolean') c.hidden = payload.hidden;
+    if (typeof payload.alias === 'string') c.alias = payload.alias.trim().slice(0, 30);
+    if (typeof payload.dmNotes === 'string') c.dmNotes = payload.dmNotes.slice(0, 2000);
   },
 
   // Change a combatant's initiative (e.g. a re-roll or a typo) and re-sort.
