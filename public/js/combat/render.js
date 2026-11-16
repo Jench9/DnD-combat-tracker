@@ -182,18 +182,19 @@ function renderRow(c, idx, state, ctx) {
     marker.textContent = '▶';
     nameLine.appendChild(marker);
   }
+  // Icon: the character's portrait / monster's icon, or their initial.
   const portrait = portraitFor(c);
+  const pic = document.createElement('span');
+  pic.className = 'c-portrait' + (c.type === 'pc' ? ' pc' : ' mon');
   if (portrait) {
     const img = document.createElement('img');
-    img.className = 'c-portrait' + (c.type === 'pc' ? ' pc' : ' mon');
     img.src = portrait;
     img.alt = '';
-    nameLine.appendChild(img);
+    pic.appendChild(img);
   } else {
-    const dot = document.createElement('span');
-    dot.className = c.type === 'pc' ? 'pc-dot' : 'mon-dot';
-    nameLine.appendChild(dot);
+    pic.textContent = ((c.name || '?').trim().charAt(0) || '?').toUpperCase();
   }
+  nameLine.appendChild(pic);
 
   const nameInput = document.createElement('input');
   nameInput.className = 'cname';

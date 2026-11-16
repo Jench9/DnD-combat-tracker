@@ -57,7 +57,18 @@ function renderRow(ch) {
   const mod = dexMod(ch);
 
   const who = document.createElement('div');
-  who.className = 'party-who';
+  who.className = 'party-who with-pic';
+  const pic = document.createElement('div');
+  pic.className = 'mini-pic pc';
+  if (ch.portrait) {
+    const img = document.createElement('img');
+    img.src = ch.portrait;
+    img.alt = '';
+    pic.appendChild(img);
+  } else {
+    pic.textContent = ((ch.name || '?').trim().charAt(0) || '?').toUpperCase();
+  }
+  const text = document.createElement('div');
   const name = document.createElement('div');
   name.className = 'party-name';
   name.textContent = ch.name || 'Unnamed character';
@@ -65,7 +76,8 @@ function renderRow(ch) {
   sub.className = 'party-sub';
   sub.textContent = ['Lv ' + (ch.level || 1), ch.class, 'AC ' + ch.ac, ch.hpCurrent + '/' + ch.hpMax + ' HP', 'Init ' + signed(mod)]
     .filter(Boolean).join(' · ');
-  who.append(name, sub);
+  text.append(name, sub);
+  who.append(pic, text);
   row.appendChild(who);
 
   const fighting = inCombat(ch);

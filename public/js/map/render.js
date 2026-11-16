@@ -11,7 +11,7 @@ export function colLabel(x) {
 export const cellLabel = (x, y) => colLabel(x) + (y + 1);
 
 // Players get monsters with a `health` word instead of hp/maxHp/ac.
-function tokenNode(c, { active, selected, portrait, where, locked }) {
+export function tokenNode(c, { active, selected, portrait, where, locked }) {
   const down = c.health ? c.health === 'Down' : c.hp <= 0;
   const t = document.createElement('div');
   t.className = 'token ' + (c.type === 'pc' ? 'pc' : 'mon')

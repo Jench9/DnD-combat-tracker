@@ -3,6 +3,7 @@
 //
 // To add a new tool: create src/features/<name>/ exposing the feature
 // shape described in src/realtime/hub.js, then add it to `features`.
+const path = require('path');
 const express = require('express');
 const http = require('http');
 const { PUBLIC_DIR, JSON_BODY_LIMIT } = require('./config');
@@ -22,6 +23,8 @@ function createApp() {
   const app = express();
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
   app.use(express.static(PUBLIC_DIR));
+  // Short address for the TV view (typed on a TV or shared): /tv
+  app.get('/tv', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'tv.html')));
 
   const server = http.createServer(app);
   const hub = createHub(server, [combat, characters, campaigns, map, monsters, items, spells]);

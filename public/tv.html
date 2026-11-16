@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Battle Map — TV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/components.css">
+<link rel="stylesheet" href="/css/pages/map.css">
+<link rel="stylesheet" href="/css/pages/tv.css">
+</head>
+<body class="tv-body">
+  <!-- Read-only, player-safe view of the battle map for a shared screen. -->
+  <main class="tv-stage" id="stage">
+    <div class="tv-board" id="board"></div>
+    <div class="tv-empty" id="empty" hidden></div>
+  </main>
+  <footer class="tv-bar" id="bar">
+    <div class="tv-round"><span class="lbl">Round</span> <b id="round">1</b></div>
+    <div class="tv-turn" id="turn">—</div>
+    <div class="tv-order" id="order"></div>
+  </footer>
+  <button type="button" class="tv-fs" id="fsBtn">⛶ Full screen</button>
+  <div class="tv-status" id="status">Connecting…</div>
+  <script type="module" src="/js/tv/main.js"></script>
+</body>
+</html>

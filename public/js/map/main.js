@@ -80,6 +80,9 @@ $('clearMapBtn').addEventListener('click', () => {
 
 $('nextTurnBtn').addEventListener('click', () => send('nextTurn'));
 
+// The TV view in its own window, ready to move to a TV / AirPlay display.
+$('tvBtn').addEventListener('click', () => window.open('/tv', 'kit-tv', 'popup,width=1280,height=720'));
+
 // ---- background maps (DM)
 function bgMessage(text, isError) {
   $('bgMsg').textContent = text;

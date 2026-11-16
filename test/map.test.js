@@ -136,3 +136,13 @@ test('map backgrounds: DM uploads, selects, players see only the selected one, d
   await new Promise((res) => setTimeout(res, 50)); // file removal is async
   assert.strictEqual((await fetch(`${base}/${background.id}`)).status, 404);
 });
+
+test('the TV view is served at /tv', async (t) => {
+  const s = await startServer();
+  t.after(() => s.close());
+  const r = await fetch(`http://localhost:${s.port}/tv`);
+  assert.strictEqual(r.status, 200);
+  const html = await r.text();
+  assert.match(html, /id="board"/);
+  assert.match(html, /\/js\/tv\/main\.js/);
+});

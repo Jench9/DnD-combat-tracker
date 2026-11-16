@@ -7,12 +7,14 @@
 //   socket.send('actionName', { ...payload });
 import { identityQuery } from './identity.js';
 
-export function connectSocket({ handlers = {}, onStatus } = {}) {
+// `query` overrides who this connection is (default: this browser's chosen
+// identity) — the TV view always connects as a plain player.
+export function connectSocket({ handlers = {}, onStatus, query } = {}) {
   let ws;
 
   function open() {
     // Who we are (DM / which character) decides what the server sends us.
-    ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/?' + identityQuery());
+    ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/?' + (query ?? identityQuery()));
     ws.onopen = () => onStatus && onStatus(true);
     ws.onclose = () => {
       onStatus && onStatus(false);
