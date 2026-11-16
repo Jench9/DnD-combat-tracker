@@ -68,7 +68,9 @@ function addImported(mappedPatch, notesPrefix) {
 // notes, campaign, inventory, AC mode, temp HP, damage taken (so a level-up adds the new max HP
 // without healing anyone), and the portrait unless the patch brings one.
 // Returns the updated character, or null.
-function refreshImported(id, mappedPatch) {
+// `replaceInventory`: the patch's inventory replaces the current one (a
+// D&D Beyond sync re-maps it); otherwise the inventory is kept.
+function refreshImported(id, mappedPatch, { replaceInventory = false } = {}) {
   const idx = characters.findIndex((c) => c.id === id);
   if (idx === -1) return null;
   const old = characters[idx];
@@ -77,7 +79,7 @@ function refreshImported(id, mappedPatch) {
   const fresh = {
     ...blankCharacter(id),
     portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp, campaignId: old.campaignId,
-    inventory: old.inventory, acAuto: old.acAuto,
+    inventory: replaceInventory && Array.isArray(inventory) ? inventory : old.inventory, acAuto: old.acAuto,
   };
   let ch = sanitizeCharacterPatch(fresh, patch);
   ch.hpCurrent = Math.max(0, ch.hpMax - damage);

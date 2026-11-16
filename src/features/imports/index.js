@@ -5,9 +5,9 @@ const express = require('express');
 const { createDndBeyondRouter } = require('./dndbeyond/route');
 const { createPdfRouter } = require('./pdf/route');
 
-function createImportsRouter({ onCharactersChanged }) {
+function createImportsRouter({ onCharactersChanged, onItemsChanged }) {
   const router = express.Router();
-  router.use('/dndbeyond', createDndBeyondRouter({ onCharactersChanged }));
+  router.use('/dndbeyond', createDndBeyondRouter({ onCharactersChanged, onItemsChanged }));
   router.use('/pdf', createPdfRouter({ onCharactersChanged }));
   return router;
 }
