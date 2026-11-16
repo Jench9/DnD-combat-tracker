@@ -66,7 +66,8 @@ function addImported(mappedPatch, notesPrefix) {
 // Re-sync an existing character from a fresh import. The table's own
 // state wins for things the source doesn't own or that change mid-session:
 // notes, campaign, inventory, AC mode, spells and slots, temp HP, damage taken (so a level-up adds the new max HP
-// without healing anyone), and the portrait unless the patch brings one.
+// without healing anyone), spent Hit Dice, rules edition, resources (unless the patch brings a merged list), and the portrait
+// unless the patch brings one.
 // Returns the updated character, or null.
 // `replaceInventory` / `replaceSpells`: the patch's inventory / spellbook
 // (spells, slots, ability) replace the current ones — a D&D Beyond sync
@@ -76,7 +77,7 @@ function refreshImported(id, mappedPatch, { replaceInventory = false, replaceSpe
   if (idx === -1) return null;
   const old = characters[idx];
   const damage = Math.max(0, old.hpMax - old.hpCurrent);
-  const { notes, hpTemp, campaignId, inventory, acAuto, spellAbility, spellSlots, spells, ...patch } = mappedPatch;
+  const { notes, hpTemp, campaignId, inventory, acAuto, spellAbility, spellSlots, spells, hitDiceUsed, rulesEdition, ...patch } = mappedPatch;
   const fresh = {
     ...blankCharacter(id),
     portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp, campaignId: old.campaignId,
@@ -84,6 +85,9 @@ function refreshImported(id, mappedPatch, { replaceInventory = false, replaceSpe
     // Kept unless the patch brings a list (the sync route passes existing +
     // newly detected ones), which is validated like any edit.
     modifiers: old.modifiers,
+    resources: old.resources,
+    hitDiceUsed: old.hitDiceUsed,
+    rulesEdition: old.rulesEdition, // detection is a guess; a choice made on the sheet wins
     ...(replaceSpells && Array.isArray(spells)
       ? { spellAbility: spellAbility || '', spellSlots, spells }
       : { spellAbility: old.spellAbility, spellSlots: old.spellSlots, spells: old.spells }),

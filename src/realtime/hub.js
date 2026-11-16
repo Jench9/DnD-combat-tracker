@@ -13,7 +13,9 @@
 //                   saying what players may do. The DM may do everything;
 //                   an action with no entry is DM-only.
 //   alsoBroadcast   optional { actionType: ['otherFeatureName'] } for
-//                   actions that change more than one slice
+//                   actions that change more than one slice, or
+//                   { actionType: (result) => [...] } to decide from what
+//                   the action returned
 //
 // Each connection's identity (DM or player + character, see
 // core/identity.js) comes from the WebSocket URL. The hub checks the
@@ -88,9 +90,10 @@ function createHub(server, features) {
 
       const payload = msg.payload && typeof msg.payload === 'object' ? msg.payload : {};
       if (!allowed(feature, msg.type, payload, ws.identity)) return; // not theirs to change
-      feature.actions[msg.type](payload, ws.identity);
+      const result = feature.actions[msg.type](payload, ws.identity);
       broadcast(feature.name);
-      const extra = (feature.alsoBroadcast && feature.alsoBroadcast[msg.type]) || [];
+      let extra = (feature.alsoBroadcast && feature.alsoBroadcast[msg.type]) || [];
+      if (typeof extra === 'function') extra = extra(result) || [];
       extra.forEach(broadcast);
     });
   });

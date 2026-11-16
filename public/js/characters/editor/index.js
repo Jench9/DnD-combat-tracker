@@ -10,6 +10,7 @@ import { ownsCharacter } from '../../core/identity.js';
 import { initInventory, refreshInventoryUi } from './inventory.js';
 import { initSpellbook, refreshSpellbookUi } from './spellbook.js';
 import { initModifierList, refreshModifierUi } from './modifierList.js';
+import { initRest, refreshRestUi, resetRestUi } from './rest.js';
 
 let equipEd;
 let featEd;
@@ -29,10 +30,11 @@ export function initEditor() {
   initInventory();
   initSpellbook(refreshInventoryUi); // spell changes also redraw the Actions tab
   initModifierList(refreshInventoryUi); // so do modifier changes
+  initRest();
 }
 
 export function openEditor(id) {
-  if (id !== store.activeCharId) clearTouched();
+  if (id !== store.activeCharId) { clearTouched(); resetRestUi(); }
   store.activeCharId = id;
   const ch = findChar(id);
   if (!ch) return;
@@ -51,6 +53,7 @@ export function openEditor(id) {
   refreshInventoryUi(ch);
   refreshSpellbookUi(ch);
   refreshModifierUi(ch);
+  refreshRestUi(ch);
   applyAccess(ch);
 
   $('char-list-view').style.display = 'none';
@@ -79,6 +82,7 @@ export function refreshEditorFromServer() {
   refreshInventoryUi(ch);
   refreshSpellbookUi(ch);
   if (!$('modList').contains(document.activeElement)) refreshModifierUi(ch); // not under the cursor
+  refreshRestUi(ch);
   applyAccess(ch);
   return true;
 }

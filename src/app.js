@@ -45,7 +45,7 @@ function createApp() {
   app.use('/api/import', createImportsRouter({
     onCharactersChanged: () => {
       hub.broadcast('characters');
-      if (require('./features/combat/characterSync').syncCombatantAcs()) hub.broadcast('combat');
+      if (require('./features/combat/characterSync').syncCombatantsFromSheets()) hub.broadcast('combat');
     },
     onItemsChanged: () => hub.broadcast('items'),
     onSpellsChanged: () => hub.broadcast('spells'),

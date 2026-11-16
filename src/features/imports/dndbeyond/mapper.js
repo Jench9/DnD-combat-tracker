@@ -3,6 +3,7 @@ const { ABILITY_KEYS } = require('../../characters/model');
 const {
   DDB_ALIGNMENTS, DDB_STAT_NAMES, DDB_ABILITY_SHORT, DDB_SKILL_BY_SUBTYPE,
 } = require('./constants');
+const { detectEdition } = require('./modifiers');
 
 function extractDdbCharacterId(input) {
   const s = String(input || '').trim();
@@ -98,6 +99,19 @@ function computeMaxHitPoints(data, abilities, level) {
   return Math.max(1, (data.baseHitPoints || 0) + (data.bonusHitPoints || 0) + (conMod + perLevelBonus) * level);
 }
 
+// Hit Dice per class: "3d10 + 2d6", and how many of each size are spent.
+function mapHitDice(classes) {
+  const total = new Map();
+  const used = { d6: 0, d8: 0, d10: 0, d12: 0 };
+  classes.forEach((c) => {
+    const size = (c.definition && c.definition.hitDice) || 8;
+    total.set(size, (total.get(size) || 0) + (c.level || 0));
+    if (`d${size}` in used) used[`d${size}`] += parseInt(c.hitDiceUsed, 10) || 0;
+  });
+  const text = [...total.entries()].sort((a, b) => b[0] - a[0]).filter(([, n]) => n > 0).map(([s, n]) => `${n}d${s}`).join(' + ');
+  return { text, used };
+}
+
 function mapDndBeyondData(data, ddbId) {
   const abilities = {};
   ABILITY_KEYS.forEach((key, i) => {
@@ -143,7 +157,9 @@ function mapDndBeyondData(data, ddbId) {
       alignment: DDB_ALIGNMENTS[data.alignmentId] || '',
       ac,
       speed: (data.race && data.race.weightSpeeds && data.race.weightSpeeds.normal && data.race.weightSpeeds.normal.walk) || 30,
-      hitDice: classes[0] ? `${level}d${(classes[0].definition && classes[0].definition.hitDice) || 8}` : '',
+      hitDice: mapHitDice(classes).text,
+      hitDiceUsed: mapHitDice(classes).used,
+      rulesEdition: detectEdition(data),
       abilities,
       hpMax,
       hpCurrent: Math.max(0, hpMax - (data.removedHitPoints || 0)),

@@ -63,6 +63,13 @@ function pactSlots(level) {
   return [count, Math.min(5, Math.ceil(level / 2))];
 }
 
+// Which slots come back on a short rest: { level, count } (level 0 = none).
+function pactMagicOf(classes) {
+  const warlock = classes.find((c) => c.name === 'warlock');
+  const [count, level] = pactSlots(warlock ? warlock.level : 0);
+  return { level, count };
+}
+
 function computeSlots(data, classes) {
   const row = SLOT_TABLE[Math.min(20, casterLevel(classes))] || [];
   const slots = Array.from({ length: 9 }, (_, i) => ({ max: row[i] || 0, used: 0 }));
@@ -211,6 +218,7 @@ function planSpells(data, library, newId) {
     newSpells,
     spellSlots: computeSlots(data, classes),
     spellAbility: spellAbilityOf(classes),
+    pactMagic: pactMagicOf(classes),
   };
 }
 

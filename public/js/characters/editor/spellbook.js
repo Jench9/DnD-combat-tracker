@@ -1,10 +1,11 @@
-// Editor: the Spells tab — spellcasting ability, spell slots (with a long
-// rest to restore them) and the spells the character knows/prepares.
+// Editor: the Spells tab — spellcasting ability, spell slots (a long rest,
+// see rest.js, restores them) and the spells the character knows/prepares.
 import { $ } from '../../core/dom.js';
 import { store, cur, patchChar, touch } from '../store.js';
 import { spellcasting } from '../../core/attacks.js';
 import { fmtMod } from '../rules.js';
 import { levelLabel, spellSummary, spellHeader } from '../../spells/format.js';
+import { longRest } from './rest.js';
 
 const entryId = () => Math.random().toString(36).slice(2, 10);
 const spellById = (id) => store.spells.find((sp) => sp.id === id);
@@ -140,9 +141,7 @@ export function refreshSpellOptions() {
 export function initSpellbook(onChanged) {
   const redraw = (c) => { refreshSpellbookUi(c); onChanged(c); };
   $('spellAbility').addEventListener('change', (e) => change('spellAbility', e.target.value, redraw));
-  $('longRestBtn').addEventListener('click', () => {
-    change('spellSlots', slotsOf(cur()).map((s) => ({ ...s, used: 0 })), redraw);
-  });
+  $('longRestBtn').addEventListener('click', longRest); // the full long rest (HP, Hit Dice, resources too)
   const add = () => {
     const q = $('spellAdd').value.trim().toLowerCase();
     const sp = store.spells.find((x) => x.name.toLowerCase() === q) || store.spells.find((x) => x.name.toLowerCase().includes(q));

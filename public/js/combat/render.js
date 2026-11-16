@@ -11,10 +11,11 @@
 // missing and monsters carry a `health` word instead of hp/maxHp/ac.
 import { CONDITIONS, conditionDescription } from './conditions.js';
 
-function mkHpBtn(label, fn) {
+function mkHpBtn(label, fn, title) {
   const b = document.createElement('button');
   b.className = 'hp-btn';
   b.textContent = label;
+  b.title = title;
   b.addEventListener('click', fn);
   return b;
 }
@@ -94,6 +95,37 @@ function renderStats(c, notes) {
   body.textContent = notes; // plain text; CSS keeps the line breaks
   det.append(sum, body);
   return det;
+}
+
+// Temporary HP: an editable field for whoever controls the combatant,
+// a read-only tag for everyone else (only when there are some).
+function renderTempHp(c, send, canEdit) {
+  const temp = c.tempHp || 0;
+  if (!canEdit) {
+    const tag = document.createElement('span');
+    tag.className = 'temp-tag';
+    tag.textContent = '+' + temp + ' temp';
+    tag.hidden = temp <= 0;
+    return tag;
+  }
+  const label = document.createElement('label');
+  label.className = 'temp-field' + (temp > 0 ? ' on' : '');
+  label.title = 'Temporary HP — lost first when taking damage; a new source replaces it';
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '0';
+  input.inputMode = 'numeric';
+  input.value = temp || '';
+  input.placeholder = '0';
+  input.setAttribute('aria-label', 'Temporary HP for ' + c.name);
+  input.addEventListener('change', () => {
+    const value = parseInt(input.value || '0', 10);
+    if (Number.isFinite(value) && value >= 0) send('setTempHp', { id: c.id, value });
+    else input.value = temp || '';
+  });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+  label.append(input, document.createTextNode('temp'));
+  return label;
 }
 
 const HEALTH_CLASS = { Unhurt: '', Hurt: '', Bloodied: ' mid', 'Near death': ' low', Down: ' low' };
@@ -228,7 +260,9 @@ function renderRow(c, idx, state, ctx) {
     main.appendChild(hl);
     main.appendChild(renderConditions(c, send, rerender, false));
     row.appendChild(main);
-    row.appendChild(document.createElement('div'));
+    const spacer = document.createElement('div');
+    spacer.className = 'row-actions'; // empty: keeps the desktop grid, hidden on phones
+    row.appendChild(spacer);
     return row;
   }
 
@@ -237,18 +271,19 @@ function renderRow(c, idx, state, ctx) {
   const hpLine = document.createElement('div');
   hpLine.className = 'hp-line';
   if (canEdit) {
-    hpLine.appendChild(mkHpBtn('−', () => adjust(-5)));
-    hpLine.appendChild(mkHpBtn('−', () => adjust(-1)));
+    hpLine.appendChild(mkHpBtn('−5', () => adjust(-5), '5 damage'));
+    hpLine.appendChild(mkHpBtn('−1', () => adjust(-1), '1 damage'));
   }
 
   const hpVal = document.createElement('div');
   hpVal.className = 'hp-val';
   hpVal.innerHTML = '<span class="cur">' + Math.max(c.hp, 0) + '</span><span class="max"> / ' + c.maxHp + '</span>';
   hpLine.appendChild(hpVal);
+  hpLine.appendChild(renderTempHp(c, send, canEdit));
 
   if (canEdit) {
-    hpLine.appendChild(mkHpBtn('+', () => adjust(1)));
-    hpLine.appendChild(mkHpBtn('+', () => adjust(5)));
+    hpLine.appendChild(mkHpBtn('+1', () => adjust(1), 'Heal 1'));
+    hpLine.appendChild(mkHpBtn('+5', () => adjust(5), 'Heal 5'));
   }
 
   const barTrack = document.createElement('div');

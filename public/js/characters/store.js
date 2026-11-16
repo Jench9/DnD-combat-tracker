@@ -35,6 +35,9 @@ export function patchChar(patch) {
 
 export function touch(key) { touched.set(key, Date.now()); }
 export function clearTouched() { touched.clear(); }
+// A server action (e.g. a rest) is about to change these fields: let its
+// echo through instead of keeping recently edited local values.
+export function untouch(...keys) { keys.forEach((k) => touched.delete(k)); }
 
 function isRecent(key) {
   const t = touched.get(key);
@@ -72,5 +75,9 @@ export function blankCharacter(id) {
     spellSlots: Array.from({ length: 9 }, () => ({ max: 0, used: 0 })),
     spells: [],
     modifiers: [],
+    hitDiceUsed: { d6: 0, d8: 0, d10: 0, d12: 0 },
+    pactMagic: { level: 0, count: 0 },
+    resources: [],
+    rulesEdition: '2024',
   };
 }

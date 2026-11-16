@@ -59,6 +59,12 @@ function featureNames(data) {
 }
 
 // -> preset keys, deduplicated, in catalog-ish order.
+// 2024 rules if the character has Weapon Mastery (2024 martial classes).
+// A 2024 character without it (e.g. a wizard) reads as 2014 — fixable on the sheet.
+function detectEdition(data) {
+  return new Set(featureNames(data)).has('weapon mastery') ? '2024' : '2014';
+}
+
 function detectPresets(data) {
   const names = new Set(featureNames(data));
   const edition = names.has('weapon mastery') ? '2024' : '2014';
@@ -82,4 +88,4 @@ function mergeModifiers(existing, data, newId) {
   return list;
 }
 
-module.exports = { detectPresets, mergeModifiers, BY_NAME };
+module.exports = { detectPresets, detectEdition, mergeModifiers, BY_NAME };

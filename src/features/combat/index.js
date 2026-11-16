@@ -17,5 +17,9 @@ module.exports = {
     clearAll: ['map', 'monsters'],
     addMonsterToCombat: ['monsters'],
     setCombatantDm: ['map', 'monsters'],
+    // A PC's HP is saved on its sheet; only then resend the characters
+    // slice (it carries every portrait, so not on monster HP clicks).
+    adjustHP: (sheetChanged) => (sheetChanged ? ['characters'] : []),
+    setTempHp: (sheetChanged) => (sheetChanged ? ['characters'] : []),
   },
 };

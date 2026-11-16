@@ -206,12 +206,13 @@
 
 .hp-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hp-btn {
-  width: 26px; height: 26px;
-  border-radius: 50%;
+  min-width: 32px; height: 28px; padding: 0 6px;
+  border-radius: 14px;
+  font-variant-numeric: tabular-nums;
   background: var(--bg);
   border: 1px solid var(--line);
   color: var(--ink);
-  font-size: 15px;
+  font-size: 13px; font-weight: 600;
   display: flex; align-items: center; justify-content: center;
 }
 .hp-btn:hover { border-color: var(--gold); }
@@ -223,6 +224,25 @@
   text-align: center;
 }
 .hp-val .max { color: var(--ink-soft); font-weight: 400; font-size: 13px; }
+.temp-field {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11.5px; font-weight: 600; color: var(--ink-soft); cursor: text;
+}
+.temp-field input {
+  width: 42px; padding: 2px 4px; text-align: center;
+  border: 1px dashed var(--line); border-radius: 4px; background: transparent;
+  color: var(--ink); font: inherit; font-size: 13px;
+  -moz-appearance: textfield; appearance: textfield;
+}
+.temp-field input::-webkit-inner-spin-button,
+.temp-field input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.temp-field input:focus { outline: none; border-style: solid; border-color: var(--gold); }
+.temp-field.on { color: var(--blue); }
+.temp-field.on input { border-style: solid; border-color: var(--blue); color: var(--blue); font-weight: 700; }
+.temp-tag {
+  font-size: 11.5px; font-weight: 700; color: var(--blue);
+  border: 1px solid var(--blue); border-radius: 10px; padding: 0 7px;
+}
 .hp-bar-track {
   flex: 1;
   min-width: 60px;
@@ -316,4 +336,39 @@ details.ref[open] summary::before { content: "▾ "; }
 .bestiary-search {
   width: 100%; padding: 7px 10px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 5px;
   background: var(--bg); color: var(--ink); font: inherit;
+}
+
+/* ---- phones ---- */
+@media (max-width: 600px) {
+  .round-count .num { font-size: 28px; }
+  .row {
+    grid-template-columns: 34px 1fr;
+    gap: 8px 10px; padding: 10px 10px 10px 8px;
+    align-items: start;
+  }
+  .init-badge { font-size: 18px; margin-top: 4px; }
+  .cname { flex: 1 1 120px; min-width: 0; max-width: none; }
+  /* Visible / Remove move under the row instead of eating a column. */
+  .row-actions {
+    grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; gap: 8px;
+    padding-top: 8px; border-top: 1px solid var(--line);
+  }
+  .row-actions:empty { display: none; }
+  .remove-btn { padding: 7px 12px; font-size: 12.5px; }
+  /* Bigger touch targets; the bar gets its own line. */
+  .hp-line { gap: 6px; }
+  .hp-btn { min-width: 40px; height: 36px; border-radius: 18px; font-size: 14px; }
+  .hp-val { min-width: 54px; }
+  .temp-field input { width: 44px; height: 32px; font-size: 14px; }
+  /* Line 1: −5 −1 HP +1 +5 · line 2: temp HP and the bar. */
+  .temp-field, .temp-tag { order: 1; }
+  .hp-bar-track { order: 2; flex: 1 1 120px; }
+  .death-saves { flex-wrap: wrap; gap: 6px 10px; }
+  .dot { width: 22px; height: 22px; }
+  .chip { font-size: 12px; padding: 4px 9px; }
+  .chip button { font-size: 13px; padding: 0 2px; }
+  .add-cond { font-size: 12px; padding: 4px 10px; }
+  .stat-notes summary { padding: 4px 0; font-size: 13px; }
+  .party-init { width: 84px; }
+  .footer-actions .btn, .controls-row .btn { flex: 1; }
 }

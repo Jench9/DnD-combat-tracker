@@ -124,6 +124,23 @@
         <div class="field"><label>Temp</label><input id="csHpTemp" type="number" value="0"></div>
       </div>
       <div class="hpbar" style="margin-top:12px;"><div class="fill" id="hpFill"></div></div>
+      <div class="rest-bar">
+        <div class="hd-left"><span class="hd-label">Hit Dice</span> <span id="hdLeft"></span></div>
+        <div class="rest-buttons">
+          <button class="btn secondary small" id="shortRestBtn">Short rest</button>
+          <button class="btn secondary small" id="longRestBtn2">Long rest</button>
+        </div>
+      </div>
+      <div class="short-rest" id="shortRestPanel" hidden>
+        <div class="sr-help">Spend Hit Dice one at a time: each heals the roll + your CON modifier. Then finish the rest to get back short-rest features<span id="srPactNote"></span>.</div>
+        <div class="sr-dice" id="srDice"></div>
+        <div class="sr-log" id="srLog"></div>
+        <div class="sr-actions">
+          <button class="btn secondary small" id="srCancel">Close</button>
+          <button class="btn small" id="srFinish">Finish short rest</button>
+        </div>
+      </div>
+      <div class="rest-msg" id="restMsg" role="status"></div>
     </div>
 
     <!-- tabs -->
@@ -151,6 +168,23 @@
     </div>
 
     <div class="tab-pane" id="tab-actions">
+      <div class="panel">
+        <div class="subhead">Resources <span class="subhead-note">limited-use features — Second Wind, Ki, Rage, Channel Divinity…</span></div>
+        <div id="resList"></div>
+        <div class="res-add">
+          <input id="resName" type="text" maxlength="40" placeholder="Add a resource — e.g. Second Wind">
+          <input id="resMax" type="number" min="1" max="999" value="1" aria-label="Uses">
+          <select id="resRecharge" aria-label="Comes back on">
+            <option value="short">Short rest</option><option value="long" selected>Long rest</option><option value="none">Manually</option>
+          </select>
+          <button class="btn small" id="resAddBtn">Add</button>
+        </div>
+        <div class="rules-line">
+          <label>Rest rules
+            <select id="rulesEdition"><option value="2024">2024 — long rest restores all Hit Dice</option><option value="2014">2014 — long rest restores half</option></select>
+          </label>
+        </div>
+      </div>
       <div class="panel">
         <div class="subhead">Actions</div>
         <div class="weapon-prof">Proficient with
@@ -202,7 +236,13 @@
         <div class="slots" id="slotGrid"></div>
         <div class="slot-actions">
           <span class="inv-hint">Set how many slots you have per level; click a pip to mark it used.</span>
-          <button class="btn secondary small" id="longRestBtn">Long rest — restore slots</button>
+          <button class="btn secondary small" id="longRestBtn">Long rest</button>
+        </div>
+        <div class="pact-line">
+          <span>Pact Magic</span>
+          <input id="pactCount" type="number" min="0" max="9" aria-label="Pact slots"> slots of level
+          <input id="pactLevel" type="number" min="0" max="9" aria-label="Pact slot level">
+          <span class="inv-hint">— Warlock slots (already counted above) that come back on a short rest.</span>
         </div>
       </div>
       <div class="panel">

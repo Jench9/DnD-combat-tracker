@@ -5,6 +5,7 @@ const { fetchCharacter, fetchAvatar } = require('./client');
 const { planInventory } = require('./inventory');
 const { planSpells } = require('./spells');
 const { mergeModifiers } = require('./modifiers');
+const { planResources, mergeResources } = require('./resources');
 const items = require('../../items/service');
 const spellLibrary = require('../../spells/service');
 const { uid } = require('../../../core/ids');
@@ -65,6 +66,7 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsCh
     mapped.patch.spells = plan.spells;
     mapped.patch.spellSlots = plan.spellSlots;
     mapped.patch.spellAbility = plan.spellAbility;
+    mapped.patch.pactMagic = plan.pactMagic;
   }
 
   router.post('/', async (req, res) => {
@@ -81,6 +83,7 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsCh
       applyInventory(mapped);
       applySpells(mapped);
       mapped.patch.modifiers = mergeModifiers([], mapped.data, uid);
+      mapped.patch.resources = planResources(mapped.data, mapped.patch, uid);
       const ch = characters.addImported({ ...mapped.patch, campaignId: req.body.campaignId }, mapped.notesPrefix);
       onCharactersChanged();
       res.json({ character: ch });
@@ -112,6 +115,8 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsCh
       applySpells(mapped);
       // Newly gained feats/features are added; existing modifiers are kept.
       mapped.patch.modifiers = mergeModifiers(existing.modifiers, mapped.data, uid);
+      // Same for limited-use features: used counts from the table are kept.
+      mapped.patch.resources = mergeResources(existing.resources, planResources(mapped.data, mapped.patch, uid));
       const ch = characters.refreshImported(existing.id, mapped.patch, { replaceInventory: true, replaceSpells: true });
       onCharactersChanged();
       res.json({ character: ch });

@@ -5,7 +5,7 @@ function freshState() {
   return {
     round: 1,
     activeIndex: 0,
-    // { id, name, init, ac, hp, maxHp, type, conditions: [], deathSuccess, deathFail,
+    // { id, name, init, ac, hp, maxHp, tempHp, type, conditions: [], deathSuccess, deathFail,
     //   characterId ('' unless added from a character sheet),
     //   monsterId ('' unless added from the monster library),
     //   DM-only: hidden (not shown to players at all), alias (name players
@@ -42,7 +42,7 @@ function sortByInitiative() {
 
 // Builds the canonical combatant shape. Callers do their own input
 // validation/defaulting (the combat form and "send character" differ).
-function addCombatant({ name, init, ac, hp, maxHp, type, characterId = '', monsterId = '', hidden = false }) {
+function addCombatant({ name, init, ac, hp, maxHp, tempHp = 0, type, characterId = '', monsterId = '', hidden = false }) {
   state.combatants.push({
     id: uid(),
     characterId,
@@ -52,6 +52,7 @@ function addCombatant({ name, init, ac, hp, maxHp, type, characterId = '', monst
     ac,
     hp,
     maxHp,
+    tempHp,
     type,
     conditions: [],
     deathSuccess: 0,
@@ -87,7 +88,7 @@ function playerView() {
       characterId: c.characterId, monsterId: c.monsterId,
     };
     if (c.type !== 'monster') {
-      return { ...base, ac: c.ac, hp: c.hp, maxHp: c.maxHp, deathSuccess: c.deathSuccess, deathFail: c.deathFail };
+      return { ...base, ac: c.ac, hp: c.hp, maxHp: c.maxHp, tempHp: c.tempHp, deathSuccess: c.deathSuccess, deathFail: c.deathFail };
     }
     return {
       ...base,

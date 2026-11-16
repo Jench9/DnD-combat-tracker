@@ -4,6 +4,7 @@ const characters = require('../characters/service');
 const { withDerived } = require('../characters/derived');
 const monsters = require('../monsters/service');
 const { mod } = require('../characters/model');
+const { writeHpToSheet } = require('./characterSync');
 
 const clampInit = (n) => Math.max(-10, Math.min(99, Math.round(n)));
 const rollD20 = () => 1 + Math.floor(Math.random() * 20);
@@ -39,6 +40,7 @@ module.exports = {
       ac: typeof ch.ac === 'number' ? ch.ac : 10,
       hp: typeof ch.hpCurrent === 'number' ? ch.hpCurrent : (ch.hpMax || 1),
       maxHp: ch.hpMax || 1,
+      tempHp: ch.hpTemp || 0,
       type: 'pc',
       characterId: ch.id,
     });
@@ -103,14 +105,33 @@ module.exports = {
     c.name = String(payload.name || 'Unnamed').slice(0, 30);
   },
 
+  // Damage uses up temporary HP first; healing never restores it.
+  // Returns true when a character sheet changed too (a PC's HP is saved
+  // on its sheet), so the hub knows to rebroadcast characters.
   adjustHP(payload) {
     const c = svc.findCombatant(payload.id);
-    if (!c) return;
-    c.hp = Math.max(0, Math.min(c.maxHp, c.hp + payload.delta));
+    if (!c || typeof payload.delta !== 'number' || !Number.isFinite(payload.delta)) return false;
+    let delta = Math.round(payload.delta);
+    if (delta < 0 && c.tempHp > 0) {
+      const absorbed = Math.min(c.tempHp, -delta);
+      c.tempHp -= absorbed;
+      delta += absorbed;
+    }
+    c.hp = Math.max(0, Math.min(c.maxHp, c.hp + delta));
     if (c.hp > 0) {
       c.deathSuccess = 0;
       c.deathFail = 0;
     }
+    return writeHpToSheet(c);
+  },
+
+  // Temporary HP don't stack: a new source replaces the current value.
+  setTempHp(payload) {
+    const c = svc.findCombatant(payload.id);
+    const value = parseInt(payload.value, 10);
+    if (!c || !Number.isFinite(value)) return false;
+    c.tempHp = Math.max(0, Math.min(999, value));
+    return writeHpToSheet(c);
   },
 
   addCondition(payload) {

@@ -11,6 +11,7 @@ function ownsCombatant(payload, identity) {
 module.exports = {
   addCharacterToCombat: (payload, identity) => owns(identity, payload.characterId),
   adjustHP: ownsCombatant,
+  setTempHp: ownsCombatant,
   addCondition: ownsCombatant,
   removeCondition: ownsCombatant,
   toggleDeathSave: ownsCombatant,

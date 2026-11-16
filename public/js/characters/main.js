@@ -6,7 +6,7 @@ import { store, findChar, cur, mergePending, blankCharacter, clearTouched } from
 import { renderCharGrid } from './list.js';
 import { initEditor, openEditor, refreshEditorFromServer, showListView } from './editor/index.js';
 import { initImport } from './import.js';
-import { identityHeaders } from '../core/identity.js';
+import { identityHeaders, myCharacterId } from '../core/identity.js';
 import { refreshItemOptions } from './editor/inventory.js';
 import { refreshSpellOptions } from './editor/spellbook.js';
 import { initCampaigns, renderCampaignControls, markCampaignsLoaded, campaignForNew } from './campaigns.js';
@@ -29,6 +29,7 @@ const socket = connectSocket({
       renderCharGrid(openEditor);
       if (store.activeCharId && !refreshEditorFromServer()) closeEditor();
       openFromHash();
+      openOwnSheet();
     },
     itemState: (msg) => {
       store.items = msg.items;
@@ -57,6 +58,17 @@ function openFromHash() {
   if (!m || !findChar(m[1])) return;
   history.replaceState(null, '', location.pathname);
   openEditor(m[1]);
+}
+
+// A player playing a character lands on their own sheet instead of the
+// list — once per page load, so "Back to list" still shows everyone.
+let ownSheetChecked = false;
+function openOwnSheet() {
+  if (ownSheetChecked) return;
+  ownSheetChecked = true;
+  const id = myCharacterId();
+  if (!id || store.activeCharId || !findChar(id)) return;
+  openEditor(id);
 }
 
 function closeEditor() {

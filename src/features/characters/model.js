@@ -1,7 +1,8 @@
 // Character shape, validation and small rules helpers. Pure functions.
 //
 // { id, portrait (data URL), name, race, class, level, background, alignment,
-//   ac, speed, hitDice,
+//   ac, speed, hitDice ("5d10", or "3d10 + 2d6" when multiclassed),
+//   hitDiceUsed: { d6, d8, d10, d12 } — spent Hit Dice (see rest.js),
 //   abilities: { str, dex, con, int, wis, cha },
 //   hpMax, hpCurrent, hpTemp,
 //   saveProf: { str: bool, ... }, skillProf: { 'Stealth': bool, ... },
@@ -14,6 +15,11 @@
 //   weaponProf: { simple, martial } — adds proficiency to weapon attacks,
 //   spellAbility: '' | 'int' | 'wis' | 'cha' | … (spell attack + save DC),
 //   spellSlots: 9 × { max, used } for slot levels 1–9,
+//   pactMagic: { level 0–9 (0 = none), count } — Warlock slots, part of
+//     spellSlots, that come back on a short rest,
+//   resources: [{ id, name, max, used, recharge: 'short'|'long'|'none' }] —
+//     limited-use features (Second Wind, Ki, Rage, Channel Divinity…),
+//   rulesEdition: '2014' | '2024' — rest rules (Hit Dice back on a long rest),
 //   spells: [{ id, spellId, name, prepared }] — from the spell library
 //     (cantrips are always ready; leveled spells need `prepared`),
 //   modifiers: [{ id, preset, active, only, custom }] — feats, fighting
@@ -45,6 +51,10 @@ function blankCharacter(id) {
     spellSlots: Array.from({ length: 9 }, () => ({ max: 0, used: 0 })),
     spells: [],
     modifiers: [],
+    hitDiceUsed: { d6: 0, d8: 0, d10: 0, d12: 0 },
+    pactMagic: { level: 0, count: 0 },
+    resources: [],
+    rulesEdition: '2024',
   };
 }
 
@@ -135,6 +145,31 @@ function sanitizeModifiers(list) {
   return out;
 }
 
+const MAX_RESOURCES = 30;
+const RECHARGES = ['short', 'long', 'none'];
+
+function sanitizeResources(list) {
+  const seen = new Set();
+  const out = [];
+  list.slice(0, MAX_RESOURCES).forEach((r) => {
+    if (!r || !INV_ID_RE.test(String(r.id)) || seen.has(r.id)) return;
+    seen.add(r.id);
+    const max = clampInt(r.max, 0, 999);
+    out.push({
+      id: r.id,
+      name: String(r.name || '').slice(0, 40),
+      max,
+      used: clampInt(r.used, 0, max),
+      recharge: pick(r.recharge, RECHARGES, 'long'),
+    });
+  });
+  return out;
+}
+
+function sanitizeHitDiceUsed(v) {
+  return { d6: clampInt(v.d6, 0, 99), d8: clampInt(v.d8, 0, 99), d10: clampInt(v.d10, 0, 99), d12: clampInt(v.d12, 0, 99) };
+}
+
 function mod(score) {
   return Math.floor(((parseInt(score, 10) || 10) - 10) / 2);
 }
@@ -160,7 +195,13 @@ function sanitizeCharacterPatch(existing, patch) {
   if (typeof patch.alignment === 'string') next.alignment = patch.alignment.slice(0, 40);
   if (patch.ac !== undefined) next.ac = parseInt(patch.ac, 10) || 10;
   if (patch.speed !== undefined) next.speed = parseInt(patch.speed, 10) || 30;
-  if (typeof patch.hitDice === 'string') next.hitDice = patch.hitDice.slice(0, 20);
+  if (typeof patch.hitDice === 'string') next.hitDice = patch.hitDice.slice(0, 40);
+  if (patch.hitDiceUsed && typeof patch.hitDiceUsed === 'object') next.hitDiceUsed = sanitizeHitDiceUsed(patch.hitDiceUsed);
+  if (patch.pactMagic && typeof patch.pactMagic === 'object') {
+    next.pactMagic = { level: clampInt(patch.pactMagic.level, 0, 9), count: clampInt(patch.pactMagic.count, 0, 9) };
+  }
+  if (Array.isArray(patch.resources)) next.resources = sanitizeResources(patch.resources);
+  if (patch.rulesEdition === '2014' || patch.rulesEdition === '2024') next.rulesEdition = patch.rulesEdition;
   if (patch.hpMax !== undefined) next.hpMax = Math.max(1, parseInt(patch.hpMax, 10) || 1);
   if (patch.hpCurrent !== undefined) next.hpCurrent = Math.max(0, parseInt(patch.hpCurrent, 10) || 0);
   if (patch.hpTemp !== undefined) next.hpTemp = Math.max(0, parseInt(patch.hpTemp, 10) || 0);
