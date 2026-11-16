@@ -15,6 +15,7 @@ export const store = {
   characters: [],
   activeCharId: null,
   campaigns: [],
+  items: [], // the item library (for inventory and actions)
   // Campaign filter on the list view: ALL, NONE, or a campaign id.
   campaignFilter: 'all',
   // Set by main.js once the socket exists.
@@ -63,5 +64,8 @@ export function blankCharacter(id) {
     equipment: '', features: '', notes: '',
     ddbId: '',
     campaignId: '',
+    inventory: [],
+    acAuto: true,
+    weaponProf: { simple: true, martial: false },
   };
 }

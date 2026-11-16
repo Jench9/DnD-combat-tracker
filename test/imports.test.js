@@ -20,7 +20,7 @@ test('mapDndBeyondData maps core fields', () => {
     classes: [{ level: 3, definition: { name: 'Rogue', hitDice: 8 }, classFeatures: [{ definition: { name: 'Sneak Attack' } }] }],
     race: { fullName: 'Elf' },
     baseHitPoints: 20, removedHitPoints: 5,
-    modifiers: { class: [{ type: 'proficiency', subType: 'stealth' }, { type: 'proficiency', subType: 'dexterity-saving-throws' }] },
+    modifiers: { class: [{ type: 'proficiency', subType: 'stealth' }, { type: 'proficiency', subType: 'dexterity-saving-throws' }, { type: 'proficiency', subType: 'simple-weapons' }] },
     inventory: [{ equipped: true, quantity: 3, definition: { name: 'Dagger' } }],
   });
   assert.strictEqual(patch.name, 'Lyra');
@@ -33,6 +33,7 @@ test('mapDndBeyondData maps core fields', () => {
   assert.strictEqual(patch.hpCurrent, 18);
   assert.ok(patch.skillProf.Stealth);
   assert.ok(patch.saveProf.dex);
+  assert.deepStrictEqual(patch.weaponProf, { simple: true, martial: false });
   assert.strictEqual(patch.equipment, 'Dagger x3');
   assert.strictEqual(patch.features, 'Sneak Attack');
   assert.match(notesPrefix, /best-effort/);

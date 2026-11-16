@@ -10,9 +10,10 @@ const store = createJsonStore('characters', []);
 // Run saved data back through the sanitizer so an old or hand-edited
 // file can't load a malformed character.
 const saved = store.load();
+// Characters saved before Auto AC existed keep their manual AC.
 let characters = (Array.isArray(saved) ? saved : [])
   .filter((c) => c && typeof c.id === 'string')
-  .map((c) => sanitizeCharacterPatch(blankCharacter(c.id), c));
+  .map((c) => ({ ...sanitizeCharacterPatch(blankCharacter(c.id), c), acAuto: c.acAuto === true }));
 
 function persist() {
   store.save(characters);
@@ -53,6 +54,7 @@ function addImported(mappedPatch, notesPrefix) {
   const id = uid();
   let ch = blankCharacter(id);
   ch = sanitizeCharacterPatch(ch, mappedPatch);
+  ch.acAuto = mappedPatch.acAuto === true; // imports bring their own AC
   if (notesPrefix) {
     ch.notes = (notesPrefix + (ch.notes ? '\n\n' + ch.notes : '')).slice(0, 4000);
   }
@@ -63,7 +65,7 @@ function addImported(mappedPatch, notesPrefix) {
 
 // Re-sync an existing character from a fresh import. The table's own
 // state wins for things the source doesn't own or that change mid-session:
-// notes, campaign, temp HP, damage taken (so a level-up adds the new max HP
+// notes, campaign, inventory, AC mode, temp HP, damage taken (so a level-up adds the new max HP
 // without healing anyone), and the portrait unless the patch brings one.
 // Returns the updated character, or null.
 function refreshImported(id, mappedPatch) {
@@ -71,10 +73,11 @@ function refreshImported(id, mappedPatch) {
   if (idx === -1) return null;
   const old = characters[idx];
   const damage = Math.max(0, old.hpMax - old.hpCurrent);
-  const { notes, hpTemp, campaignId, ...patch } = mappedPatch;
+  const { notes, hpTemp, campaignId, inventory, acAuto, ...patch } = mappedPatch;
   const fresh = {
     ...blankCharacter(id),
     portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp, campaignId: old.campaignId,
+    inventory: old.inventory, acAuto: old.acAuto,
   };
   let ch = sanitizeCharacterPatch(fresh, patch);
   ch.hpCurrent = Math.max(0, ch.hpMax - damage);

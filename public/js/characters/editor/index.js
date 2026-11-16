@@ -7,6 +7,7 @@ import { makeListEditor } from './listEditor.js';
 import { setPortrait, initPortrait } from './portrait.js';
 import { refreshEditorCampaign } from '../campaigns.js';
 import { ownsCharacter } from '../../core/identity.js';
+import { initInventory, refreshInventoryUi } from './inventory.js';
 
 let equipEd;
 let featEd;
@@ -23,6 +24,7 @@ export function initEditor() {
   featEd = makeListEditor({ listId: 'featList', addId: 'featAdd', addBtnId: 'featAddBtn', prop: 'features', withQty: false, multiline: true });
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   initPortrait();
+  initInventory();
 }
 
 export function openEditor(id) {
@@ -42,6 +44,7 @@ export function openEditor(id) {
   equipEd.render(ch.equipment);
   featEd.render(ch.features);
   showTab('stats');
+  refreshInventoryUi(ch);
   applyAccess(ch);
 
   $('char-list-view').style.display = 'none';
@@ -67,6 +70,7 @@ export function refreshEditorFromServer() {
   renderSkills(ch);
   if (!equipEd.busy()) equipEd.render(ch.equipment);
   if (!featEd.busy()) featEd.render(ch.features);
+  refreshInventoryUi(ch);
   applyAccess(ch);
   return true;
 }

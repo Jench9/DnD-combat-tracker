@@ -1,6 +1,7 @@
 // Client -> server combat actions. Each takes a payload and mutates state.
 const svc = require('./service');
 const characters = require('../characters/service');
+const { withDerived } = require('../characters/derived');
 const monsters = require('../monsters/service');
 const { mod } = require('../characters/model');
 
@@ -25,8 +26,9 @@ module.exports = {
   // leave it out to have the server roll d20 + DEX modifier. A character
   // can only be in the fight once.
   addCharacterToCombat(payload) {
-    const ch = characters.find(payload.characterId);
-    if (!ch) return;
+    const found = characters.find(payload.characterId);
+    if (!found) return;
+    const ch = withDerived(found); // e.g. AC from equipped armor
     if (svc.getState().combatants.some((c) => c.characterId === ch.id)) return;
     const init = typeof payload.init === 'number' && Number.isFinite(payload.init)
       ? payload.init

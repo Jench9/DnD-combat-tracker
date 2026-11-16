@@ -3,7 +3,9 @@
 // `portraitFor(combatant)` returns a portrait data URL or ''; `notesFor(combatant)`
 // returns its library monster's notes (stat block) or ''; `canControl(combatant)`
 // says whether this browser may change it (DM: all; player: their own);
-// `isDm` adds the DM tools (hide from players, alias, DM notes).
+// `isDm` adds the DM tools (hide from players, alias, DM notes);
+// `actionsFor(combatant)` returns a function that renders a PC's actions
+// into a container, or null.
 //
 // Players get a filtered state from the server: hidden combatants are
 // missing and monsters carry a `health` word instead of hp/maxHp/ac.
@@ -124,8 +126,28 @@ function renderDmTools(c, send) {
 }
 const openDm = new Set();
 
+// Which rows have Actions expanded (survives redraws).
+const openActions = new Set();
+function renderActionsSection(c, fill) {
+  const det = document.createElement('details');
+  det.className = 'stat-notes actions-section';
+  det.open = openActions.has(c.id);
+  const sum = document.createElement('summary');
+  sum.textContent = 'Actions';
+  const body = document.createElement('div');
+  body.className = 'stat-body actions-body';
+  const draw = () => { if (det.open) fill(body); };
+  det.addEventListener('toggle', () => {
+    if (det.open) openActions.add(c.id); else openActions.delete(c.id);
+    draw();
+  });
+  draw();
+  det.append(sum, body);
+  return det;
+}
+
 function renderRow(c, idx, state, ctx) {
-  const { send, rerender, portraitFor, notesFor, canControl, isDm } = ctx;
+  const { send, rerender, portraitFor, notesFor, actionsFor, canControl, isDm } = ctx;
   const canEdit = canControl(c);
   const row = document.createElement('div');
   const down = c.health ? c.health === 'Down' : c.hp <= 0;
@@ -252,6 +274,8 @@ function renderRow(c, idx, state, ctx) {
   main.appendChild(renderConditions(c, send, rerender, canEdit));
   const notes = notesFor(c);
   if (notes) main.appendChild(renderStats(c, notes));
+  const fillActions = canEdit && actionsFor(c);
+  if (fillActions) main.appendChild(renderActionsSection(c, fillActions));
   if (isDm) main.appendChild(renderDmTools(c, send));
   row.appendChild(main);
 
@@ -278,9 +302,10 @@ function renderRow(c, idx, state, ctx) {
 }
 
 export function renderCombat(state, {
-  send, rerender, portraitFor = () => '', notesFor = () => '', canControl = () => true, isDm = true,
+  send, rerender, portraitFor = () => '', notesFor = () => '', actionsFor = () => null,
+  canControl = () => true, isDm = true,
 }) {
-  const ctx = { send, rerender, portraitFor, notesFor, canControl, isDm };
+  const ctx = { send, rerender, portraitFor, notesFor, actionsFor, canControl, isDm };
   document.getElementById('roundNum').textContent = state.round;
   const list = document.getElementById('list');
   list.innerHTML = '';

@@ -163,7 +163,7 @@ const FIELDS = {
   iDamageType: ['damageType', 'select'], iVersatile: ['versatileDamage', 'dice'], iRange: ['range', 'text'],
   iMagic: ['magicBonus', 'number'], iExtra: ['extraDamage', 'dice'], iExtraType: ['extraDamageType', 'select'],
   iArmorType: ['armorType', 'select'], iBaseAc: ['baseAc', 'number'], iMaxDex: ['maxDex', 'maxdex'],
-  iStr: ['strengthReq', 'number'], iStealth: ['stealthDisadvantage', 'check'],
+  iStr: ['strengthReq', 'number'], iStealth: ['stealthDisadvantage', 'check'], iArmorMagic: ['magicBonus', 'number'],
   iEffectDice: ['effectDice', 'dice'], iEffect: ['effect', 'text'], iNotes: ['notes', 'text'],
 };
 

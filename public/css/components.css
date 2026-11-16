@@ -135,3 +135,15 @@ body.is-dm .player-only { display: none !important; }
 .join-name { font-weight: 600; font-size: 15px; }
 .join-meta { color: var(--ink-soft); font-size: 12px; }
 .join-cancel { margin-top: 12px; }
+
+/* ---- character actions (core/attacks.js): sheet + combat tracker ---- */
+.action-row { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.action-row:last-child { border-bottom: none; }
+.action-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.action-name { font-weight: 700; font-size: 14px; }
+.action-stat { font-family: var(--font-display); font-size: 14px; color: var(--ink); }
+.action-detail { color: var(--ink-soft); font-size: 11.5px; }
+.action-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.action-result { font-size: 12.5px; margin-top: 4px; color: var(--ink); font-weight: 600; }
+.action-result:empty { display: none; }
+.action-result.crit { color: var(--wax); }

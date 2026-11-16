@@ -41,6 +41,7 @@ function mapProficiencies(data) {
     : [];
   const saveProf = {};
   const skillProf = {};
+  const weaponProf = { simple: false, martial: false };
   modifierGroups.forEach((m) => {
     if (!m || m.type !== 'proficiency') return;
     const subType = String(m.subType || '');
@@ -49,9 +50,13 @@ function mapProficiencies(data) {
       if (short) saveProf[short] = true;
     } else if (DDB_SKILL_BY_SUBTYPE[subType]) {
       skillProf[DDB_SKILL_BY_SUBTYPE[subType]] = true;
+    } else if (subType === 'simple-weapons') {
+      weaponProf.simple = true;
+    } else if (subType === 'martial-weapons') {
+      weaponProf.martial = true;
     }
   });
-  return { saveProf, skillProf };
+  return { saveProf, skillProf, weaponProf };
 }
 
 // AC has no single source field in the raw data — D&D Beyond
@@ -105,7 +110,7 @@ function mapDndBeyondData(data, ddbId) {
     .map((c) => `${(c.definition && c.definition.name) || 'Class'} ${c.level || ''}`.trim())
     .join(' / ');
 
-  const { saveProf, skillProf } = mapProficiencies(data);
+  const { saveProf, skillProf, weaponProf } = mapProficiencies(data);
   const ac = estimateArmorClass(data, abilities);
   const hpMax = computeMaxHitPoints(data, abilities, level);
 
@@ -144,6 +149,7 @@ function mapDndBeyondData(data, ddbId) {
       hpCurrent: Math.max(0, hpMax - (data.removedHitPoints || 0)),
       hpTemp: data.temporaryHitPoints || 0,
       saveProf,
+      weaponProf,
       skillProf,
       equipment: equipmentText,
       features: features.join('\n'),

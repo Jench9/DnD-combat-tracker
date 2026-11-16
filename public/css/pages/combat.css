@@ -112,6 +112,8 @@
 .init-badge.locked:hover { border-color: transparent; }
 .eye-btn.on { color: var(--gold); border-color: var(--gold); }
 .dm-tools summary { color: var(--gold); }
+.actions-section summary { color: var(--good); }
+.actions-body { white-space: normal; }
 .dm-fields { display: flex; flex-direction: column; gap: 6px; }
 .dm-fields input, .dm-fields textarea {
   width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px;

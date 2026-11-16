@@ -16,9 +16,10 @@ export function weaponSummary(it) {
 
 // e.g. "AC 14 + DEX (max 2) · stealth disadvantage"
 export function armorSummary(it) {
-  if (it.armorType === 'shield') return `${signed(it.baseAc)} AC · shield`;
+  const magic = it.magicBonus || 0;
+  if (it.armorType === 'shield') return `${signed(it.baseAc + magic)} AC · shield`;
   const dex = it.maxDex === 0 ? '' : it.maxDex === null ? ' + DEX' : ` + DEX (max ${it.maxDex})`;
-  const parts = [`AC ${it.baseAc}${dex}`, `${it.armorType} armor`];
+  const parts = [`AC ${it.baseAc + magic}${dex}`, `${it.armorType} armor`];
   if (it.strengthReq) parts.push(`STR ${it.strengthReq}`);
   if (it.stealthDisadvantage) parts.push('stealth disadvantage');
   return parts.join(' · ');

@@ -7,6 +7,7 @@ import { renderCharGrid } from './list.js';
 import { initEditor, openEditor, refreshEditorFromServer, showListView } from './editor/index.js';
 import { initImport } from './import.js';
 import { identityHeaders } from '../core/identity.js';
+import { refreshItemOptions } from './editor/inventory.js';
 import { initCampaigns, renderCampaignControls, markCampaignsLoaded, campaignForNew } from './campaigns.js';
 
 renderNav();
@@ -27,6 +28,11 @@ const socket = connectSocket({
       renderCharGrid(openEditor);
       if (store.activeCharId && !refreshEditorFromServer()) closeEditor();
       openFromHash();
+    },
+    itemState: (msg) => {
+      store.items = msg.items;
+      refreshItemOptions();
+      if (store.activeCharId && !refreshEditorFromServer()) closeEditor();
     },
     campaignState: (msg) => {
       store.campaigns = msg.campaigns;

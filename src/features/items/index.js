@@ -14,6 +14,8 @@ module.exports = {
   wire: { type: 'itemState', key: 'items' },
   snapshot: service.all,
   actions,
+  // Characters' Auto AC depends on the armor items they wear.
+  alsoBroadcast: { updateItem: ['characters'], deleteItem: ['characters'] },
   permissions: {
     addItem: (payload, identity) => !!identity.characterId,
     updateItem: ownsItem,

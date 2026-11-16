@@ -7,7 +7,11 @@
 //   saveProf: { str: bool, ... }, skillProf: { 'Stealth': bool, ... },
 //   equipment, features, notes,
 //   ddbId (D&D Beyond character id, '' if not linked),
-//   campaignId ('' = no campaign) }
+//   campaignId ('' = no campaign),
+//   inventory: [{ id, itemId, name, qty, equipped }] — items from the item
+//     library (`name` is a copy, shown if the library item is deleted),
+//   acAuto: true = AC is computed from equipped armor (see derived.js),
+//   weaponProf: { simple, martial } — adds proficiency to weapon attacks }
 
 const { MAX_PORTRAIT_CHARS, sanitizeImage } = require('../../core/images');
 
@@ -25,7 +29,33 @@ function blankCharacter(id) {
     equipment: '', features: '', notes: '',
     ddbId: '',
     campaignId: '',
+    inventory: [],
+    acAuto: true,
+    weaponProf: { simple: true, martial: false },
   };
+}
+
+const INV_ID_RE = /^[a-z0-9]{1,20}$/;
+const MAX_INVENTORY = 200;
+
+// Keeps well-formed entries only: unique ids, a library item id, a
+// quantity 0–9999, and an equipped flag.
+function sanitizeInventory(list) {
+  const seen = new Set();
+  const out = [];
+  list.slice(0, MAX_INVENTORY).forEach((e) => {
+    if (!e || !INV_ID_RE.test(String(e.id)) || !INV_ID_RE.test(String(e.itemId)) || seen.has(e.id)) return;
+    seen.add(e.id);
+    const qty = parseInt(e.qty, 10);
+    out.push({
+      id: e.id,
+      itemId: e.itemId,
+      name: typeof e.name === 'string' ? e.name.slice(0, 60) : '',
+      qty: Number.isFinite(qty) ? Math.max(0, Math.min(9999, qty)) : 1,
+      equipped: !!e.equipped,
+    });
+  });
+  return out;
 }
 
 function mod(score) {
@@ -60,6 +90,14 @@ function sanitizeCharacterPatch(existing, patch) {
   if (typeof patch.equipment === 'string') next.equipment = patch.equipment.slice(0, 4000);
   if (typeof patch.features === 'string') next.features = patch.features.slice(0, 4000);
   if (typeof patch.notes === 'string') next.notes = patch.notes.slice(0, 4000);
+  if (Array.isArray(patch.inventory)) next.inventory = sanitizeInventory(patch.inventory);
+  if (patch.acAuto !== undefined) next.acAuto = !!patch.acAuto;
+  if (patch.weaponProf && typeof patch.weaponProf === 'object') {
+    next.weaponProf = { ...existing.weaponProf };
+    ['simple', 'martial'].forEach((k) => {
+      if (patch.weaponProf[k] !== undefined) next.weaponProf[k] = !!patch.weaponProf[k];
+    });
+  }
   if (typeof patch.campaignId === 'string' && /^[a-z0-9]{0,20}$/.test(patch.campaignId)) next.campaignId = patch.campaignId;
   if (typeof patch.ddbId === 'string' && /^\d{0,20}$/.test(patch.ddbId)) next.ddbId = patch.ddbId;
 

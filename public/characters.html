@@ -111,7 +111,8 @@
       <div class="tile"><div class="tile-val" id="csProf">+2</div><div class="tile-label">Proficiency</div></div>
       <div class="tile"><div class="tile-val" id="initTile">+0</div><div class="tile-label">Initiative</div></div>
       <div class="tile"><input id="csSpeed" class="bare" type="number" placeholder="30"><div class="tile-label">Speed (ft)</div></div>
-      <div class="tile ac"><input id="csAC" class="bare" type="number" placeholder="10"><div class="tile-label">Armor Class</div></div>
+      <div class="tile ac"><input id="csAC" class="bare" type="number" placeholder="10"><div class="tile-label">Armor Class</div>
+        <label class="ac-auto" title="Calculate AC from equipped armor, shield and DEX"><input type="checkbox" id="csAcAuto"> auto</label></div>
       <div class="tile"><input id="csHitDice" class="sm" type="text" placeholder="1d8"><div class="tile-label">Hit Dice</div></div>
     </div>
 
@@ -128,6 +129,7 @@
     <!-- tabs -->
     <div class="tabs" id="sheetTabs">
       <button class="tab-btn active" data-tab="stats">Stats</button>
+      <button class="tab-btn" data-tab="actions">Actions</button>
       <button class="tab-btn" data-tab="equipment">Equipment</button>
       <button class="tab-btn" data-tab="features">Features</button>
       <button class="tab-btn" data-tab="notes">Notes</button>
@@ -147,9 +149,31 @@
       </div>
     </div>
 
+    <div class="tab-pane" id="tab-actions">
+      <div class="panel">
+        <div class="subhead">Actions</div>
+        <div class="weapon-prof">Proficient with
+          <label><input type="checkbox" id="profSimple"> simple weapons</label>
+          <label><input type="checkbox" id="profMartial"> martial weapons</label>
+        </div>
+        <div id="actionList"></div>
+        <div class="inv-hint">Attacks come from <b>equipped</b> weapons in the Equipment tab; usable items (like potions) from anything with effect dice.</div>
+      </div>
+    </div>
+
     <div class="tab-pane" id="tab-equipment">
       <div class="panel">
-        <div class="subhead">Equipment &amp; inventory</div>
+        <div class="subhead">Inventory</div>
+        <div id="invList"></div>
+        <div class="item-add inv-add">
+          <input id="invAdd" type="text" list="invOptions" placeholder="Add from the item library — e.g. Longsword">
+          <datalist id="invOptions"></datalist>
+          <button class="btn" id="invAddBtn">Add</button>
+        </div>
+        <div class="inv-hint" id="invHint"></div>
+      </div>
+      <div class="panel">
+        <div class="subhead">Other equipment <span class="subhead-note">(free text)</span></div>
         <div id="equipList"></div>
         <div class="item-add">
           <input id="equipAdd" type="text" placeholder="Add an item — e.g. Arrows x20">

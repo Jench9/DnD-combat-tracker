@@ -1,11 +1,13 @@
 const service = require('./service');
 const actions = require('./actions');
+const { withDerived } = require('./derived');
 const { owns } = require('../../core/identity');
 
 module.exports = {
   name: 'characters',
   wire: { type: 'charState', key: 'characters' },
-  snapshot: service.all,
+  // Sent with computed values (e.g. Auto AC) filled in.
+  snapshot: () => service.all().map(withDerived),
   actions,
   // Anyone can create a character (a new player joining); players edit and
   // delete only their own.
