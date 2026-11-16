@@ -218,7 +218,6 @@ function equipment(e, edition) {
     const ranged = e.weapon_range === 'Ranged' || cats2024.has('ranged-weapons');
     const range = e.range && e.range.long ? `${e.range.normal}/${e.range.long}`
       : (e.throw_range ? `${e.throw_range.normal}/${e.throw_range.long}` : '');
-    const mastery = e.mastery ? `Mastery: ${e.mastery.name}.` : '';
     return {
       ...base,
       name: weaponName(e.name),
@@ -230,7 +229,7 @@ function equipment(e, edition) {
       versatileDamage: e.two_handed_damage ? dice(e.two_handed_damage.damage_dice) : '',
       range,
       properties: PROPERTIES.filter((p) => props.includes(p)),
-      notes: [mastery, base.notes].filter(Boolean).join('\n'),
+      mastery: e.mastery ? lower(e.mastery.name) : '',
     };
   }
   if (isArmor && e.armor_class) {
@@ -326,8 +325,12 @@ function monster(m, edition) {
 // ---------------------------------------------------------------- build
 function build() {
   const spells = nameEditions(read('2014', 'Spells').map((s) => spell(s, '2014')), read('2024', 'Spells').map((s) => spell(s, '2024')));
+  // Weapon masteries are a 2024 rule, but the same weapons from the 2014
+  // list have the same mastery (a 2024-rules character may wield them).
+  const masteryOf = new Map(read('2024', 'Equipment').filter((e) => e.mastery).map((e) => [lower(weaponName(e.name)), lower(e.mastery.name)]));
+  const withMastery = (it) => (it.type === 'weapon' && !it.mastery && masteryOf.has(lower(it.name)) ? { ...it, mastery: masteryOf.get(lower(it.name)) } : it);
   const items = nameEditions(
-    [...read('2014', 'Equipment').map((e) => equipment(e, '2014')), ...read('2014', 'Magic-Items').filter(isConcreteMagicItem).map((m) => magicItem(m, '2014'))],
+    [...read('2014', 'Equipment').map((e) => withMastery(equipment(e, '2014'))), ...read('2014', 'Magic-Items').filter(isConcreteMagicItem).map((m) => magicItem(m, '2014'))],
     [...read('2024', 'Equipment').map((e) => equipment(e, '2024')), ...read('2024', 'Magic-Items').filter(isConcreteMagicItem).map((m) => magicItem(m, '2024'))],
   );
   const monsters = nameEditions(read('2014', 'Monsters').map((m) => monster(m, '2014')), read('2024', 'Monsters').map((m) => monster(m, '2024')));

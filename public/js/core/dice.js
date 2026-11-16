@@ -64,16 +64,33 @@ export function formatDice(expr, extraMod = 0) {
 
 export const rollDie = (sides) => 1 + Math.floor(Math.random() * sides);
 
-export function roll(expr, extraMod = 0, { crit = false } = {}) {
+// Reroll rules, applied to each die: returns [value, shown text].
+//   'gwf-2014': 1 or 2 is rerolled once (the new roll stands)
+//   'gwf-2024': 1 or 2 counts as 3
+//   'ea':       1 counts as 2 (Elemental Adept)
+function applyReroll(r, sides, rule) {
+  if (rule === 'gwf-2014' && r <= 2) { const n = rollDie(sides); return [n, `${r}→${n}`]; }
+  if (rule === 'gwf-2024' && r <= 2) return [3, `${r}→3`];
+  if (rule === 'ea' && r === 1) return [2, '1→2'];
+  return [r, String(r)];
+}
+
+// Options: crit doubles every die; critExtraDice adds that many more dice
+// of the first group's size on a crit (Brutal Critical); reroll as above.
+export function roll(expr, extraMod = 0, { crit = false, reroll = '', critExtraDice = 0 } = {}) {
   const d = parseDice(expr);
   if (!d) return { total: 0, rolls: [], text: '?' };
   const parts = [];
   let total = 0;
-  d.groups.forEach((g) => {
-    const count = g.count * (crit ? 2 : 1);
-    const rolls = Array.from({ length: count }, () => rollDie(g.sides));
-    total += rolls.reduce((a, b) => a + b, 0);
-    parts.push(`${count}d${g.sides} [${rolls.join(', ')}]`);
+  d.groups.forEach((g, i) => {
+    const count = g.count * (crit ? 2 : 1) + (crit && i === 0 ? critExtraDice : 0);
+    const shown = [];
+    for (let k = 0; k < count; k++) {
+      const [v, txt] = applyReroll(rollDie(g.sides), g.sides, reroll);
+      total += v;
+      shown.push(txt);
+    }
+    parts.push(`${count}d${g.sides} [${shown.join(', ')}]`);
   });
   const mod = d.mod + extraMod;
   total += mod;

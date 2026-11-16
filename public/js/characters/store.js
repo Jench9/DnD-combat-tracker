@@ -71,5 +71,6 @@ export function blankCharacter(id) {
     spellAbility: '',
     spellSlots: Array.from({ length: 9 }, () => ({ max: 0, used: 0 })),
     spells: [],
+    modifiers: [],
   };
 }

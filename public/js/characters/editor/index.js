@@ -9,6 +9,7 @@ import { refreshEditorCampaign } from '../campaigns.js';
 import { ownsCharacter } from '../../core/identity.js';
 import { initInventory, refreshInventoryUi } from './inventory.js';
 import { initSpellbook, refreshSpellbookUi } from './spellbook.js';
+import { initModifierList, refreshModifierUi } from './modifierList.js';
 
 let equipEd;
 let featEd;
@@ -27,6 +28,7 @@ export function initEditor() {
   initPortrait();
   initInventory();
   initSpellbook(refreshInventoryUi); // spell changes also redraw the Actions tab
+  initModifierList(refreshInventoryUi); // so do modifier changes
 }
 
 export function openEditor(id) {
@@ -48,6 +50,7 @@ export function openEditor(id) {
   showTab('stats');
   refreshInventoryUi(ch);
   refreshSpellbookUi(ch);
+  refreshModifierUi(ch);
   applyAccess(ch);
 
   $('char-list-view').style.display = 'none';
@@ -75,6 +78,7 @@ export function refreshEditorFromServer() {
   if (!featEd.busy()) featEd.render(ch.features);
   refreshInventoryUi(ch);
   refreshSpellbookUi(ch);
+  if (!$('modList').contains(document.activeElement)) refreshModifierUi(ch); // not under the cursor
   applyAccess(ch);
   return true;
 }

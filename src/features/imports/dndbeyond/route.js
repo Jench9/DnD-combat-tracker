@@ -4,6 +4,7 @@ const { extractDdbCharacterId, mapDndBeyondData } = require('./mapper');
 const { fetchCharacter, fetchAvatar } = require('./client');
 const { planInventory } = require('./inventory');
 const { planSpells } = require('./spells');
+const { mergeModifiers } = require('./modifiers');
 const items = require('../../items/service');
 const spellLibrary = require('../../spells/service');
 const { uid } = require('../../../core/ids');
@@ -79,6 +80,7 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsCh
       if (error) return res.status(status).json({ error });
       applyInventory(mapped);
       applySpells(mapped);
+      mapped.patch.modifiers = mergeModifiers([], mapped.data, uid);
       const ch = characters.addImported({ ...mapped.patch, campaignId: req.body.campaignId }, mapped.notesPrefix);
       onCharactersChanged();
       res.json({ character: ch });
@@ -108,6 +110,8 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsCh
       if (existing.portrait) delete mapped.patch.portrait;
       applyInventory(mapped);
       applySpells(mapped);
+      // Newly gained feats/features are added; existing modifiers are kept.
+      mapped.patch.modifiers = mergeModifiers(existing.modifiers, mapped.data, uid);
       const ch = characters.refreshImported(existing.id, mapped.patch, { replaceInventory: true, replaceSpells: true });
       onCharactersChanged();
       res.json({ character: ch });

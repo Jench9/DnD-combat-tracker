@@ -15,7 +15,12 @@
 //   spellAbility: '' | 'int' | 'wis' | 'cha' | … (spell attack + save DC),
 //   spellSlots: 9 × { max, used } for slot levels 1–9,
 //   spells: [{ id, spellId, name, prepared }] — from the spell library
-//     (cantrips are always ready; leveled spells need `prepared`) }
+//     (cantrips are always ready; leveled spells need `prepared`),
+//   modifiers: [{ id, preset, active, only, custom }] — feats, fighting
+//     styles, class features, weapon mastery… that change attacks. `preset`
+//     names an entry of the client catalog (public/js/core/modifiers.js);
+//     otherwise `custom` holds the definition. `active` switches situational
+//     ones (Rage, Hex…); `only` limits it to named weapons/spells/damage types. }
 
 const { MAX_PORTRAIT_CHARS, sanitizeImage } = require('../../core/images');
 
@@ -39,6 +44,7 @@ function blankCharacter(id) {
     spellAbility: '',
     spellSlots: Array.from({ length: 9 }, () => ({ max: 0, used: 0 })),
     spells: [],
+    modifiers: [],
   };
 }
 
@@ -88,6 +94,46 @@ function sanitizeSpells(list) {
   return out;
 }
 
+const MAX_MODIFIERS = 50;
+const PRESET_RE = /^[a-z0-9-]{1,40}$/;
+const DAMAGE_TOKENS = ['PROF', 'STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+const DAMAGE_TYPES = ['', 'acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic',
+  'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder'];
+const DICE_RE = /^\d{1,2}d(4|6|8|10|12)$/;
+
+const pick = (v, allowed, fallback) => (allowed.includes(v) ? v : fallback);
+const clampInt = (v, min, max) => Math.max(min, Math.min(max, parseInt(v, 10) || 0));
+
+function sanitizeCustomModifier(c) {
+  if (!c || typeof c !== 'object') return null;
+  const damage = String(c.damage ?? '').trim().toUpperCase();
+  return {
+    name: String(c.name || 'Custom modifier').slice(0, 40),
+    toHit: clampInt(c.toHit, -20, 20),
+    damage: DAMAGE_TOKENS.includes(damage) ? damage : String(clampInt(damage, -20, 50)),
+    dice: DICE_RE.test(String(c.dice || '')) ? c.dice : '',
+    diceType: pick(c.diceType, DAMAGE_TYPES, ''),
+    appliesTo: pick(c.appliesTo, ['weapon', 'spell', 'any'], 'weapon'),
+    range: pick(c.range, ['melee', 'ranged', 'any'], 'any'),
+    toggle: !!c.toggle,
+    note: String(c.note || '').slice(0, 300),
+  };
+}
+
+function sanitizeModifiers(list) {
+  const seen = new Set();
+  const out = [];
+  list.slice(0, MAX_MODIFIERS).forEach((m) => {
+    if (!m || !INV_ID_RE.test(String(m.id)) || seen.has(m.id)) return;
+    const preset = PRESET_RE.test(String(m.preset || '')) ? m.preset : '';
+    const custom = preset ? null : sanitizeCustomModifier(m.custom);
+    if (!preset && !custom) return;
+    seen.add(m.id);
+    out.push({ id: m.id, preset, active: !!m.active, only: String(m.only || '').slice(0, 100), custom });
+  });
+  return out;
+}
+
 function mod(score) {
   return Math.floor(((parseInt(score, 10) || 10) - 10) / 2);
 }
@@ -125,6 +171,7 @@ function sanitizeCharacterPatch(existing, patch) {
   if (patch.spellAbility === '' || ABILITY_KEYS.includes(patch.spellAbility)) next.spellAbility = patch.spellAbility;
   if (Array.isArray(patch.spellSlots)) next.spellSlots = sanitizeSlots(patch.spellSlots);
   if (Array.isArray(patch.spells)) next.spells = sanitizeSpells(patch.spells);
+  if (Array.isArray(patch.modifiers)) next.modifiers = sanitizeModifiers(patch.modifiers);
   if (patch.weaponProf && typeof patch.weaponProf === 'object') {
     next.weaponProf = { ...existing.weaponProf };
     ['simple', 'martial'].forEach((k) => {

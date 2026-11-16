@@ -10,9 +10,13 @@
 // 5e rules: melee attacks use STR, ranged use DEX, finesse the better of
 // the two. To hit = that modifier + proficiency (if proficient with the
 // weapon's category) + magic bonus; damage = dice + modifier + magic bonus.
+// On top of that, the character's modifiers (feats, fighting styles, class
+// features, weapon mastery, Hex…; see modifiers.js) add to hit, damage,
+// extra dice, reroll rules, a wider crit range and rules notes.
 import { abilityMod, profBonusForLevel, fmtMod } from '../characters/rules.js';
 import { roll, rollDie, formatDice, addDice, scaleDice } from './dice.js';
 import { slotLabel, spellHeader } from '../spells/format.js';
+import { effectsFor, unarmedOverride, resolveModifiers } from './modifiers.js';
 
 // Spell attack bonus and save DC, or null without a spellcasting ability.
 export function spellcasting(ch) {
@@ -34,9 +38,32 @@ export function spellDice(sp, slotLevel, charLevel) {
   return sp.higherLevelDice && slotLevel > sp.level ? addDice(sp.dice, sp.higherLevelDice, slotLevel - sp.level) : sp.dice;
 }
 
+const ABILITY_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+
+// Everything the modifier engine needs about the character.
+function envFor(ch) {
+  const abilityMods = Object.fromEntries(ABILITY_KEYS.map((k) => [k, abilityMod(ch.abilities?.[k])]));
+  return { ch, abilityMods, prof: profBonusForLevel(ch.level) };
+}
+
+// One way of dealing damage with an attack (one-handed, two-handed…):
+// main dice + flat modifier, plus extra labelled dice (item extra damage,
+// Sneak Attack, Hex…), and how the main dice are rolled.
+function grip(label, dice, type, mod, fx, itemExtra) {
+  const parts = [];
+  if (itemExtra) parts.push(itemExtra);
+  fx.parts.forEach((p) => parts.push(p));
+  return {
+    label,
+    main: { dice, type, mod: mod + fx.flat, reroll: fx.reroll, critExtraDice: fx.critExtraDice },
+    parts,
+  };
+}
+
 export function buildActions(ch, itemsById, spellsById = new Map()) {
-  const mods = { str: abilityMod(ch.abilities?.str), dex: abilityMod(ch.abilities?.dex) };
-  const prof = profBonusForLevel(ch.level);
+  const env = envFor(ch);
+  const mods = env.abilityMods;
+  const prof = env.prof;
   const actions = [];
 
   (ch.inventory || []).forEach((entry) => {
@@ -47,21 +74,34 @@ export function buildActions(ch, itemsById, spellsById = new Map()) {
       if (it.properties.includes('finesse')) ability = mods.dex > mods.str ? 'dex' : 'str';
       const proficient = !!(ch.weaponProf && ch.weaponProf[it.weaponCategory]);
       const magic = it.magicBonus || 0;
-      const dmgMod = mods[ability] + magic;
       const reach = it.properties.includes('reach') ? 'reach 10 ft' : 'reach 5 ft';
+      const base = {
+        kind: 'weapon', name: it.name, range: it.attackType, props: it.properties, ability,
+        attackRoll: true, damaging: true, damageType: it.damageType, mastery: it.mastery || '',
+      };
+      // Two-handed weapons are always used two-handed; versatile ones both ways.
+      const fx = effectsFor({ ...base, twoHandedGrip: it.properties.includes('two-handed') }, env);
+      const fx2 = it.versatileDamage ? effectsFor({ ...base, twoHandedGrip: true }, env) : null;
+      const itemExtra = it.extraDamage ? { dice: it.extraDamage, type: it.extraDamageType || '', label: '' } : null;
+      const dmgMod = mods[ability] + magic;
       actions.push({
         key: entry.id,
         kind: 'attack',
         name: it.name,
-        toHit: mods[ability] + (proficient ? prof : 0) + magic,
-        damage: { dice: it.damage, mod: dmgMod, type: it.damageType },
-        versatile: it.versatileDamage ? { dice: it.versatileDamage, mod: dmgMod, type: it.damageType } : null,
-        extra: it.extraDamage ? { dice: it.extraDamage, mod: 0, type: it.extraDamageType || '' } : null,
+        toHit: mods[ability] + (proficient ? prof : 0) + magic + fx.toHit,
+        toHitDice: fx.toHitDice,
+        critRange: fx.critRange,
+        grips: [
+          grip('Damage', it.damage, it.damageType, dmgMod, fx, itemExtra),
+          ...(fx2 ? [grip('2-handed', it.versatileDamage, it.damageType, dmgMod, fx2, itemExtra)] : []),
+        ],
         detail: [
           it.attackType === 'ranged' ? `range ${it.range || '?'} ft` : reach + (it.range ? ` or range ${it.range} ft` : ''),
           ability.toUpperCase(),
           proficient ? 'proficient' : 'not proficient',
+          ...new Set([...fx.applied, ...(fx2 ? fx2.applied : [])]),
         ].join(' · '),
+        notes: [...new Set([...fx.notes, ...(fx2 ? fx2.notes : [])])],
       });
     } else if (it.type === 'gear' && it.effectDice) {
       actions.push({
@@ -78,46 +118,80 @@ export function buildActions(ch, itemsById, spellsById = new Map()) {
     actions.push({ key: entry.id, kind: 'spell', name: sp.name, spell: sp });
   });
 
-  // Everyone can punch: STR + proficiency to hit, 1 + STR damage.
+  // Everyone can punch: STR + proficiency to hit, 1 + STR damage — unless
+  // Martial Arts gives a bigger die and lets DEX be used.
+  const ma = unarmedOverride(env);
+  const uAbility = ma && ma.dex && mods.dex > mods.str ? 'dex' : 'str';
+  const ufx = effectsFor({
+    kind: 'unarmed', name: 'Unarmed Strike', range: 'melee', props: [], ability: uAbility,
+    attackRoll: true, damaging: true, damageType: 'bludgeoning',
+  }, env);
   actions.push({
     key: 'unarmed', kind: 'attack', name: 'Unarmed Strike',
-    toHit: mods.str + prof, damage: { dice: '1', mod: mods.str, type: 'bludgeoning' },
-    versatile: null, extra: null, detail: 'reach 5 ft · STR',
+    toHit: mods[uAbility] + prof + ufx.toHit, toHitDice: ufx.toHitDice, critRange: ufx.critRange,
+    grips: [grip('Damage', ma ? ma.die : '1', 'bludgeoning', mods[uAbility], ufx, null)],
+    detail: ['reach 5 ft', uAbility.toUpperCase(), ...ufx.applied].join(' · '),
+    notes: ufx.notes,
   });
   return actions;
 }
 
-const damageText = (d) => `${formatDice(d.dice, d.mod)} ${d.type}`.trim();
+const partText = (p) => ` + ${p.dice} ${p.type}${p.label ? ` (${p.label})` : ''}`.replace(/ +\(/, ' (').replace(/\s+$/, '');
+const gripText = (g) => `${formatDice(g.main.dice, g.main.mod)} ${g.main.type}`.trim() + g.parts.map(partText).join('');
+const toHitText = (a) => `${fmtMod(a.toHit)}${(a.toHitDice || []).map((d) => ` +${d.dice}`).join('')} to hit`;
 
 // Last roll per character+action, kept across redraws (the combat list
-// redraws on every change at the table). A natural 20 arms a critical
-// for that action's next damage roll.
-const results = new Map(); // key -> { text, crit }
+// redraws on every change at the table). A critical hit arms that action's
+// next damage roll.
+const results = new Map(); // key -> { text, crit, armed }
 
-function rollDamage(a, part, crit) {
-  const main = roll(part.dice, part.mod, { crit });
-  const lines = [`${Math.max(0, main.total)} ${part.type} (${main.text})`];
+function rollGrip(g, crit) {
+  const main = roll(g.main.dice, g.main.mod, { crit, reroll: g.main.reroll, critExtraDice: g.main.critExtraDice });
+  const lines = [`${Math.max(0, main.total)} ${g.main.type} (${main.text})`];
   let total = Math.max(0, main.total);
-  if (a.extra) {
-    const ex = roll(a.extra.dice, 0, { crit });
-    lines.push(`${ex.total} ${a.extra.type} (${ex.text})`);
-    total += ex.total;
-  }
-  return (crit ? 'CRITICAL ' : '') + 'damage: ' + (a.extra ? `${total} total — ` : '') + lines.join(' + ');
+  g.parts.forEach((p) => {
+    const r = roll(p.dice, 0, { crit });
+    lines.push(`${r.total} ${p.type}${p.label ? ` ${p.label}` : ''} (${r.text})`.replace(/\s+\(/, ' ('));
+    total += r.total;
+  });
+  return (crit ? 'CRITICAL ' : '') + 'damage: ' + (g.parts.length ? `${total} total — ` : '') + lines.join(' + ');
+}
+
+// d20 + to hit (+ Bless-style dice); a critical on critRange or higher.
+function rollAttack(a) {
+  const d20 = rollDie(20);
+  const extra = (a.toHitDice || []).map((d) => ({ d, r: roll(d.dice) }));
+  const total = d20 + a.toHit + extra.reduce((s, x) => s + x.r.total, 0);
+  const crit = d20 >= (a.critRange || 20);
+  const note = crit ? (d20 === 20 ? ' — natural 20, critical hit!' : ` — natural ${d20}, critical hit!`) : d20 === 1 ? ' — natural 1, miss' : '';
+  const extraText = extra.map((x) => ` + ${x.r.total} (${x.d.label})`).join('');
+  return { total, crit, text: `Attack: ${total} (d20 [${d20}] ${fmtMod(a.toHit)}${extraText})${note}` };
 }
 
 // --- spells
 const slotChoice = new Map(); // key -> chosen slot level (survives redraws)
 
+// The character's modifiers that apply to this spell (Agonizing Blast,
+// Empowered Evocation, Elemental Adept, Hex on spell attacks…).
+function spellEffects(sp, character) {
+  const sc = spellcasting(character);
+  return effectsFor({
+    kind: 'spell', name: sp.name, ability: sc ? sc.ability : '', attackRoll: sp.mechanic === 'attack',
+    school: sp.school, damaging: !!sp.dice && sp.mechanic !== 'heal', damageType: sp.damageType,
+  }, envFor(character));
+}
+
+const spellParts = (fx) => fx.parts.map(partText).join('');
+
 // What a spell does with a given slot, as text (no rolls).
-function spellStat(sp, sc, slot, charLevel) {
+function spellStat(sp, sc, slot, charLevel, fx) {
   const d = spellDice(sp, slot, charLevel);
-  const mod = sp.addMod && sc ? sc.mod : 0;
+  const mod = (sp.addMod && sc ? sc.mod : 0) + (sp.mechanic === 'heal' ? 0 : fx.flat);
   const dmg = d ? `${formatDice(d, mod)} ${sp.mechanic === 'heal' ? 'healing' : sp.damageType}`.trim() : '';
-  const extra = sp.extraDice ? ` + ${sp.extraDice} ${sp.extraDamageType}` : '';
+  const extra = (sp.extraDice ? ` + ${sp.extraDice} ${sp.extraDamageType}` : '') + (d ? spellParts(fx) : '');
   const needsCaster = sp.mechanic === 'attack' || sp.mechanic === 'save' || sp.addMod;
   if (needsCaster && !sc) return (dmg + extra) + ' — set a spellcasting ability in the Spells tab';
-  if (sp.mechanic === 'attack') return `${fmtMod(sc.attack)} to hit · ${dmg}${extra}`;
+  if (sp.mechanic === 'attack') return `${toHitText({ toHit: sc.attack + fx.toHit, toHitDice: fx.toHitDice })} · ${dmg}${extra}`;
   if (sp.mechanic === 'save') {
     const onSave = !dmg ? '' : sp.saveSuccess === 'half' ? ' (half on success)' : ' (none on success)';
     return `DC ${sc.dc} ${sp.saveAbility.toUpperCase()} save` + (dmg ? ` · ${dmg}${extra}${onSave}` : '');
@@ -126,24 +200,26 @@ function spellStat(sp, sc, slot, charLevel) {
 }
 
 // Casts: rolls everything the spell needs, returns the result text.
-function castText(sp, sc, slot, charLevel) {
+function castText(sp, sc, slot, charLevel, fx) {
   const d = spellDice(sp, slot, charLevel);
   const mod = sp.addMod && sc ? sc.mod : 0;
   const at = sp.level > 0 ? ` (${slotLabel(slot)}-level slot)` : '';
   const dmgRoll = (crit) => {
-    const main = roll(d, mod, { crit });
+    const main = roll(d, mod + fx.flat, { crit, reroll: fx.reroll });
     let text = `${Math.max(0, main.total)} ${sp.damageType} (${main.text})`;
     if (sp.extraDice) {
-      const ex = roll(sp.extraDice, 0, { crit });
+      const ex = roll(sp.extraDice, 0, { crit, reroll: fx.reroll });
       text += ` + ${ex.total} ${sp.extraDamageType} (${ex.text})`;
     }
+    fx.parts.forEach((p) => {
+      const r = roll(p.dice, 0, { crit });
+      text += ` + ${r.total} ${p.type} ${p.label} (${r.text})`;
+    });
     return text;
   };
   if (sp.mechanic === 'attack' && sc) {
-    const d20 = rollDie(20);
-    const crit = d20 === 20;
-    const note = crit ? ' — natural 20, critical!' : d20 === 1 ? ' — natural 1, miss' : '';
-    return { crit, text: `${sp.name}${at}: attack ${d20 + sc.attack} (d20 [${d20}] ${fmtMod(sc.attack)})${note}` + (d ? ` · ${crit ? 'CRITICAL ' : ''}damage ${dmgRoll(crit)}` : '') };
+    const r = rollAttack({ toHit: sc.attack + fx.toHit, toHitDice: fx.toHitDice, critRange: 20 });
+    return { crit: r.crit, text: `${sp.name}${at}: ${r.text.replace(/^Attack/, 'attack')}` + (d ? ` · ${r.crit ? 'CRITICAL ' : ''}damage ${dmgRoll(r.crit)}` : '') };
   }
   if (sp.mechanic === 'save' && sc) {
     const onSave = sp.saveSuccess === 'half' ? ', half on a success' : '';
@@ -160,6 +236,7 @@ function castText(sp, sc, slot, charLevel) {
 function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show }) {
   const sp = a.spell;
   const sc = spellcasting(character);
+  const fx = spellEffects(sp, character);
   const slots = character.spellSlots || [];
   const available = (lvl) => { const s = slots[lvl - 1]; return s ? s.max - s.used : 0; };
   const levels = sp.level === 0 ? [0] : [...Array(10 - sp.level).keys()].map((i) => sp.level + i).filter((l) => (slots[l - 1] || {}).max > 0);
@@ -173,14 +250,15 @@ function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show
   name.textContent = sp.name;
   const stat = document.createElement('span');
   stat.className = 'action-stat';
-  stat.textContent = spellStat(sp, sc, slot, character.level);
+  stat.textContent = spellStat(sp, sc, slot, character.level, fx);
   head.append(name, stat);
   row.appendChild(head);
   const det = document.createElement('div');
   det.className = 'action-detail';
-  det.textContent = spellHeader(sp);
+  det.textContent = [spellHeader(sp), ...fx.applied].join(' · ');
   if (sp.description) det.title = sp.description;
   row.appendChild(det);
+  appendNotes(row, fx.notes);
 
   if (canUse) {
     const btns = document.createElement('div');
@@ -205,7 +283,7 @@ function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show
       sel.addEventListener('change', () => {
         slotChoice.set(key, parseInt(sel.value, 10));
         slot = parseInt(sel.value, 10);
-        stat.textContent = spellStat(sp, sc, slot, character.level);
+        stat.textContent = spellStat(sp, sc, slot, character.level, fx);
         cast.disabled = available(slot) <= 0;
       });
       btns.appendChild(sel);
@@ -217,7 +295,7 @@ function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show
     cast.disabled = sp.level > 0 && (!levels.length || available(slot) <= 0);
     cast.title = sp.level > 0 ? 'Spend a slot and roll' : 'Roll';
     cast.addEventListener('click', () => {
-      const r = castText(sp, sc, slot, character.level);
+      const r = castText(sp, sc, slot, character.level, fx);
       results.set(key, r);
       show();
       if (sp.level > 0) onSpendSlot(slot);
@@ -229,10 +307,40 @@ function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show
   show();
 }
 
-export function renderActions(container, { character, items, spells = [], canUse, onUse, onSpendSlot = () => {} }) {
+function appendNotes(row, notes) {
+  (notes || []).forEach((n) => {
+    const el = document.createElement('div');
+    el.className = 'action-note';
+    el.textContent = n;
+    row.appendChild(el);
+  });
+}
+
+// `onToggleModifier(id)`: if given, situational modifiers (Rage, Hex…)
+// get quick on/off switches above the actions (the combat tracker).
+export function renderActions(container, {
+  character, items, spells = [], canUse, onUse, onSpendSlot = () => {}, onToggleModifier = null,
+}) {
   const byId = new Map(items.map((it) => [it.id, it]));
   const actions = buildActions(character, byId, new Map(spells.map((sp) => [sp.id, sp])));
   container.innerHTML = '';
+
+  const toggles = onToggleModifier ? resolveModifiers(character).filter(({ def }) => def.toggle) : [];
+  if (toggles.length) {
+    const bar = document.createElement('div');
+    bar.className = 'mod-toggles';
+    toggles.forEach(({ entry, def }) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mod-chip' + (entry.active ? ' on' : '');
+      b.textContent = `${def.name.replace(/\s*\(.*?\)|\s*[−-]\d.*$/g, '')}: ${entry.active ? 'on' : 'off'}`;
+      b.title = def.name;
+      b.disabled = !canUse;
+      b.addEventListener('click', () => onToggleModifier(entry.id));
+      bar.appendChild(b);
+    });
+    container.appendChild(bar);
+  }
 
   const sc = spellcasting(character);
   if (sc && actions.some((a) => a.kind === 'spell')) {
@@ -270,11 +378,10 @@ export function renderActions(container, { character, items, spells = [], canUse
     const stat = document.createElement('span');
     stat.className = 'action-stat';
     if (a.kind === 'attack') {
-      stat.textContent = `${fmtMod(a.toHit)} to hit · ${damageText(a.damage)}`
-        + (a.extra ? ` + ${damageText(a.extra)}` : '')
-        + (a.versatile ? ` (two-handed ${damageText(a.versatile)})` : '');
+      stat.textContent = `${toHitText(a)} · ${gripText(a.grips[0])}`
+        + (a.grips[1] ? ` (two-handed ${gripText(a.grips[1])})` : '');
     } else {
-      stat.textContent = damageText(a.effect);
+      stat.textContent = `${formatDice(a.effect.dice, a.effect.mod)} ${a.effect.type}`.trim();
     }
     head.appendChild(stat);
     row.appendChild(head);
@@ -285,6 +392,7 @@ export function renderActions(container, { character, items, spells = [], canUse
       det.textContent = a.detail;
       row.appendChild(det);
     }
+    appendNotes(row, a.notes);
 
     const out = document.createElement('div');
     out.className = 'action-result';
@@ -308,18 +416,14 @@ export function renderActions(container, { character, items, spells = [], canUse
       };
       if (a.kind === 'attack') {
         button('Attack', () => {
-          const d20 = rollDie(20);
-          const total = d20 + a.toHit;
-          const note = d20 === 20 ? ' — natural 20, critical hit!' : d20 === 1 ? ' — natural 1, miss' : '';
-          results.set(key, { text: `Attack: ${total} (d20 [${d20}] ${fmtMod(a.toHit)})${note}`, crit: d20 === 20, armed: d20 === 20 });
+          const r = rollAttack(a);
+          results.set(key, { text: r.text, crit: r.crit, armed: r.crit });
         }, 'Roll d20 + to hit');
-        const dmg = (part, label) => button(label, () => {
+        a.grips.forEach((g) => button(g.label, () => {
           const prev = results.get(key);
           const crit = !!(prev && prev.armed);
-          results.set(key, { text: rollDamage(a, part, crit), crit, armed: false });
-        }, 'Roll damage (doubled dice after a natural 20)');
-        dmg(a.damage, 'Damage');
-        if (a.versatile) dmg(a.versatile, '2-handed');
+          results.set(key, { text: rollGrip(g, crit), crit, armed: false });
+        }, 'Roll damage (doubled dice after a critical hit)'));
       } else {
         button('Use', () => {
           const r = roll(a.effect.dice);

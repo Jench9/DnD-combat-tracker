@@ -63,6 +63,10 @@ function actionsFor(c) {
     items,
     spells,
     canUse: ownsCharacter(ch.id),
+    onToggleModifier: (modId) => send('updateCharacter', {
+      id: ch.id,
+      patch: { modifiers: ch.modifiers.map((m) => (m.id === modId ? { ...m, active: !m.active } : m)) },
+    }),
     onSpendSlot: (level) => send('updateCharacter', {
       id: ch.id,
       patch: { spellSlots: ch.spellSlots.map((s, i) => (i === level - 1 ? { ...s, used: Math.min(s.max, s.used + 1) } : s)) },

@@ -157,6 +157,29 @@
           <label><input type="checkbox" id="profSimple"> simple weapons</label>
           <label><input type="checkbox" id="profMartial"> martial weapons</label>
         </div>
+        <div class="mod-panel">
+          <div class="mod-title">Modifiers <span class="subhead-note">feats, fighting styles, class features, weapon mastery…</span></div>
+          <div id="modList"></div>
+          <div class="mod-add">
+            <select id="modPreset" aria-label="Add a modifier"></select>
+            <button class="btn small" id="modAddBtn">Add</button>
+            <button class="btn secondary small" id="modCustomBtn">+ Custom</button>
+          </div>
+          <div class="mod-custom" id="modCustomForm" hidden>
+            <div class="mod-custom-grid">
+              <label>Name <input id="mcName" type="text" maxlength="40" placeholder="Blessed Blade"></label>
+              <label>Applies to <select id="mcApplies"><option value="weapon">Weapon attacks</option><option value="spell">Spells</option><option value="any">Everything</option></select></label>
+              <label>Range <select id="mcRange"><option value="any">Melee and ranged</option><option value="melee">Melee</option><option value="ranged">Ranged</option></select></label>
+              <label>To hit <input id="mcToHit" type="number" value="0"></label>
+              <label>Damage bonus <input id="mcDamage" type="text" value="0" placeholder="2, PROF, CHA…"></label>
+              <label>Extra dice <input id="mcDice" type="text" placeholder="1d6"></label>
+              <label>Extra dice type <select id="mcDiceType"></select></label>
+              <label class="check"><input id="mcToggle" type="checkbox"> Situational (on/off switch)</label>
+            </div>
+            <label class="mod-note-field">Note <input id="mcNote" type="text" maxlength="300" placeholder="Shown under each attack it applies to"></label>
+            <div class="mod-custom-actions"><button class="btn secondary small" id="mcCancel">Cancel</button><button class="btn small" id="mcSave">Add custom modifier</button></div>
+          </div>
+        </div>
         <div id="actionList"></div>
         <div class="inv-hint">Attacks come from <b>equipped</b> weapons in the Equipment tab; usable items (like potions) from anything with effect dice.</div>
       </div>

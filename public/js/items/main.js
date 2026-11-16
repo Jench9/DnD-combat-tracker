@@ -165,6 +165,7 @@ const FIELDS = {
   iCategory: ['weaponCategory', 'select'], iAttackType: ['attackType', 'select'], iDamage: ['damage', 'dice'],
   iDamageType: ['damageType', 'select'], iVersatile: ['versatileDamage', 'dice'], iRange: ['range', 'text'],
   iMagic: ['magicBonus', 'number'], iExtra: ['extraDamage', 'dice'], iExtraType: ['extraDamageType', 'select'],
+  iMastery: ['mastery', 'select'],
   iArmorType: ['armorType', 'select'], iBaseAc: ['baseAc', 'number'], iMaxDex: ['maxDex', 'maxdex'],
   iStr: ['strengthReq', 'number'], iStealth: ['stealthDisadvantage', 'check'], iArmorMagic: ['magicBonus', 'number'],
   iEffectDice: ['effectDice', 'dice'], iEffect: ['effect', 'text'], iNotes: ['notes', 'text'],

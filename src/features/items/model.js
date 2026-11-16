@@ -6,7 +6,9 @@
 // Weapon:  weaponCategory 'simple'|'martial', attackType 'melee'|'ranged',
 //          damage dice + damageType, versatileDamage (dice when used two-handed),
 //          range 'normal/long' ft, properties [...], magicBonus (+to hit and damage),
-//          extraDamage + extraDamageType (e.g. a flame tongue's 2d6 fire)
+//          extraDamage + extraDamageType (e.g. a flame tongue's 2d6 fire),
+//          mastery (2024 weapon mastery property: cleave, graze, nick, push,
+//          sap, slow, topple, vex — or '')
 // Armor:   armorType 'light'|'medium'|'heavy'|'shield', baseAc (shield: the bonus),
 //          maxDex (null = no limit), strengthReq, stealthDisadvantage
 // Gear:    effectDice (e.g. a healing potion's 2d4+2), effect label
@@ -19,6 +21,7 @@ const DAMAGE_TYPES = ['acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning
   'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder'];
 const PROPERTIES = ['ammunition', 'finesse', 'heavy', 'light', 'loading', 'reach', 'special', 'thrown', 'two-handed'];
 const ARMOR_TYPES = ['light', 'medium', 'heavy', 'shield'];
+const MASTERIES = ['cleave', 'graze', 'nick', 'push', 'sap', 'slow', 'topple', 'vex'];
 // "1d8", "2d6+2", "1d4 - 1", or a flat "1". Normalised to "2d6+2".
 const DICE_RE = /^\s*(?:(\d{1,2})\s*d\s*(4|6|8|10|12|20|100)(?:\s*([+-])\s*(\d{1,3}))?|(\d{1,3}))\s*$/i;
 const RANGE_RE = /^\s*(\d{1,4})\s*\/\s*(\d{1,4})\s*$/;
@@ -37,7 +40,7 @@ function blankItem(id, type = 'gear') {
   return {
     id, name: '', type, cost: '', weight: 0, notes: '', source: 'custom', createdBy: '', edition: '',
     weaponCategory: 'simple', attackType: 'melee', damage: '1d4', damageType: 'bludgeoning',
-    versatileDamage: '', range: '', properties: [], magicBonus: 0, extraDamage: '', extraDamageType: '',
+    versatileDamage: '', range: '', properties: [], magicBonus: 0, extraDamage: '', extraDamageType: '', mastery: '',
     armorType: 'light', baseAc: 11, maxDex: null, strengthReq: 0, stealthDisadvantage: false,
     effectDice: '', effect: '',
   };
@@ -84,6 +87,7 @@ function sanitizeItemPatch(existing, patch) {
   if (patch.magicBonus !== undefined) next.magicBonus = int(patch.magicBonus, 0, 5, existing.magicBonus);
   if (patch.extraDamage !== undefined) next.extraDamage = dice(patch.extraDamage, existing.extraDamage, true);
   if (patch.extraDamageType === '' || DAMAGE_TYPES.includes(patch.extraDamageType)) next.extraDamageType = patch.extraDamageType;
+  if (patch.mastery === '' || MASTERIES.includes(patch.mastery)) next.mastery = patch.mastery;
 
   if (ARMOR_TYPES.includes(patch.armorType)) next.armorType = patch.armorType;
   if (patch.baseAc !== undefined) next.baseAc = int(patch.baseAc, 0, 30, existing.baseAc);
@@ -98,5 +102,5 @@ function sanitizeItemPatch(existing, patch) {
 }
 
 module.exports = {
-  ID_RE, TYPES, DAMAGE_TYPES, PROPERTIES, ARMOR_TYPES, normaliseDice, blankItem, sanitizeItemPatch,
+  ID_RE, TYPES, DAMAGE_TYPES, PROPERTIES, ARMOR_TYPES, MASTERIES, normaliseDice, blankItem, sanitizeItemPatch,
 };

@@ -157,3 +157,10 @@ body.is-dm .player-only { display: none !important; }
 /* SRD attribution (pages listing SRD content) */
 .srd-credit { color: var(--ink-soft); font-size: 11.5px; text-align: center; margin: 28px 0 8px; }
 .srd-credit a { color: inherit; }
+.action-note { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; padding-left: 8px; border-left: 2px solid var(--line); }
+.mod-toggles { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.mod-chip {
+  font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink-soft);
+}
+.mod-chip.on { background: var(--wax); border-color: var(--wax); color: #fff; }

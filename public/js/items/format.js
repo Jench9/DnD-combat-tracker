@@ -10,6 +10,7 @@ export function weaponSummary(it) {
   if (it.range) parts.push(`range ${it.range} ft`);
   if (it.properties.length) parts.push(it.properties.join(', '));
   parts.push(`${it.weaponCategory} ${it.attackType}`);
+  if (it.mastery) parts.push(`mastery: ${it.mastery}`);
   if (it.magicBonus) parts.push(`${signed(it.magicBonus)} to hit`);
   return parts.join(' · ');
 }

@@ -81,6 +81,9 @@ function refreshImported(id, mappedPatch, { replaceInventory = false, replaceSpe
     ...blankCharacter(id),
     portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp, campaignId: old.campaignId,
     inventory: replaceInventory && Array.isArray(inventory) ? inventory : old.inventory, acAuto: old.acAuto,
+    // Kept unless the patch brings a list (the sync route passes existing +
+    // newly detected ones), which is validated like any edit.
+    modifiers: old.modifiers,
     ...(replaceSpells && Array.isArray(spells)
       ? { spellAbility: spellAbility || '', spellSlots, spells }
       : { spellAbility: old.spellAbility, spellSlots: old.spellSlots, spells: old.spells }),
