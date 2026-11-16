@@ -8,6 +8,7 @@ import { initEditor, openEditor, refreshEditorFromServer, showListView } from '.
 import { initImport } from './import.js';
 import { identityHeaders } from '../core/identity.js';
 import { refreshItemOptions } from './editor/inventory.js';
+import { refreshSpellOptions } from './editor/spellbook.js';
 import { initCampaigns, renderCampaignControls, markCampaignsLoaded, campaignForNew } from './campaigns.js';
 
 renderNav();
@@ -32,6 +33,11 @@ const socket = connectSocket({
     itemState: (msg) => {
       store.items = msg.items;
       refreshItemOptions();
+      if (store.activeCharId && !refreshEditorFromServer()) closeEditor();
+    },
+    spellState: (msg) => {
+      store.spells = msg.spells;
+      refreshSpellOptions();
       if (store.activeCharId && !refreshEditorFromServer()) closeEditor();
     },
     campaignState: (msg) => {

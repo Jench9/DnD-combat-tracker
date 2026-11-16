@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spells</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/items.css">
+<link rel="stylesheet" href="css/pages/spells.css">
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="app-nav" data-active="spells"></nav>
+
+  <header>
+    <div>
+      <h1>Spells</h1>
+      <div class="tagline">Common spells from the SRD, plus your own — add them to a character's Spells tab</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <span class="conn-status"><span class="conn-dot" id="connDot"></span><span id="connLabel">Connecting…</span></span>
+      <button class="btn" id="newSpellBtn" hidden>+ New spell</button>
+    </div>
+  </header>
+
+  <div class="panel item-editor" id="editor" hidden>
+    <div class="ed-grid">
+      <div class="field wide"><label for="sName">Name</label><input id="sName" type="text" maxlength="60" placeholder="Arcane Lance"></div>
+      <div class="field"><label for="sLevel">Level</label><select id="sLevel"></select></div>
+      <div class="field"><label for="sSchool">School</label><select id="sSchool"></select></div>
+      <div class="field"><label for="sTime">Casting time</label><input id="sTime" type="text" maxlength="60" placeholder="1 action"></div>
+      <div class="field"><label for="sRange">Range</label><input id="sRange" type="text" maxlength="60" placeholder="120 ft"></div>
+      <div class="field"><label for="sComponents">Components</label><input id="sComponents" type="text" maxlength="60" placeholder="V, S, M"></div>
+      <div class="field"><label for="sDuration">Duration</label><input id="sDuration" type="text" maxlength="60" placeholder="Instantaneous"></div>
+    </div>
+    <div class="props">
+      <label class="check"><input type="checkbox" id="sConc"> Concentration</label>
+      <label class="check"><input type="checkbox" id="sRitual"> Ritual</label>
+    </div>
+
+    <div class="ed-section">
+      <div class="ed-grid">
+        <div class="field"><label for="sMechanic">Resolves with</label>
+          <select id="sMechanic">
+            <option value="attack">Spell attack roll</option>
+            <option value="save">Saving throw</option>
+            <option value="auto">Always hits</option>
+            <option value="heal">Healing</option>
+            <option value="none">No roll</option>
+          </select>
+        </div>
+        <div class="field" data-show="save"><label for="sSave">Save ability</label>
+          <select id="sSave"><option value="">—</option><option value="str">STR</option><option value="dex">DEX</option><option value="con">CON</option><option value="int">INT</option><option value="wis">WIS</option><option value="cha">CHA</option></select>
+        </div>
+        <div class="field" data-show="save"><label for="sSaveSuccess">On a successful save</label>
+          <select id="sSaveSuccess"><option value="half">Half damage</option><option value="none">No damage</option></select>
+        </div>
+        <div class="field" data-show="dice"><label for="sDice" id="sDiceLabel">Damage dice</label><input id="sDice" type="text" placeholder="8d6"></div>
+        <div class="field" data-show="damage"><label for="sDamageType">Damage type</label><select id="sDamageType"></select></div>
+        <div class="field" data-show="dice"><label for="sHigher">Per slot level above</label><input id="sHigher" type="text" placeholder="1d6"></div>
+        <div class="field" data-show="damage"><label for="sExtra">Extra damage dice</label><input id="sExtra" type="text" placeholder="4d6"></div>
+        <div class="field" data-show="damage"><label for="sExtraType">Extra damage type</label><select id="sExtraType"></select></div>
+      </div>
+      <div class="props">
+        <label class="check" data-show="dice"><input type="checkbox" id="sAddMod"> Add spellcasting modifier to the roll</label>
+        <label class="check" data-show="dice"><input type="checkbox" id="sScaling"> Cantrip: more dice at levels 5 / 11 / 17</label>
+      </div>
+    </div>
+
+    <div class="field"><label>Classes</label><div class="props" id="sClasses"></div></div>
+    <div class="field" style="margin-top:10px"><label for="sDesc">Description</label><textarea id="sDesc" rows="4" maxlength="3000"></textarea></div>
+    <div class="ed-hint">Dice like <b>8d6</b>, <b>3d4+3</b> or a flat number. Invalid dice are ignored.</div>
+    <div class="ed-actions">
+      <button class="btn secondary small" id="deleteSpellBtn">Delete</button>
+      <button class="btn small" id="doneBtn">Done</button>
+    </div>
+  </div>
+
+  <div class="item-filters">
+    <input id="search" type="search" placeholder="Search spells…" aria-label="Search spells">
+    <select id="levelFilter" aria-label="Level"><option value="">All levels</option></select>
+    <select id="classFilter" aria-label="Class"><option value="">All classes</option></select>
+  </div>
+
+  <div id="spellList"></div>
+</div>
+
+<script type="module" src="js/spells/main.js"></script>
+</body>
+</html>

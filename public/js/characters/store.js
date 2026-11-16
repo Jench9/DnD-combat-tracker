@@ -16,6 +16,7 @@ export const store = {
   activeCharId: null,
   campaigns: [],
   items: [], // the item library (for inventory and actions)
+  spells: [], // the spell library (for the spellbook and actions)
   // Campaign filter on the list view: ALL, NONE, or a campaign id.
   campaignFilter: 'all',
   // Set by main.js once the socket exists.
@@ -67,5 +68,8 @@ export function blankCharacter(id) {
     inventory: [],
     acAuto: true,
     weaponProf: { simple: true, martial: false },
+    spellAbility: '',
+    spellSlots: Array.from({ length: 9 }, () => ({ max: 0, used: 0 })),
+    spells: [],
   };
 }

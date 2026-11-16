@@ -8,6 +8,7 @@ import { setPortrait, initPortrait } from './portrait.js';
 import { refreshEditorCampaign } from '../campaigns.js';
 import { ownsCharacter } from '../../core/identity.js';
 import { initInventory, refreshInventoryUi } from './inventory.js';
+import { initSpellbook, refreshSpellbookUi } from './spellbook.js';
 
 let equipEd;
 let featEd;
@@ -25,6 +26,7 @@ export function initEditor() {
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   initPortrait();
   initInventory();
+  initSpellbook(refreshInventoryUi); // spell changes also redraw the Actions tab
 }
 
 export function openEditor(id) {
@@ -45,6 +47,7 @@ export function openEditor(id) {
   featEd.render(ch.features);
   showTab('stats');
   refreshInventoryUi(ch);
+  refreshSpellbookUi(ch);
   applyAccess(ch);
 
   $('char-list-view').style.display = 'none';
@@ -71,6 +74,7 @@ export function refreshEditorFromServer() {
   if (!equipEd.busy()) equipEd.render(ch.equipment);
   if (!featEd.busy()) featEd.render(ch.features);
   refreshInventoryUi(ch);
+  refreshSpellbookUi(ch);
   applyAccess(ch);
   return true;
 }

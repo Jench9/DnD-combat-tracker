@@ -5,6 +5,7 @@ import { store, cur, patchChar, touch } from '../store.js';
 import { itemSummary } from '../../items/format.js';
 import { renderActions } from '../../core/attacks.js';
 import { ownsCharacter } from '../../core/identity.js';
+import { refreshSpellbookUi } from './spellbook.js';
 
 const entryId = () => Math.random().toString(36).slice(2, 10);
 const itemById = (id) => store.items.find((it) => it.id === id);
@@ -18,6 +19,7 @@ function change(prop, value) {
   touch('f:' + prop);
   patchChar({ [prop]: value });
   refreshInventoryUi(c);
+  if (prop === 'spellSlots') refreshSpellbookUi(c); // a cast spent a slot
 }
 
 function setInventory(fn) {
@@ -103,8 +105,15 @@ function renderActionsTab(ch) {
   renderActions($('actionList'), {
     character: ch,
     items: store.items,
+    spells: store.spells,
     canUse: ownsCharacter(ch.id),
     onUse: (id) => setInventory((inv) => inv.map((e) => (e.id === id ? { ...e, qty: Math.max(0, e.qty - 1) } : e))),
+    onSpendSlot: (level) => {
+      const c = cur();
+      if (!c) return;
+      const slots = (c.spellSlots || []).map((s, i) => (i === level - 1 ? { ...s, used: Math.min(s.max, s.used + 1) } : { ...s }));
+      change('spellSlots', slots);
+    },
   });
 }
 

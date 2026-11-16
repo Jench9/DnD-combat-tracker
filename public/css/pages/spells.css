@@ -1,0 +1,7 @@
+/* spells.css — on top of items.css (same list/editor layout). */
+.item-filters select {
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--bg-panel); color: var(--ink); font: inherit;
+}
+.item-sum.strong { color: var(--ink); }
+.item-meta { text-transform: capitalize; white-space: normal; text-align: right; }

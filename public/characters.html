@@ -130,6 +130,7 @@
     <div class="tabs" id="sheetTabs">
       <button class="tab-btn active" data-tab="stats">Stats</button>
       <button class="tab-btn" data-tab="actions">Actions</button>
+      <button class="tab-btn" data-tab="spells">Spells</button>
       <button class="tab-btn" data-tab="equipment">Equipment</button>
       <button class="tab-btn" data-tab="features">Features</button>
       <button class="tab-btn" data-tab="notes">Notes</button>
@@ -158,6 +159,37 @@
         </div>
         <div id="actionList"></div>
         <div class="inv-hint">Attacks come from <b>equipped</b> weapons in the Equipment tab; usable items (like potions) from anything with effect dice.</div>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="tab-spells">
+      <div class="panel">
+        <div class="subhead">Spellcasting</div>
+        <div class="spell-top">
+          <label class="field-inline">Ability
+            <select id="spellAbility">
+              <option value="">— none —</option>
+              <option value="int">Intelligence</option><option value="wis">Wisdom</option><option value="cha">Charisma</option>
+              <option value="str">Strength</option><option value="dex">Dexterity</option><option value="con">Constitution</option>
+            </select>
+          </label>
+          <span class="spell-numbers" id="spellNumbers"></span>
+        </div>
+        <div class="slots" id="slotGrid"></div>
+        <div class="slot-actions">
+          <span class="inv-hint">Set how many slots you have per level; click a pip to mark it used.</span>
+          <button class="btn secondary small" id="longRestBtn">Long rest — restore slots</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="subhead">Spells known</div>
+        <div id="spellBook"></div>
+        <div class="item-add inv-add">
+          <input id="spellAdd" type="text" list="spellOptions" placeholder="Add from the spell library — e.g. Fireball">
+          <datalist id="spellOptions"></datalist>
+          <button class="btn" id="spellAddBtn">Add</button>
+        </div>
+        <div class="inv-hint" id="spellHint">Cantrips are always ready; tick <b>prepared</b> for the leveled spells you can cast today. They show up in the Actions tab.</div>
       </div>
     </div>
 

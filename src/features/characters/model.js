@@ -11,7 +11,11 @@
 //   inventory: [{ id, itemId, name, qty, equipped }] — items from the item
 //     library (`name` is a copy, shown if the library item is deleted),
 //   acAuto: true = AC is computed from equipped armor (see derived.js),
-//   weaponProf: { simple, martial } — adds proficiency to weapon attacks }
+//   weaponProf: { simple, martial } — adds proficiency to weapon attacks,
+//   spellAbility: '' | 'int' | 'wis' | 'cha' | … (spell attack + save DC),
+//   spellSlots: 9 × { max, used } for slot levels 1–9,
+//   spells: [{ id, spellId, name, prepared }] — from the spell library
+//     (cantrips are always ready; leveled spells need `prepared`) }
 
 const { MAX_PORTRAIT_CHARS, sanitizeImage } = require('../../core/images');
 
@@ -32,6 +36,9 @@ function blankCharacter(id) {
     inventory: [],
     acAuto: true,
     weaponProf: { simple: true, martial: false },
+    spellAbility: '',
+    spellSlots: Array.from({ length: 9 }, () => ({ max: 0, used: 0 })),
+    spells: [],
   };
 }
 
@@ -53,6 +60,29 @@ function sanitizeInventory(list) {
       name: typeof e.name === 'string' ? e.name.slice(0, 60) : '',
       qty: Number.isFinite(qty) ? Math.max(0, Math.min(9999, qty)) : 1,
       equipped: !!e.equipped,
+    });
+  });
+  return out;
+}
+
+const MAX_SPELLS = 300;
+
+function sanitizeSlots(list) {
+  return Array.from({ length: 9 }, (_, i) => {
+    const s = list[i] || {};
+    const max = Math.max(0, Math.min(9, parseInt(s.max, 10) || 0));
+    return { max, used: Math.max(0, Math.min(max, parseInt(s.used, 10) || 0)) };
+  });
+}
+
+function sanitizeSpells(list) {
+  const seen = new Set();
+  const out = [];
+  list.slice(0, MAX_SPELLS).forEach((e) => {
+    if (!e || !INV_ID_RE.test(String(e.id)) || !INV_ID_RE.test(String(e.spellId)) || seen.has(e.id)) return;
+    seen.add(e.id);
+    out.push({
+      id: e.id, spellId: e.spellId, name: typeof e.name === 'string' ? e.name.slice(0, 60) : '', prepared: !!e.prepared,
     });
   });
   return out;
@@ -92,6 +122,9 @@ function sanitizeCharacterPatch(existing, patch) {
   if (typeof patch.notes === 'string') next.notes = patch.notes.slice(0, 4000);
   if (Array.isArray(patch.inventory)) next.inventory = sanitizeInventory(patch.inventory);
   if (patch.acAuto !== undefined) next.acAuto = !!patch.acAuto;
+  if (patch.spellAbility === '' || ABILITY_KEYS.includes(patch.spellAbility)) next.spellAbility = patch.spellAbility;
+  if (Array.isArray(patch.spellSlots)) next.spellSlots = sanitizeSlots(patch.spellSlots);
+  if (Array.isArray(patch.spells)) next.spells = sanitizeSpells(patch.spells);
   if (patch.weaponProf && typeof patch.weaponProf === 'object') {
     next.weaponProf = { ...existing.weaponProf };
     ['simple', 'martial'].forEach((k) => {

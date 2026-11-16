@@ -23,11 +23,13 @@ let state = { round: 1, activeIndex: 0, combatants: [] };
 const pics = createPortraitLookup();
 let characters = []; // saved sheets: inventories for the Actions section
 let items = []; // the item library
+let spells = []; // the spell library
 
 const socket = connectSocket({
   handlers: {
     state: (msg) => { state = msg.state; render(); setPartyData({ combatants: state.combatants }); },
     itemState: (msg) => { items = msg.items; render(); },
+    spellState: (msg) => { spells = msg.spells; render(); },
     charState: (msg) => {
       characters = msg.characters;
       pics.setCharacters(msg.characters);
@@ -50,16 +52,21 @@ let stale = false;
 const { portraitFor } = pics;
 const notesFor = (c) => (pics.monsterFor(c) || {}).notes || '';
 
-// A PC's actions (attacks from equipped weapons, usable items) as a
-// function that fills a container, or null. Using an item spends it from
-// the character's inventory.
+// A PC's actions (attacks from equipped weapons, usable items, spells) as
+// a function that fills a container, or null. Using an item spends it from
+// the character's inventory; casting a leveled spell spends a slot.
 function actionsFor(c) {
   const ch = c.characterId && characters.find((x) => x.id === c.characterId);
   if (!ch) return null;
   return (container) => renderActions(container, {
     character: ch,
     items,
+    spells,
     canUse: ownsCharacter(ch.id),
+    onSpendSlot: (level) => send('updateCharacter', {
+      id: ch.id,
+      patch: { spellSlots: ch.spellSlots.map((s, i) => (i === level - 1 ? { ...s, used: Math.min(s.max, s.used + 1) } : s)) },
+    }),
     onUse: (entryId) => send('updateCharacter', {
       id: ch.id,
       patch: { inventory: ch.inventory.map((e) => (e.id === entryId ? { ...e, qty: Math.max(0, e.qty - 1) } : e)) },

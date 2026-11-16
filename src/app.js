@@ -16,6 +16,7 @@ const campaigns = require('./features/campaigns');
 const map = require('./features/map');
 const monsters = require('./features/monsters');
 const items = require('./features/items');
+const spells = require('./features/spells');
 
 function createApp() {
   const app = express();
@@ -23,7 +24,7 @@ function createApp() {
   app.use(express.static(PUBLIC_DIR));
 
   const server = http.createServer(app);
-  const hub = createHub(server, [combat, characters, campaigns, map, monsters, items]);
+  const hub = createHub(server, [combat, characters, campaigns, map, monsters, items, spells]);
 
   // For the "Who are you?" screen, which can open on any page (even ones
   // without a live connection): just enough to pick a character.

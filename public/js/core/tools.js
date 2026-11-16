@@ -33,6 +33,13 @@ export const TOOLS = [
     description: 'Weapons, armor and gear with their damage dice and AC — plus custom magic items.',
   },
   {
+    id: 'spells',
+    href: 'spells.html',
+    icon: '✨',
+    title: 'Spells',
+    description: 'Cantrips and spells with their attacks, saves, damage and healing — plus your own.',
+  },
+  {
     id: 'map',
     href: 'map.html',
     icon: '🗺️',

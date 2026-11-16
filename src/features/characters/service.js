@@ -65,7 +65,7 @@ function addImported(mappedPatch, notesPrefix) {
 
 // Re-sync an existing character from a fresh import. The table's own
 // state wins for things the source doesn't own or that change mid-session:
-// notes, campaign, inventory, AC mode, temp HP, damage taken (so a level-up adds the new max HP
+// notes, campaign, inventory, AC mode, spells and slots, temp HP, damage taken (so a level-up adds the new max HP
 // without healing anyone), and the portrait unless the patch brings one.
 // Returns the updated character, or null.
 // `replaceInventory`: the patch's inventory replaces the current one (a
@@ -75,11 +75,12 @@ function refreshImported(id, mappedPatch, { replaceInventory = false } = {}) {
   if (idx === -1) return null;
   const old = characters[idx];
   const damage = Math.max(0, old.hpMax - old.hpCurrent);
-  const { notes, hpTemp, campaignId, inventory, acAuto, ...patch } = mappedPatch;
+  const { notes, hpTemp, campaignId, inventory, acAuto, spellAbility, spellSlots, spells, ...patch } = mappedPatch;
   const fresh = {
     ...blankCharacter(id),
     portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp, campaignId: old.campaignId,
     inventory: replaceInventory && Array.isArray(inventory) ? inventory : old.inventory, acAuto: old.acAuto,
+    spellAbility: old.spellAbility, spellSlots: old.spellSlots, spells: old.spells,
   };
   let ch = sanitizeCharacterPatch(fresh, patch);
   ch.hpCurrent = Math.max(0, ch.hpMax - damage);
