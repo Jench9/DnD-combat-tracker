@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Items</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/items.css">
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="app-nav" data-active="items"></nav>
+
+  <header>
+    <div>
+      <h1>Items</h1>
+      <div class="tagline">Weapons, armor and gear — the basics from the SRD, plus your own creations</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <span class="conn-status"><span class="conn-dot" id="connDot"></span><span id="connLabel">Connecting…</span></span>
+      <button class="btn" id="newItemBtn" hidden>+ New item</button>
+    </div>
+  </header>
+
+  <!-- editor (create / edit) -->
+  <div class="panel item-editor" id="editor" hidden>
+    <div class="ed-grid">
+      <div class="field wide"><label for="iName">Name</label><input id="iName" type="text" maxlength="60" placeholder="Flame Tongue"></div>
+      <div class="field"><label for="iType">Type</label>
+        <select id="iType"><option value="weapon">Weapon</option><option value="armor">Armor / shield</option><option value="gear">Gear</option></select>
+      </div>
+      <div class="field"><label for="iCost">Cost</label><input id="iCost" type="text" maxlength="20" placeholder="15 gp"></div>
+      <div class="field"><label for="iWeight">Weight (lb)</label><input id="iWeight" type="number" min="0" step="0.25"></div>
+    </div>
+
+    <div class="ed-section" data-for="weapon">
+      <div class="ed-grid">
+        <div class="field"><label for="iCategory">Category</label>
+          <select id="iCategory"><option value="simple">Simple</option><option value="martial">Martial</option></select>
+        </div>
+        <div class="field"><label for="iAttackType">Attack</label>
+          <select id="iAttackType"><option value="melee">Melee</option><option value="ranged">Ranged</option></select>
+        </div>
+        <div class="field"><label for="iDamage">Damage dice</label><input id="iDamage" type="text" placeholder="1d8"></div>
+        <div class="field"><label for="iDamageType">Damage type</label><select id="iDamageType"></select></div>
+        <div class="field"><label for="iVersatile">Two-handed dice <span class="opt">(versatile)</span></label><input id="iVersatile" type="text" placeholder="1d10"></div>
+        <div class="field"><label for="iRange">Range (ft)</label><input id="iRange" type="text" placeholder="80/320"></div>
+        <div class="field"><label for="iMagic">Magic bonus</label><input id="iMagic" type="number" min="0" max="5" placeholder="0"></div>
+        <div class="field"><label for="iExtra">Extra damage dice</label><input id="iExtra" type="text" placeholder="2d6"></div>
+        <div class="field"><label for="iExtraType">Extra damage type</label><select id="iExtraType"></select></div>
+      </div>
+      <div class="props" id="iProps"></div>
+    </div>
+
+    <div class="ed-section" data-for="armor">
+      <div class="ed-grid">
+        <div class="field"><label for="iArmorType">Armor type</label>
+          <select id="iArmorType"><option value="light">Light</option><option value="medium">Medium</option><option value="heavy">Heavy</option><option value="shield">Shield</option></select>
+        </div>
+        <div class="field"><label for="iBaseAc" id="iBaseAcLabel">Base AC</label><input id="iBaseAc" type="number" min="0" max="30"></div>
+        <div class="field"><label for="iMaxDex">Max DEX bonus</label><input id="iMaxDex" type="number" min="0" max="10" placeholder="no limit"></div>
+        <div class="field"><label for="iStr">STR required</label><input id="iStr" type="number" min="0" max="30" placeholder="0"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="iStealth"> Disadvantage on Stealth</label>
+    </div>
+
+    <div class="ed-section" data-for="gear">
+      <div class="ed-grid">
+        <div class="field"><label for="iEffectDice">Effect dice</label><input id="iEffectDice" type="text" placeholder="2d4+2"></div>
+        <div class="field"><label for="iEffect">Effect</label><input id="iEffect" type="text" maxlength="60" placeholder="healing"></div>
+      </div>
+    </div>
+
+    <div class="field"><label for="iNotes">Notes</label><textarea id="iNotes" rows="3" maxlength="2000" placeholder="Special rules, description…"></textarea></div>
+    <div class="ed-hint" id="edHint">Dice like <b>1d8</b>, <b>2d6+2</b> or a flat number. Invalid dice are ignored.</div>
+    <div class="ed-actions">
+      <button class="btn secondary small" id="deleteItemBtn">Delete</button>
+      <button class="btn small" id="doneBtn">Done</button>
+    </div>
+  </div>
+
+  <div class="item-filters">
+    <input id="search" type="search" placeholder="Search items…" aria-label="Search items">
+    <div class="type-tabs" id="typeTabs">
+      <button type="button" data-type="" class="active">All</button>
+      <button type="button" data-type="weapon">Weapons</button>
+      <button type="button" data-type="armor">Armor</button>
+      <button type="button" data-type="gear">Gear</button>
+    </div>
+  </div>
+
+  <div id="itemList"></div>
+</div>
+
+<script type="module" src="js/items/main.js"></script>
+</body>
+</html>

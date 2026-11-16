@@ -1,6 +1,6 @@
 # Adventurer's Kit
 
-A self-hosted D&D 5e toolkit for the table: a **Combat Tracker**, **Character Sheets** (with D&D Beyond and PDF import), a **Monsters** library and a grid **Battle Map**, synced live across every device connected to the server. One player bumps a monster's HP and everyone's screen updates instantly.
+A self-hosted D&D 5e toolkit for the table: a **Combat Tracker**, **Character Sheets** (with D&D Beyond and PDF import), a **Monsters** library, an **Items** library (SRD weapons/armor/gear + custom items) and a grid **Battle Map**, synced live across every device connected to the server. One player bumps a monster's HP and everyone's screen updates instantly.
 
 A small Node server holds all state in memory (character sheets are also saved to disk) and pushes updates to every browser over WebSocket. No accounts, no database, no build step.
 
@@ -50,7 +50,7 @@ There are no accounts. The first time someone opens the app they pick **I'm the 
 
 Character sheets are saved to `data/characters.json` (half a second after each change, and on shutdown) and loaded again on startup, so they survive restarts. With Docker, `docker-compose.yaml` mounts `./data` into the container, so they also survive rebuilds. Set `DATA_DIR` to store the file somewhere else. Back up that folder to back up your characters.
 
-Campaigns, the monster library and the list of battle map backgrounds are saved the same way (`data/campaigns.json`, `data/monsters.json`, `data/map-backgrounds.json`); background images themselves are files in `data/maps/`.
+Campaigns, the monster and item libraries and the list of battle map backgrounds are saved the same way (`data/campaigns.json`, `data/monsters.json`, `data/map-backgrounds.json`); background images themselves are files in `data/maps/`.
 
 Combat state and token positions on the battle map are still **only in memory** and reset on restart.
 
@@ -90,6 +90,7 @@ adventurers-kit/
 │       │   └── index.js
 │       ├── campaigns/             campaign list (characters reference one)
 │       ├── monsters/              monster library (model, service, actions), persisted
+│       ├── items/                 item library: model (dice validation), SRD starter set, service, actions
 │       ├── map/                   battle map: grid size + token positions (memory only), background images (saved) + upload route
 │       └── imports/               REST importers, mounted at /api/import/<source>
 │           ├── dndbeyond/         constants, mapper (pure), client (network), route

@@ -26,6 +26,13 @@ export const TOOLS = [
     description: 'Save monsters with their stats and an icon, then add them to fights in a click.',
   },
   {
+    id: 'items',
+    href: 'items.html',
+    icon: '🗡️',
+    title: 'Items',
+    description: 'Weapons, armor and gear with their damage dice and AC — plus custom magic items.',
+  },
+  {
     id: 'map',
     href: 'map.html',
     icon: '🗺️',
