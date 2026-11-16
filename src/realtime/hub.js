@@ -24,7 +24,9 @@ const { WebSocketServer } = require('ws');
 const { identityFromUrl, isDm } = require('../core/identity');
 
 function createHub(server, features) {
-  const wss = new WebSocketServer({ server });
+  // Compression: the libraries (SRD items, spells, monsters) are a few MB
+  // of JSON, sent on every connect; deflate makes that ~5–10× smaller.
+  const wss = new WebSocketServer({ server, perMessageDeflate: { threshold: 1024 } });
 
   const byName = new Map(features.map((f) => [f.name, f]));
   const actionOwner = new Map();

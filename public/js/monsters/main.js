@@ -37,6 +37,7 @@ function start() {
     handlers: {
       monsterState: (msg) => {
         monsters = msg.monsters;
+        refreshTypeFilter();
         if (openId && !current()) closeEditor();
         renderGrid();
         refreshEditor();
@@ -67,15 +68,43 @@ function start() {
     return d;
   }
 
+  // Type filter options from what's in the library (beast, dragon, …).
+  function refreshTypeFilter() {
+    const sel = $('typeFilter');
+    const keep = sel.value;
+    const types = [...new Set(monsters.map((m) => m.creatureType).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="">All types</option>';
+    types.forEach((t) => {
+      const o = document.createElement('option');
+      o.value = t;
+      o.textContent = t[0].toUpperCase() + t.slice(1) + (t.endsWith('s') ? '' : 's');
+      sel.appendChild(o);
+    });
+    sel.value = types.includes(keep) ? keep : '';
+  }
+
+  // Large libraries (the SRD has ~675 creatures) render the first matches only.
+  const MAX_SHOWN = 120;
+
   function renderGrid() {
     const grid = $('monGrid');
     grid.innerHTML = '';
     if (monsters.length === 0) {
+      $('monCount').textContent = '';
       grid.innerHTML = '<div class="empty-lg"><div class="big-icon">🐉</div>No monsters yet — create one with “+ New monster”, '
-        + 'or add a set of common ones with “+ Common monsters”.</div>';
+        + 'or add every SRD creature with “+ SRD creatures”.</div>';
       return;
     }
-    monsters.forEach((m) => {
+    const q = $('monSearch').value.trim().toLowerCase();
+    const type = $('typeFilter').value;
+    const ed = $('editionFilter').value;
+    const shown = monsters.filter((m) => (!q || m.name.toLowerCase().includes(q))
+      && (!type || m.creatureType === type)
+      && (!ed || (ed === 'custom' ? !m.edition : m.edition === ed)));
+    $('monCount').textContent = shown.length > MAX_SHOWN
+      ? `Showing ${MAX_SHOWN} of ${shown.length} — search or filter to narrow it down.`
+      : `${shown.length} monster${shown.length === 1 ? '' : 's'}`;
+    shown.slice(0, MAX_SHOWN).forEach((m) => {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'mon-card' + (m.id === openId ? ' open' : '');
@@ -88,7 +117,8 @@ function start() {
       name.textContent = m.name || 'Unnamed monster';
       const stats = document.createElement('div');
       stats.className = 'mon-card-stats';
-      stats.innerHTML = `<span><b>${m.ac}</b> AC</span><span><b>${m.hpMax}</b> HP</span><span><b>${signed(m.initBonus)}</b> init</span>`;
+      stats.innerHTML = `<span><b>${m.ac}</b> AC</span><span><b>${m.hpMax}</b> HP</span><span><b>${signed(m.initBonus)}</b> init</span>`
+        + (m.cr ? `<span><b>${m.cr}</b> CR</span>` : '');
       body.append(name, stats);
       card.appendChild(body);
       grid.appendChild(card);
@@ -170,6 +200,8 @@ function start() {
     }
   });
   $('iconRemove').addEventListener('click', () => { setIcon(''); patch({ icon: '' }); });
+
+  ['monSearch', 'typeFilter', 'editionFilter'].forEach((id) => $(id).addEventListener('input', renderGrid));
 
   renderGrid();
 }

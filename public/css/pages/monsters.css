@@ -46,3 +46,13 @@
 .link-btn { background: none; border: none; color: var(--ink-soft); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
 .empty-lg { grid-column: 1 / -1; text-align: center; color: var(--ink-soft); padding: 50px 20px; }
 .empty-lg .big-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.6; }
+.mon-filters { margin: 4px 0 6px; }
+.mon-filters select {
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg-panel); color: var(--ink); font: inherit;
+}
+.mon-count { color: var(--ink-soft); font-size: 12.5px; margin-bottom: 10px; }
+.mon-filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mon-filters input[type=search] {
+  flex: 1 1 220px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--bg-panel); color: var(--ink); font: inherit;
+}

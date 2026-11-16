@@ -24,7 +24,7 @@
     </div>
     <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
       <span class="conn-status"><span class="conn-dot" id="connDot"></span><span id="connLabel">Connecting…</span></span>
-      <button class="btn secondary dm-only" id="starterBtn" title="Add common monsters from the 5e SRD (skips ones you already have)">+ Common monsters</button>
+      <button class="btn secondary dm-only" id="starterBtn" title="Add every creature from the SRD 5.1 and 5.2 (skips ones you already have)">+ SRD creatures</button>
       <button class="btn dm-only" id="newMonsterBtn">+ New monster</button>
     </div>
   </header>
@@ -53,7 +53,17 @@
     </div>
   </div>
 
+  <div class="item-filters mon-filters">
+    <input id="monSearch" type="search" placeholder="Search monsters…" aria-label="Search monsters">
+    <select id="typeFilter" aria-label="Creature type"><option value="">All types</option></select>
+    <select id="editionFilter" aria-label="Edition">
+      <option value="">All editions</option><option value="2014">2014 rules (SRD 5.1)</option><option value="2024">2024 rules (SRD 5.2)</option><option value="custom">Custom</option>
+    </select>
+  </div>
+  <div class="mon-count" id="monCount"></div>
+
   <div class="mon-grid" id="monGrid"></div>
+  <div class="srd-credit">Includes material from the System Reference Document 5.1 and 5.2 by Wizards of the Coast LLC, licensed under <a href="https://creativecommons.org/licenses/by/4.0/legalcode" target="_blank" rel="noopener">CC-BY-4.0</a>.</div>
 </div>
 
 <script type="module" src="js/monsters/main.js"></script>

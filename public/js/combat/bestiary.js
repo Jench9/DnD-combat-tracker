@@ -81,7 +81,21 @@ export function renderBestiary() {
     list.appendChild(empty);
     return;
   }
-  monsters.forEach((m) => list.appendChild(renderRow(m)));
+  // The SRD library is large: show matches for the search (first 30).
+  const q = $('bestiarySearch').value.trim().toLowerCase();
+  const shown = monsters.filter((m) => !q || m.name.toLowerCase().includes(q));
+  shown.slice(0, 30).forEach((m) => list.appendChild(renderRow(m)));
+  if (shown.length > 30) {
+    const more = document.createElement('div');
+    more.className = 'empty';
+    more.textContent = `…and ${shown.length - 30} more — type to search.`;
+    list.appendChild(more);
+  } else if (!shown.length) {
+    const none = document.createElement('div');
+    none.className = 'empty';
+    none.textContent = 'No monster matches.';
+    list.appendChild(none);
+  }
 }
 
 export function setBestiary(list) {
@@ -91,6 +105,7 @@ export function setBestiary(list) {
 
 export function initBestiary(sendFn) {
   send = sendFn;
+  $('bestiarySearch').addEventListener('input', renderBestiary);
   $('bestiaryList').addEventListener('focusout', () => {
     setTimeout(() => { if ($('bestiaryList').dataset.stale) renderBestiary(); }, 0);
   });

@@ -1,10 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { planInventory } = require('../src/features/imports/dndbeyond/inventory');
-const { STARTER_ITEMS } = require('../src/features/items/starter');
+const { SRD_ITEMS } = require('../src/srd');
 const { startServer, connect } = require('./helpers');
 
-const LIBRARY = STARTER_ITEMS.map((it, i) => ({ id: `lib${i}`, properties: [], magicBonus: 0, ...it }));
+const LIBRARY = SRD_ITEMS.map((it, i) => ({ id: `lib${i}`, properties: [], magicBonus: 0, ...it }));
 const libId = (name) => LIBRARY.find((i) => i.name === name).id;
 
 // D&D Beyond inventory entries (shape of the unofficial character JSON).
@@ -17,8 +17,8 @@ const PAYLOAD = {
     ddb('Arrows', { quantity: 35 }, { filterType: 'Other Gear' }),
     ddb('Potion of Healing', { quantity: 2 }, { filterType: 'Potion' }),
     ddb('Rope, Hempen (50 feet)', {}, { filterType: 'Other Gear' }),
-    ddb('Waterskin', {}, { filterType: 'Other Gear' }),
-    ddb('Tinderbox', { quantity: 2 }, { filterType: 'Other Gear' }),
+    ddb('Lucky Pebble', {}, { filterType: 'Other Gear' }), // not in the SRD
+    ddb("Grandma's Locket", { quantity: 2 }, { filterType: 'Other Gear' }),
     ddb('Longsword, +1', { equipped: true }, {
       filterType: 'Weapon', type: 'Longsword', magic: true, categoryId: 2, attackType: 1,
       damage: { diceString: '1d8' }, damageType: 'Slashing',
@@ -46,7 +46,7 @@ test('planInventory: matches library names, creates magic weapons/armor, leaves 
   assert.deepStrictEqual([byName('Leather Armor')[0].itemId, byName('Leather Armor')[0].equipped], [libId('Leather Armor'), true]);
   assert.strictEqual(byName('Arrows (20)')[0].qty, 2, '35 arrows = 2 bundles of 20');
   assert.strictEqual(byName('Potion of Healing')[0].qty, 2);
-  assert.strictEqual(byName('Rope, Hempen (50 ft)')[0].itemId, libId('Rope, Hempen (50 ft)'));
+  assert.strictEqual(byName('Rope, hempen (50 feet)')[0].itemId, libId('Rope, hempen (50 feet)'));
 
   // New library items: +1 longsword (both copies share it), Flame Tongue (base dice), +1 breastplate.
   assert.strictEqual(plan.newItems.length, 3);
@@ -56,11 +56,13 @@ test('planInventory: matches library names, creates magic weapons/armor, leaves 
     ['1d8', 'slashing', '1d10', 1, 'martial']);
   assert.strictEqual(byName('Longsword, +1').length, 2);
   assert.ok(byName('Longsword, +1').every((e) => e.itemId === created('Longsword, +1').id));
-  assert.strictEqual(created('Flame Tongue').patch.damage, '1d8', 'falls back to the base weapon');
+  // The SRD's "Flame Tongue" is a dice-less magic item, so the weapon is created separately.
+  assert.ok(LIBRARY.some((i) => i.name === 'Flame Tongue' && i.type === 'gear'));
+  assert.strictEqual(created('Flame Tongue (Longsword)').patch.damage, '1d8', 'falls back to the base weapon');
   const bp = created('Breastplate, +1').patch;
   assert.deepStrictEqual([bp.armorType, bp.baseAc, bp.maxDex, bp.magicBonus], ['medium', 14, 2, 1]);
 
-  assert.strictEqual(plan.otherText, 'Waterskin\nTinderbox x2\nMystery Thing');
+  assert.strictEqual(plan.otherText, "Lucky Pebble\nGrandma's Locket x2\nMystery Thing");
   assert.strictEqual(new Set(plan.inventory.map((e) => e.id)).size, plan.inventory.length, 'unique entry ids');
 });
 
@@ -98,7 +100,7 @@ test('D&D Beyond import and sync map the inventory into the library', async (t) 
   assert.deepStrictEqual([plus1.source, plus1.createdBy, plus1.magicBonus], ['custom', 'dm', 1]);
   const longsword = character.inventory.find((e) => e.name === 'Longsword');
   assert.strictEqual(lib.find((i) => i.id === longsword.itemId).name, 'Longsword');
-  assert.strictEqual(character.equipment, 'Waterskin\nTinderbox x2\nMystery Thing');
+  assert.strictEqual(character.equipment, "Lucky Pebble\nGrandma's Locket x2\nMystery Thing");
   assert.deepStrictEqual(character.weaponProf, { simple: false, martial: true });
 
   // Sync: D&D Beyond now also has a shield; nothing new is created twice.

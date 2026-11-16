@@ -1,7 +1,8 @@
 // Item shape and validation. Pure functions.
 //
 // Common:  { id, name, type: 'weapon' | 'armor' | 'gear', cost, weight, notes,
-//            source: 'srd' | 'custom', createdBy: 'dm' | '<characterId>' | '' }
+//            source: 'srd' | 'custom', createdBy: 'dm' | '<characterId>' | '',
+//            edition: '2014' | '2024' | '' (SRD 5.1 / 5.2; '' for custom) }
 // Weapon:  weaponCategory 'simple'|'martial', attackType 'melee'|'ranged',
 //          damage dice + damageType, versatileDamage (dice when used two-handed),
 //          range 'normal/long' ft, properties [...], magicBonus (+to hit and damage),
@@ -34,7 +35,7 @@ function normaliseDice(v) {
 
 function blankItem(id, type = 'gear') {
   return {
-    id, name: '', type, cost: '', weight: 0, notes: '', source: 'custom', createdBy: '',
+    id, name: '', type, cost: '', weight: 0, notes: '', source: 'custom', createdBy: '', edition: '',
     weaponCategory: 'simple', attackType: 'melee', damage: '1d4', damageType: 'bludgeoning',
     versatileDamage: '', range: '', properties: [], magicBonus: 0, extraDamage: '', extraDamageType: '',
     armorType: 'light', baseAc: 11, maxDex: null, strengthReq: 0, stealthDisadvantage: false,
@@ -64,7 +65,8 @@ function sanitizeItemPatch(existing, patch) {
     const w = Number(patch.weight);
     if (Number.isFinite(w)) next.weight = Math.max(0, Math.min(9999, Math.round(w * 100) / 100));
   }
-  if (typeof patch.notes === 'string') next.notes = str(patch.notes, 2000);
+  if (typeof patch.notes === 'string') next.notes = str(patch.notes, 8000);
+  if (['2014', '2024', ''].includes(patch.edition)) next.edition = patch.edition;
 
   if (['simple', 'martial'].includes(patch.weaponCategory)) next.weaponCategory = patch.weaponCategory;
   if (['melee', 'ranged'].includes(patch.attackType)) next.attackType = patch.attackType;

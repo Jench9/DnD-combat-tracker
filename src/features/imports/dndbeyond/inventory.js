@@ -28,14 +28,28 @@ function nameKeys(name) {
 }
 
 // Index the library by normalised name (also without "(20)" bundles and
-// without a trailing "armor").
+// without a trailing "armor"): key -> [items].
 function indexLibrary(library) {
   const idx = new Map();
   library.forEach((it) => {
     const n = norm(it.name);
-    [n, n.replace(/ armor$/, '')].forEach((k) => { if (k && !idx.has(k)) idx.set(k, it); });
+    new Set([n, n.replace(/ armor$/, '')]).forEach((k) => {
+      if (!k) return;
+      if (!idx.has(k)) idx.set(k, []);
+      idx.get(k).push(it);
+    });
   });
   return idx;
+}
+
+// D&D Beyond weapons/armor only match library items of the same type: the
+// SRD lists e.g. "Flame Tongue" as a (dice-less) magic item, and matching
+// a flame tongue longsword to it would lose its attack.
+const WANT_TYPE = { Weapon: 'weapon', Armor: 'armor' };
+function findInLibrary(idx, name, filterType) {
+  const want = WANT_TYPE[filterType];
+  const candidates = nameKeys(name).flatMap((k) => idx.get(k) || []);
+  return want ? candidates.find((it) => it.type === want) : candidates[0];
 }
 
 // Library items sold in bundles, e.g. "Arrows (20)": D&D Beyond counts
@@ -64,7 +78,7 @@ function itemFromDefinition(def, library) {
     let damage = def.damage && def.damage.diceString;
     let damageType = String(def.damageType || '').toLowerCase();
     // Generic magic weapons may only name their base weapon.
-    const base = indexLibrary(library).get(norm(def.type));
+    const base = (indexLibrary(library).get(norm(def.type)) || []).find((it) => it.type === 'weapon');
     if (!damage && base && base.type === 'weapon') { damage = base.damage; damageType = damageType || base.damageType; }
     if (!damage) return null;
     const ranged = def.attackType === 2;
@@ -119,7 +133,7 @@ function planInventory(data, library, newId) {
     const qty = Math.max(1, parseInt(entry.quantity, 10) || 1);
     const equipped = !!entry.equipped;
 
-    const lib = nameKeys(def.name).map((k) => idx.get(k)).find(Boolean);
+    const lib = findInLibrary(idx, def.name, def.filterType);
     if (lib) {
       inventory.push({ id: newId(), itemId: lib.id, name: lib.name, qty: bundleQty(lib, qty), equipped });
       return;
@@ -132,6 +146,8 @@ function planInventory(data, library, newId) {
         other.push(qty > 1 ? `${def.name} x${qty}` : def.name);
         return;
       }
+      // Don't clash with a same-named library entry of another type.
+      if (nameKeys(def.name).some((k) => idx.has(k))) patch.name = `${def.name} (${def.type || patch.type})`;
       itemId = newId();
       created.set(key, itemId);
       newItems.push({ id: itemId, patch });

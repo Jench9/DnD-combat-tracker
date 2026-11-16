@@ -315,3 +315,7 @@ details.ref[open] summary::before { content: "▾ "; }
 
 .footer-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
 .controls-row { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.bestiary-search {
+  width: 100%; padding: 7px 10px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--bg); color: var(--ink); font: inherit;
+}

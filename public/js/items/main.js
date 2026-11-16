@@ -69,7 +69,7 @@ function renderRow(it) {
   name.textContent = it.name || 'Unnamed item';
   const meta = document.createElement('span');
   meta.className = 'item-meta';
-  meta.textContent = [it.cost, it.weight ? it.weight + ' lb' : ''].filter(Boolean).join(' · ');
+  meta.textContent = [it.edition, it.cost, it.weight ? it.weight + ' lb' : ''].filter(Boolean).join(' · ');
   top.append(name, meta);
 
   const sum = document.createElement('div');
@@ -101,7 +101,9 @@ function renderList() {
   const list = $('itemList');
   list.innerHTML = '';
   const q = $('search').value.trim().toLowerCase();
+  const ed = $('editionFilter').value;
   const shown = items.filter((it) => (!typeFilter || it.type === typeFilter)
+    && (!ed || (ed === 'custom' ? it.source === 'custom' : it.edition === ed))
     && (!q || it.name.toLowerCase().includes(q) || itemSummary(it).toLowerCase().includes(q)));
   if (shown.length === 0) {
     list.innerHTML = '<div class="empty-lg">No items match.</div>';
@@ -126,6 +128,7 @@ function renderList() {
 }
 
 $('search').addEventListener('input', renderList);
+$('editionFilter').addEventListener('change', renderList);
 $('typeTabs').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-type]');
   if (!b) return;

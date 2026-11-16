@@ -10,7 +10,8 @@
 //   extraDice + extraDamageType (a second damage type, e.g. ice storm),
 //   higherLevelDice (added per slot level above the spell's level),
 //   cantripScaling (dice count ×2/×3/×4 at character levels 5/11/17),
-//   description, source: 'srd' | 'custom', createdBy }
+//   description, source: 'srd' | 'custom', createdBy,
+//   edition: '2014' | '2024' | '' (SRD 5.1 / 5.2; '' for custom) }
 const { normaliseDice, DAMAGE_TYPES } = require('../items/model');
 
 const ID_RE = /^[a-z0-9]{1,20}$/;
@@ -25,7 +26,7 @@ function blankSpell(id) {
     duration: 'Instantaneous', concentration: false, ritual: false, classes: [],
     mechanic: 'none', saveAbility: '', saveSuccess: 'half', dice: '', damageType: '', addMod: false,
     extraDice: '', extraDamageType: '', higherLevelDice: '', cantripScaling: false,
-    description: '', source: 'custom', createdBy: '',
+    description: '', source: 'custom', createdBy: '', edition: '',
   };
 }
 
@@ -56,7 +57,8 @@ function sanitizeSpellPatch(existing, patch) {
   if (patch.extraDice !== undefined) next.extraDice = dice(patch.extraDice, existing.extraDice);
   if (patch.extraDamageType === '' || DAMAGE_TYPES.includes(patch.extraDamageType)) next.extraDamageType = patch.extraDamageType;
   if (patch.higherLevelDice !== undefined) next.higherLevelDice = dice(patch.higherLevelDice, existing.higherLevelDice);
-  if (typeof patch.description === 'string') next.description = str(patch.description, 3000);
+  if (typeof patch.description === 'string') next.description = str(patch.description, 8000);
+  if (['2014', '2024', ''].includes(patch.edition)) next.edition = patch.edition;
   return next;
 }
 

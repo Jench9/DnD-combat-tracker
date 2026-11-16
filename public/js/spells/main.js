@@ -79,7 +79,7 @@ function renderRow(sp) {
   name.textContent = sp.name || 'Unnamed spell';
   const meta = document.createElement('span');
   meta.className = 'item-meta';
-  meta.textContent = sp.classes.join(', ');
+  meta.textContent = [sp.edition, sp.classes.join(', ')].filter(Boolean).join(' · ');
   top.append(name, meta);
   const head = document.createElement('div');
   head.className = 'item-sum';
@@ -114,7 +114,9 @@ function renderList() {
   const q = $('search').value.trim().toLowerCase();
   const lvl = $('levelFilter').value;
   const cls = $('classFilter').value;
+  const ed = $('editionFilter').value;
   const shown = spells.filter((sp) => (lvl === '' || sp.level === Number(lvl)) && (!cls || sp.classes.includes(cls))
+    && (!ed || (ed === 'custom' ? sp.source === 'custom' : sp.edition === ed))
     && (!q || sp.name.toLowerCase().includes(q) || sp.description.toLowerCase().includes(q)));
   if (!shown.length) { list.innerHTML = '<div class="empty-lg">No spells match.</div>'; return; }
   for (let l = 0; l <= 9; l++) {
@@ -134,7 +136,7 @@ function renderList() {
     list.appendChild(box);
   }
 }
-['search', 'levelFilter', 'classFilter'].forEach((id) => $(id).addEventListener('input', renderList));
+['search', 'levelFilter', 'classFilter', 'editionFilter'].forEach((id) => $(id).addEventListener('input', renderList));
 
 // ---- editor
 // input id -> [spell prop, kind]  (kind: text | dice | select | number | check)

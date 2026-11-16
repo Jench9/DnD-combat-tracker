@@ -1,10 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { planSpells, spellFromDefinition } = require('../src/features/imports/dndbeyond/spells');
-const { STARTER_SPELLS } = require('../src/features/spells/starter');
+const { SRD_SPELLS } = require('../src/srd');
 const { startServer, connect } = require('./helpers');
 
-const LIBRARY = STARTER_SPELLS.map((sp, i) => ({ id: `sp${i}`, ...sp }));
+const LIBRARY = SRD_SPELLS.map((sp, i) => ({ id: `sp${i}`, ...sp }));
 const cls = (name, level, extra = {}) => ({ id: name + level, level, definition: { name }, ...extra });
 const slotsFor = (classes, extra = {}) => planSpells({ classes, ...extra }, LIBRARY, () => 'x').spellSlots.map((s) => s.max);
 const row = (...n) => [...n, ...Array(9 - n.length).fill(0)];

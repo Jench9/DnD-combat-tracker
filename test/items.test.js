@@ -6,7 +6,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { startServer, connect } = require('./helpers');
 const { normaliseDice, sanitizeItemPatch, blankItem } = require('../src/features/items/model');
-const { STARTER_ITEMS } = require('../src/features/items/starter');
+const { SRD_ITEMS: STARTER_ITEMS } = require('../src/srd');
 
 test('dice are validated and normalised', () => {
   assert.strictEqual(normaliseDice('2D6 + 2'), '2d6+2');
@@ -57,7 +57,9 @@ test('items: SRD basics are loaded; custom items with ownership rules', async (t
   lyra.send('updateItem', { id: greatsword.id, patch: { damage: '9d12' } });
   lyra.send('updateItem', { id: 'flametongue', patch: { name: 'Flame Tongue +1' } });
   dm.send('updateItem', { id: plate.id, patch: { notes: 'Heavy!' } });
-  const after = await dm.next('itemState', (m) => m.items.find((i) => i.id === plate.id)?.notes === 'Heavy!');
+  // Updates from different connections can arrive in any order: wait for both.
+  const after = await dm.next('itemState', (m) => m.items.find((i) => i.id === plate.id)?.notes === 'Heavy!'
+    && m.items.find((i) => i.id === 'flametongue')?.name === 'Flame Tongue +1');
   const by = (id) => after.items.find((i) => i.id === id);
   assert.strictEqual(by('flametongue').name, 'Flame Tongue +1');
   assert.strictEqual(by(greatsword.id).damage, '2d6');

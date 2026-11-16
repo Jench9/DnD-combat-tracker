@@ -153,3 +153,7 @@ body.is-dm .player-only { display: none !important; }
   padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px;
   background: var(--bg); color: var(--ink); font: inherit; font-size: 12.5px;
 }
+
+/* SRD attribution (pages listing SRD content) */
+.srd-credit { color: var(--ink-soft); font-size: 11.5px; text-align: center; margin: 28px 0 8px; }
+.srd-credit a { color: inherit; }

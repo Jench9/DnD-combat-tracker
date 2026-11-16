@@ -48,3 +48,6 @@
 .item-editor textarea { resize: vertical; }
 .ed-hint { color: var(--ink-soft); font-size: 12px; margin-top: 6px; }
 .ed-actions { display: flex; justify-content: space-between; margin-top: 12px; }
+.item-filters select {
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg-panel); color: var(--ink); font: inherit;
+}

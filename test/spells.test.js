@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { startServer, connect } = require('./helpers');
 const { sanitizeSpellPatch, blankSpell } = require('../src/features/spells/model');
-const { STARTER_SPELLS } = require('../src/features/spells/starter');
+const { SRD_SPELLS } = require('../src/srd');
 const { sanitizeCharacterPatch, blankCharacter } = require('../src/features/characters/model');
 
 test('spell fields are validated', () => {
@@ -42,7 +42,7 @@ test('spells: SRD spells loaded; custom spells with ownership rules', async (t) 
   await Promise.all([dm.opened, lyra.opened, brann.opened]);
 
   const first = await lyra.next('spellState');
-  assert.strictEqual(first.spells.length, STARTER_SPELLS.length);
+  assert.strictEqual(first.spells.length, SRD_SPELLS.length);
   const fireball = first.spells.find((x) => x.name === 'Fireball');
   assert.deepStrictEqual(
     [fireball.level, fireball.mechanic, fireball.saveAbility, fireball.saveSuccess, fireball.dice, fireball.higherLevelDice],

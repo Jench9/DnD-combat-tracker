@@ -13,7 +13,9 @@ test('monsters: library add/update (sanitized)/delete', async (t) => {
   c.send('addMonster', { id: 'gob', patch: { name: 'Dup' } }); // ignored
   c.send('addMonster', { id: 'BAD!', patch: { name: 'x' } }); // ignored
   const added = await c.next('monsterState', (m) => m.monsters.length === 1);
-  assert.deepStrictEqual(added.monsters[0], { id: 'gob', name: 'Goblin', ac: 15, hpMax: 7, initBonus: 2, icon: '', notes: '' });
+  assert.deepStrictEqual(added.monsters[0], {
+    id: 'gob', name: 'Goblin', ac: 15, hpMax: 7, initBonus: 2, icon: '', notes: '', creatureType: '', cr: '', edition: '',
+  });
 
   c.send('updateMonster', { id: 'gob', patch: { ac: 99, hpMax: 0, initBonus: 'x', icon: 'javascript:alert(1)', bogus: 1 } });
   const upd = await c.next('monsterState', (m) => m.monsters[0]?.ac === 40);
@@ -65,7 +67,7 @@ test('monsters: starter set is added once, keeping existing ones', async (t) => 
   const c = connect(s.port);
   t.after(async () => { c.close(); await s.close(); });
   await c.opened;
-  const { STARTER_MONSTERS } = require('../src/features/monsters/starter');
+  const { SRD_MONSTERS: STARTER_MONSTERS } = require('../src/srd');
   const start = (await c.next('monsterState')).monsters.length; // earlier tests in this file left some
 
   c.send('addMonster', { id: 'mygob', patch: { name: 'goblin', ac: 99 } }); // already have a goblin
@@ -81,12 +83,14 @@ test('monsters: starter set is added once, keeping existing ones', async (t) => 
   assert.strictEqual(goblins(after), goblins(before), 'no new goblin');
   const ogre = after.monsters.find((x) => x.name === 'Ogre');
   assert.deepStrictEqual([ogre.ac, ogre.hpMax, ogre.initBonus], [11, 59, -1]);
-  assert.strictEqual(after.monsters[0].name, 'Kobold', 'CR order at the top');
+  assert.strictEqual(after.monsters[0].cr, '0', 'easiest (CR 0) first');
 
-  // Full stat blocks in the notes.
-  const gob = after.monsters.find((x) => x.name === 'Kobold');
-  assert.match(gob.notes, /^CR 1\/8 · Small humanoid\n/);
-  assert.match(gob.notes, /Dagger: \+4, reach 5 ft, 1d4\+2 piercing\./);
+  // Full SRD stat blocks in the notes, plus type/CR/edition for filtering.
+  const kobold = after.monsters.find((x) => x.name === 'Kobold');
+  assert.match(kobold.notes, /^CR 1\/8 · Small humanoid/);
+  assert.match(kobold.notes, /\nDagger: Melee Weapon Attack: \+4 to hit/);
+  assert.deepStrictEqual([kobold.creatureType, kobold.cr, kobold.edition], ['humanoid', '1/8', '2014']);
+  assert.ok(after.monsters.some((x) => x.name === 'Wolf (2024)' && x.edition === '2024'));
 
   c.send('addStarterMonsters'); // nothing new
   c.send('addMonster', { id: 'marker', patch: { name: 'Marker' } });

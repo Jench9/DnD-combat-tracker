@@ -2,7 +2,12 @@
 // No WebSocket knowledge here.
 const { createJsonStore } = require('../../core/jsonStore');
 const { uid } = require('../../core/ids');
-const { STARTER_MONSTERS } = require('./starter');
+const { SRD_MONSTERS } = require('../../srd');
+
+// "1/8" -> 0.125, for sorting by challenge rating.
+const crValue = (cr) => (/^1\/\d$/.test(cr) ? 1 / Number(cr.slice(2)) : Number(cr) || 0);
+// The SRD creatures, easiest first.
+const STARTER_MONSTERS = [...SRD_MONSTERS].sort((a, b) => crValue(a.cr) - crValue(b.cr) || a.name.localeCompare(b.name));
 const { ID_RE, blankMonster, sanitizeMonsterPatch } = require('./model');
 
 const store = createJsonStore('monsters', []);
@@ -44,11 +49,12 @@ function remove(id) {
   persist();
 }
 
-// Add the SRD starter set, skipping names already in the library (any
-// case). New ones go to the top of the list in CR order. A library monster
-// with a starter's name whose notes are empty or still the old one-line
-// summary gets the full stat-block notes; edited notes are left alone.
-// Returns { added, upgraded }.
+// Add the SRD creatures (5.1 + 5.2), skipping names already in the library
+// (any case). New ones go to the top of the list in CR order. A library
+// monster with an SRD creature's name whose notes are empty or just the
+// one-line "CR · size type" summary gets the full stat block; edited notes
+// are left alone. Same-named monsters also get the SRD type/CR/edition if
+// they have none (for filtering). Returns { added, upgraded }.
 function addStarters() {
   let upgraded = 0;
   const fresh = [];
@@ -58,11 +64,13 @@ function addStarters() {
       fresh.push(sanitizeMonsterPatch(blankMonster(uid()), st));
       return;
     }
+    const summary = st.notes.split('\n')[0];
     same.forEach((m) => {
-      if (m.notes.trim() === '' || m.notes.trim() === st.summary) {
+      if (m.notes.trim() === '' || m.notes.trim() === summary) {
         m.notes = sanitizeMonsterPatch(m, { notes: st.notes }).notes;
         upgraded++;
       }
+      if (!m.creatureType) Object.assign(m, sanitizeMonsterPatch(m, { creatureType: st.creatureType, cr: st.cr, edition: st.edition }));
     });
   });
   if (fresh.length || upgraded) {
