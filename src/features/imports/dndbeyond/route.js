@@ -3,7 +3,9 @@ const characters = require('../../characters/service');
 const { extractDdbCharacterId, mapDndBeyondData } = require('./mapper');
 const { fetchCharacter, fetchAvatar } = require('./client');
 const { planInventory } = require('./inventory');
+const { planSpells } = require('./spells');
 const items = require('../../items/service');
+const spellLibrary = require('../../spells/service');
 const { uid } = require('../../../core/ids');
 const { identityFromHeaders, isDm, owns } = require('../../../core/identity');
 
@@ -38,7 +40,7 @@ async function loadDdbCharacter(ddbId) {
 // POST /api/import/dndbeyond/refresh  { characterId, input? }
 //   Re-imports into an existing character (e.g. after leveling up).
 //   Uses the character's stored D&D Beyond id; `input` links or re-links it.
-function createDndBeyondRouter({ onCharactersChanged, onItemsChanged }) {
+function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsChanged }) {
   const router = express.Router();
 
   // Map the D&D Beyond inventory onto the item library: matched items go
@@ -53,6 +55,17 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged }) {
     mapped.patch.equipment = plan.otherText;
   }
 
+  // Same for spells: matched by name, unknown ones added to the library;
+  // slots from the caster tables, used counts from D&D Beyond.
+  function applySpells(mapped) {
+    const plan = planSpells(mapped.data, spellLibrary.all(), uid);
+    plan.newSpells.forEach((n) => spellLibrary.add(n.id, n.patch, 'dm'));
+    if (plan.newSpells.length) onSpellsChanged();
+    mapped.patch.spells = plan.spells;
+    mapped.patch.spellSlots = plan.spellSlots;
+    mapped.patch.spellAbility = plan.spellAbility;
+  }
+
   router.post('/', async (req, res) => {
     if (!isDm(identityFromHeaders(req))) {
       return res.status(403).json({ error: 'Only the DM can import new characters.' });
@@ -65,6 +78,7 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged }) {
       const { mapped, status, error } = await loadDdbCharacter(ddbId);
       if (error) return res.status(status).json({ error });
       applyInventory(mapped);
+      applySpells(mapped);
       const ch = characters.addImported({ ...mapped.patch, campaignId: req.body.campaignId }, mapped.notesPrefix);
       onCharactersChanged();
       res.json({ character: ch });
@@ -93,7 +107,8 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged }) {
       // A portrait set in the app wins; D&D Beyond's only fills an empty one.
       if (existing.portrait) delete mapped.patch.portrait;
       applyInventory(mapped);
-      const ch = characters.refreshImported(existing.id, mapped.patch, { replaceInventory: true });
+      applySpells(mapped);
+      const ch = characters.refreshImported(existing.id, mapped.patch, { replaceInventory: true, replaceSpells: true });
       onCharactersChanged();
       res.json({ character: ch });
     } catch (err) {

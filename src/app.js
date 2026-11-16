@@ -42,6 +42,7 @@ function createApp() {
   app.use('/api/import', createImportsRouter({
     onCharactersChanged: () => hub.broadcast('characters'),
     onItemsChanged: () => hub.broadcast('items'),
+    onSpellsChanged: () => hub.broadcast('spells'),
   }));
 
   return { app, server, hub };

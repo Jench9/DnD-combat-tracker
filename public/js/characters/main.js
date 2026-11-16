@@ -97,7 +97,7 @@ $('ddbSyncBtn').addEventListener('click', async () => {
     input = prompt('Paste the D&D Beyond character URL or ID to link "' + (ch.name || 'this character') + '":');
     if (!input || !input.trim()) return;
   } else if (!confirm('Update "' + (ch.name || 'this character') + '" from D&D Beyond?\n\n'
-    + 'Stats, proficiencies, inventory, equipment and features will be replaced with what\'s on D&D Beyond. '
+    + 'Stats, proficiencies, inventory, equipment, spells, spell slots and features will be replaced with what\'s on D&D Beyond. '
     + 'Portrait, notes, temp HP and damage taken are kept.')) {
     return;
   }
