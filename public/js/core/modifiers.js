@@ -3,9 +3,11 @@
 // custom definitions ({ custom }); this module resolves them and works out
 // what they add to a weapon attack or a spell.
 //
-//   PRESETS                         the catalog (both editions, labelled)
+//   PRESETS                         the catalog (both editions, labelled),
+//                                   loaded from modifier-presets.json
 //   resolveModifiers(character)     -> [{ entry, def }]
-//   weaponEffects(ctx), spellEffects(ctx), unarmedEffects(ctx)
+//   effectsFor(attack, env)         what they add to one attack or spell
+//   unarmedOverride(env)            Martial Arts die for the unarmed strike
 //
 // A definition (preset or custom) may have:
 //   when: { kind: 'weapon' | 'spell' | 'any' | 'unarmed',
@@ -18,6 +20,8 @@
 //   'gwf-2024' | 'ea'), critRange, critExtraDice ({ class, table }),
 //   unarmed ({ class, table, dex }), mastery (show the weapon's mastery),
 //   note (template: {MOD} {PROF} {DC} {TYPE} are filled in), toggle.
+//   ac ({ bonus, requiresArmor } or an unarmored base { base, add: ['DEX', …],
+//   noShield }) — applied by the server's Auto AC (characters/derived.js).
 // `entry.only` (comma-separated) limits a modifier to weapons/spells with
 // those names, or to damage of those types.
 
@@ -32,116 +36,9 @@ export const MASTERY_NOTES = {
   vex: 'Vex — on a hit that deals damage, you have advantage on your next attack against it before the end of your next turn.',
 };
 
-const P = (key, name, category, edition, def) => ({ key, name, category, edition, ...def });
-
-export const PRESETS = [
-  // ---- Fighting styles
-  P('archery', 'Archery', 'Fighting style', '', {
-    when: { kind: 'weapon', range: 'ranged' }, toHit: 2,
-  }),
-  P('dueling', 'Dueling', 'Fighting style', '', {
-    when: { kind: 'weapon', range: 'melee', oneHanded: true }, damage: 2,
-    note: 'Dueling: +2 damage while holding the weapon in one hand and no other weapon.',
-  }),
-  P('gwf-2014', 'Great Weapon Fighting (2014)', 'Fighting style', '2014', {
-    when: { kind: 'weapon', range: 'melee', twoHandedGrip: true }, reroll: 'gwf-2014',
-    note: 'Great Weapon Fighting: 1s and 2s on the weapon\'s damage dice are rerolled once.',
-  }),
-  P('gwf-2024', 'Great Weapon Fighting (2024)', 'Fighting style', '2024', {
-    when: { kind: 'weapon', range: 'melee', twoHandedGrip: true }, reroll: 'gwf-2024',
-    note: 'Great Weapon Fighting: 1s and 2s on the weapon\'s damage dice count as 3.',
-  }),
-  P('thrown-weapon-fighting', 'Thrown Weapon Fighting (when throwing)', 'Fighting style', '', {
-    when: { kind: 'weapon', props: ['thrown'] }, damage: 2, toggle: true,
-  }),
-
-  // ---- Feats
-  P('gwm-2014', 'Great Weapon Master (2014) −5/+10', 'Feat', '2014', {
-    when: { kind: 'weapon', range: 'melee', props: ['heavy'] }, toHit: -5, damage: 10, toggle: true,
-    note: 'Great Weapon Master: also a bonus-action attack after a critical hit or dropping a creature to 0 HP.',
-  }),
-  P('gwm-2024', 'Great Weapon Master (2024)', 'Feat', '2024', {
-    when: { kind: 'weapon', props: ['heavy'] }, damage: 'PROF',
-    note: 'Great Weapon Master: +PB damage on a hit as part of the Attack action; Hew — bonus-action attack after a critical hit or dropping a creature to 0 HP.',
-  }),
-  P('ss-2014', 'Sharpshooter (2014) −5/+10', 'Feat', '2014', {
-    when: { kind: 'weapon', range: 'ranged' }, toHit: -5, damage: 10, toggle: true,
-    note: 'Sharpshooter: no disadvantage at long range; ignore half and three-quarters cover.',
-  }),
-  P('ss-2024', 'Sharpshooter (2024)', 'Feat', '2024', {
-    when: { kind: 'weapon', range: 'ranged' },
-    note: 'Sharpshooter: ignore half and three-quarters cover; no disadvantage at long range or with an enemy within 5 ft.',
-  }),
-  P('savage-attacker', 'Savage Attacker', 'Feat', '', {
-    when: { kind: 'weapon' },
-    note: 'Savage Attacker: once per turn, roll the weapon\'s damage dice twice and use either total.',
-  }),
-  P('elemental-adept', "Elemental Adept (set the type in 'only for')", 'Feat', '', {
-    when: { kind: 'spell', damaging: true }, reroll: 'ea',
-    note: 'Elemental Adept: ignores resistance to this damage type; 1s on the damage dice count as 2.',
-  }),
-
-  // ---- Class features
-  P('rage', 'Rage (Barbarian)', 'Class feature', '', {
-    when: { kind: 'any', range: 'melee', strBased: true },
-    damage: { class: 'barbarian', table: [[1, 2], [9, 3], [16, 4]] }, toggle: true,
-    note: 'Rage: advantage on STR checks and saves; resistance to bludgeoning, piercing and slashing damage.',
-  }),
-  P('brutal-critical-2014', 'Brutal Critical (2014)', 'Class feature', '2014', {
-    when: { kind: 'weapon', range: 'melee' }, critExtraDice: { class: 'barbarian', table: [[9, 1], [13, 2], [17, 3]] },
-  }),
-  P('sneak-attack', 'Sneak Attack (Rogue)', 'Class feature', '', {
-    when: { kind: 'weapon', finesseOrRanged: true }, dice: { class: 'rogue', every: 2, die: 'd6' }, toggle: true,
-    note: 'Sneak Attack: once per turn, with advantage or an ally within 5 ft of the target.',
-  }),
-  P('divine-smite-2014', 'Divine Smite (2014) — 1st-level slot', 'Class feature', '2014', {
-    when: { kind: 'weapon', range: 'melee' }, dice: '2d8', diceType: 'radiant', toggle: true,
-    note: 'Divine Smite: spend a slot (mark it used); +1d8 per slot level above 1st (max 5d8), +1d8 against undead or fiends.',
-  }),
-  P('improved-divine-smite-2014', 'Improved Divine Smite (2014)', 'Class feature', '2014', {
-    when: { kind: 'weapon', range: 'melee' }, dice: '1d8', diceType: 'radiant',
-  }),
-  P('radiant-strikes-2024', 'Radiant Strikes (2024 Paladin)', 'Class feature', '2024', {
-    when: { kind: 'any', range: 'melee', weaponOrUnarmed: true }, dice: '1d8', diceType: 'radiant',
-  }),
-  P('improved-critical', 'Improved Critical (crit on 19–20)', 'Class feature', '', {
-    when: { kind: 'weapon' }, critRange: 19,
-  }),
-  P('superior-critical', 'Superior Critical (crit on 18–20)', 'Class feature', '', {
-    when: { kind: 'weapon' }, critRange: 18,
-  }),
-  P('martial-arts-2014', 'Martial Arts (2014 Monk)', 'Class feature', '2014', {
-    when: { kind: 'unarmed' }, unarmed: { class: 'monk', table: [[1, '1d4'], [5, '1d6'], [11, '1d8'], [17, '1d10']], dex: true },
-  }),
-  P('martial-arts-2024', 'Martial Arts (2024 Monk)', 'Class feature', '2024', {
-    when: { kind: 'unarmed' }, unarmed: { class: 'monk', table: [[1, '1d6'], [5, '1d8'], [11, '1d10'], [17, '1d12']], dex: true },
-  }),
-  P('agonizing-blast', 'Agonizing Blast (Warlock)', 'Class feature', '', {
-    when: { kind: 'spell', damaging: true }, damage: 'CHA', defaultOnly: 'Eldritch Blast',
-  }),
-  P('empowered-evocation', 'Empowered Evocation (Wizard)', 'Class feature', '', {
-    when: { kind: 'spell', school: 'evocation', damaging: true }, damage: 'INT',
-    note: 'Empowered Evocation: adds INT to one damage roll of a wizard evocation spell.',
-  }),
-  P('weapon-mastery', 'Weapon Mastery (2024)', 'Class feature', '2024', {
-    when: { kind: 'weapon' }, mastery: true,
-    note: "Weapon Mastery: limit it to the weapon kinds you've chosen with 'only for' (e.g. Longsword, Shortbow).",
-  }),
-
-  // ---- Spells that boost attacks
-  P('hex', 'Hex (target cursed)', 'Spell effect', '', {
-    when: { kind: 'any', attackRoll: true }, dice: '1d6', diceType: 'necrotic', toggle: true,
-  }),
-  P('hunters-mark-2014', "Hunter's Mark (2014, target marked)", 'Spell effect', '2014', {
-    when: { kind: 'weapon' }, dice: '1d6', toggle: true,
-  }),
-  P('hunters-mark-2024', "Hunter's Mark (2024, target marked)", 'Spell effect', '2024', {
-    when: { kind: 'any', attackRoll: true }, dice: '1d6', diceType: 'force', toggle: true,
-  }),
-  P('bless', 'Bless (+1d4 to attacks)', 'Spell effect', '', {
-    when: { kind: 'any', attackRoll: true }, toHitDice: '1d4', toggle: true,
-  }),
-];
+// The catalog is shared with the server (which computes AC from it), so
+// it lives in a JSON file both sides read.
+export const PRESETS = await (await fetch(new URL('./modifier-presets.json', import.meta.url))).json();
 
 const PRESET_BY_KEY = new Map(PRESETS.map((p) => [p.key, p]));
 export const presetByKey = (key) => PRESET_BY_KEY.get(key);
@@ -167,6 +64,7 @@ function customDef(c) {
   const when = { kind: c.appliesTo === 'any' ? 'any' : c.appliesTo };
   if (c.range !== 'any') when.range = c.range;
   return {
+    ac: c.ac ? { bonus: c.ac } : undefined,
     name: c.name, category: 'Custom', edition: '', toggle: c.toggle,
     when, toHit: c.toHit || 0,
     damage: /^\d+$|^-\d+$/.test(c.damage) ? Number(c.damage) : c.damage,
@@ -242,6 +140,7 @@ export function effectsFor(a, env) {
 
   resolveModifiers(env.ch).forEach((m) => {
     const { entry, def } = m;
+    if (!def.when) return; // AC-only (Defense, Shield…): handled by the server's Auto AC
     if (!isOn(m) || !matchesWhen(def.when, a) || !onlyMatches(entry, def, { name: a.name, damageType: a.damageType })) return;
     let used = false;
     if (def.toHit) { out.toHit += def.toHit; used = true; }

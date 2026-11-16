@@ -40,7 +40,10 @@ function createApp() {
   app.use('/api/maps', createMapRouter({ onMapChanged: () => hub.broadcast('map') }));
 
   app.use('/api/import', createImportsRouter({
-    onCharactersChanged: () => hub.broadcast('characters'),
+    onCharactersChanged: () => {
+      hub.broadcast('characters');
+      if (require('./features/combat/characterSync').syncCombatantAcs()) hub.broadcast('combat');
+    },
     onItemsChanged: () => hub.broadcast('items'),
     onSpellsChanged: () => hub.broadcast('spells'),
   }));

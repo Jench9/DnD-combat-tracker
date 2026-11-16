@@ -6,6 +6,10 @@
 // Normalised feature name -> preset key; `{ 2014, 2024 }` where they differ.
 const BY_NAME = {
   archery: 'archery',
+  defense: 'defense',
+  'unarmored defense:barbarian': 'unarmored-defense-barbarian',
+  'unarmored defense:monk': 'unarmored-defense-monk',
+  'draconic resilience': { 2014: 'draconic-resilience-2014', 2024: 'draconic-resilience-2024' },
   dueling: 'dueling',
   'great weapon fighting': { 2014: 'gwf-2014', 2024: 'gwf-2024' },
   'thrown weapon fighting': 'thrown-weapon-fighting',
@@ -39,9 +43,13 @@ function featureNames(data) {
   (Array.isArray(data.classes) ? data.classes : []).forEach((c) => {
     const level = parseInt(c.level, 10) || 0;
     const feats = [...(c.classFeatures || []), ...((c.subclassDefinition && c.subclassDefinition.classFeatures) || [])];
+    const cls = norm(c.definition && c.definition.name);
     feats.forEach((f) => {
       const req = f && f.definition && (f.definition.requiredLevel || 0);
-      if (req <= level) names.push(nameOf(f));
+      if (req > level) return;
+      names.push(nameOf(f));
+      // Same name, different rules per class.
+      if (norm(nameOf(f)) === 'unarmored defense') names.push(`unarmored defense:${cls}`);
     });
   });
   const options = data.options && typeof data.options === 'object' ? data.options : {};

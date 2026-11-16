@@ -19,15 +19,16 @@ test('character modifiers are validated', () => {
   assert.deepStrictEqual(ch.modifiers.map((m) => m.id), ['m1', 'm3', 'm4']);
   assert.deepStrictEqual(ch.modifiers[0], { id: 'm1', preset: 'rage', active: true, only: 'Greataxe', custom: null });
   assert.deepStrictEqual(ch.modifiers[1].custom, {
-    name: 'Blessed Blade', toHit: 20, damage: 'CHA', dice: '1d6', diceType: 'radiant', appliesTo: 'weapon', range: 'melee', toggle: true, note: 'x',
+    name: 'Blessed Blade', toHit: 20, damage: 'CHA', dice: '1d6', diceType: 'radiant', appliesTo: 'weapon', range: 'melee', toggle: true, note: 'x', ac: 0,
   });
   assert.deepStrictEqual([ch.modifiers[2].custom.damage, ch.modifiers[2].custom.dice, ch.modifiers[2].custom.diceType, ch.modifiers[2].custom.appliesTo], ['0', '', '', 'weapon']);
 });
 
 // Every preset the D&D Beyond detection can produce must exist in the client catalog.
 test('detected preset keys all exist in the client catalog', () => {
-  const catalog = fs.readFileSync(path.join(__dirname, '../public/js/core/modifiers.js'), 'utf8');
-  const keys = new Set([...catalog.matchAll(/P\('([a-z0-9-]+)'/g)].map((m) => m[1]));
+  const catalog = JSON.parse(fs.readFileSync(path.join(__dirname, '../public/js/core/modifier-presets.json'), 'utf8'));
+  const keys = new Set(catalog.map((p) => p.key));
+  assert.strictEqual(keys.size, catalog.length, 'preset keys are unique');
   const detected = Object.values(BY_NAME).flatMap((v) => (typeof v === 'string' ? [v] : Object.values(v)));
   detected.forEach((k) => assert.ok(keys.has(k), `missing preset ${k}`));
 });

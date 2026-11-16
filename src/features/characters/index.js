@@ -9,6 +9,8 @@ module.exports = {
   // Sent with computed values (e.g. Auto AC) filled in.
   snapshot: () => service.all().map(withDerived),
   actions,
+  // Sheet edits can change a combatant's AC.
+  alsoBroadcast: { updateCharacter: ['combat'] },
   // Anyone can create a character (a new player joining); players edit and
   // delete only their own.
   permissions: {

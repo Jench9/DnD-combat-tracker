@@ -15,7 +15,7 @@ module.exports = {
   snapshot: service.all,
   actions,
   // Characters' Auto AC depends on the armor items they wear.
-  alsoBroadcast: { updateItem: ['characters'], deleteItem: ['characters'] },
+  alsoBroadcast: { updateItem: ['characters', 'combat'], deleteItem: ['characters', 'combat'] },
   permissions: {
     addItem: (payload, identity) => !!identity.characterId,
     updateItem: ownsItem,

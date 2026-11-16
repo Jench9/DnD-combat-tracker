@@ -117,6 +117,7 @@ function sanitizeCustomModifier(c) {
     range: pick(c.range, ['melee', 'ranged', 'any'], 'any'),
     toggle: !!c.toggle,
     note: String(c.note || '').slice(0, 300),
+    ac: clampInt(c.ac, -10, 10), // AC bonus (with Auto AC)
   };
 }
 

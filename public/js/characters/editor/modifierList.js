@@ -119,6 +119,7 @@ export function initModifierList(changed) {
       damage: $('mcDamage').value.trim() || '0',
       dice: $('mcDice').value.trim().toLowerCase(),
       diceType: $('mcDiceType').value,
+      ac: parseInt($('mcAc').value, 10) || 0,
       toggle: $('mcToggle').checked,
       note: $('mcNote').value.trim(),
     };
@@ -127,6 +128,7 @@ export function initModifierList(changed) {
     ['mcName', 'mcDice', 'mcNote'].forEach((id) => { $(id).value = ''; });
     $('mcToHit').value = '0';
     $('mcDamage').value = '0';
+    $('mcAc').value = '0';
     $('mcToggle').checked = false;
   });
 }

@@ -120,7 +120,10 @@ function renderActionsTab(ch) {
 function renderAc(ch) {
   $('csAcAuto').checked = !!ch.acAuto;
   $('csAC').readOnly = !!ch.acAuto;
-  $('csAC').title = ch.acAuto ? 'Calculated from equipped armor, shield and DEX' : '';
+  // Auto: show how it's made up (armor, DEX, shield, Defense, Shield spell…).
+  $('csAC').title = ch.acAuto
+    ? `AC ${ch.ac} = ${ch.acBreakdown || 'armor, shield and DEX'}`
+    : 'Manual AC — tick "auto" to calculate it from armor, shield, DEX and AC modifiers';
   if (ch.acAuto) $('csAC').value = ch.ac;
 }
 
