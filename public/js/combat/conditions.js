@@ -8,6 +8,7 @@ export const CONDITIONS = [
   ['Incapacitated', "Can't take actions or reactions."],
   ['Invisible', "Can't be seen without special sense; attacks against you have disadvantage, yours have advantage."],
   ['Paralyzed', "Incapacitated, can't move/speak; auto-fails STR/DEX saves; hits within 5ft are crits."],
+  ['Petrified', "Turned to stone: incapacitated, can't move/speak; resistant to all damage; auto-fails STR/DEX saves."],
   ['Poisoned', "Disadvantage on attack rolls and ability checks."],
   ['Prone', "Disadvantage on attacks; melee attacks against you have advantage, ranged have disadvantage."],
   ['Restrained', "Speed 0; disadvantage on attacks and DEX saves; attacks against you have advantage."],

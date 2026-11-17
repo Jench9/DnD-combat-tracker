@@ -8,6 +8,8 @@ import { initBestiary, setBestiary } from './bestiary.js';
 import { createPortraitLookup } from '../core/portraits.js';
 import { isDm, ownsCharacter } from '../core/identity.js';
 import { renderActions } from '../core/attacks.js';
+import { abilityMod, profBonusForLevel } from '../characters/rules.js';
+import { ENDS_CONCENTRATION_CONDITIONS, openSpellDialog } from './spells.js';
 
 renderNav();
 
@@ -71,18 +73,45 @@ function actionsFor(c) {
       id: ch.id,
       patch: { spellSlots: ch.spellSlots.map((s, i) => (i === level - 1 ? { ...s, used: Math.min(s.max, s.used + 1) } : s)) },
     }),
+    // Casting: blocked while incapacitated; a new concentration spell ends
+    // the old one; lasting spells then ask for their targets.
+    cast: {
+      blocked: castBlockedReason(c),
+      before: (sp) => !(sp.concentration && c.concentration)
+        || confirm(`${c.name} is concentrating on ${c.concentration}. Casting ${sp.name} ends it. Continue?`),
+      after: (sp) => {
+        if (sp.concentration || !/^instant/i.test(sp.duration || '')) {
+          openSpellDialog({ state, caster: c, spell: sp.name, concentration: !!sp.concentration, send, canTargetHidden: isDm() });
+        }
+      },
+    },
     onUse: (entryId) => send('updateCharacter', {
       id: ch.id,
       patch: { inventory: ch.inventory.map((e) => (e.id === entryId ? { ...e, qty: Math.max(0, e.qty - 1) } : e)) },
     }),
   });
 }
+function castBlockedReason(c) {
+  const cond = c.conditions.find((x) => ENDS_CONCENTRATION_CONDITIONS.includes(x));
+  if (cond) return `Can't cast spells while ${cond}`;
+  return '';
+}
+
+// A PC's CON saving throw bonus, from their sheet (null without one).
+function conSaveFor(c) {
+  const ch = c.characterId && characters.find((x) => x.id === c.characterId);
+  if (!ch) return null;
+  return abilityMod(ch.abilities?.con) + (ch.saveProf?.con ? profBonusForLevel(ch.level) : 0);
+}
+
 function render() {
   const el = document.activeElement;
   if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && $('list').contains(el)) { stale = true; return; }
   stale = false;
   renderCombat(state, {
-    send, rerender: render, portraitFor, notesFor, actionsFor, isDm: isDm(),
+    send, rerender: render, portraitFor, notesFor, actionsFor, isDm: isDm(), conSaveFor,
+    onConcentrate: (c) => openSpellDialog({ state, caster: c, spell: '', concentration: true, send, canTargetHidden: isDm() }),
+    onAddEffect: (c) => openSpellDialog({ state, target: c, send, canTargetHidden: isDm() }),
     canControl: (c) => isDm() || (!!c.characterId && ownsCharacter(c.characterId)),
   });
   // Players may only end their own turn.

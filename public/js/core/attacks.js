@@ -233,7 +233,7 @@ function castText(sp, sc, slot, charLevel, fx) {
   return { crit: false, text: `Cast ${sp.name}${at}.` };
 }
 
-function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show }) {
+function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show, cast: castHooks }) {
   const sp = a.spell;
   const sc = spellcasting(character);
   const fx = spellEffects(sp, character);
@@ -294,11 +294,17 @@ function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show
     cast.textContent = 'Cast';
     cast.disabled = sp.level > 0 && (!levels.length || available(slot) <= 0);
     cast.title = sp.level > 0 ? 'Spend a slot and roll' : 'Roll';
+    if (castHooks.blocked) {
+      cast.disabled = true;
+      cast.title = castHooks.blocked;
+    }
     cast.addEventListener('click', () => {
+      if (castHooks.before && !castHooks.before(sp)) return;
       const r = castText(sp, sc, slot, character.level, fx);
       results.set(key, r);
       show();
       if (sp.level > 0) onSpendSlot(slot);
+      if (castHooks.after) castHooks.after(sp);
     });
     btns.appendChild(cast);
     row.appendChild(btns);
@@ -318,8 +324,10 @@ function appendNotes(row, notes) {
 
 // `onToggleModifier(id)`: if given, situational modifiers (Rage, Hex…)
 // get quick on/off switches above the actions (the combat tracker).
+// `cast` (combat tracker): { blocked: '' | reason Cast is disabled,
+// before(spell) → false cancels the cast, after(spell) once it's cast }.
 export function renderActions(container, {
-  character, items, spells = [], canUse, onUse, onSpendSlot = () => {}, onToggleModifier = null,
+  character, items, spells = [], canUse, onUse, onSpendSlot = () => {}, onToggleModifier = null, cast = {},
 }) {
   const byId = new Map(items.map((it) => [it.id, it]));
   const actions = buildActions(character, byId, new Map(spells.map((sp) => [sp.id, sp])));
@@ -362,7 +370,7 @@ export function renderActions(container, {
         out.textContent = r ? r.text : '';
         out.classList.toggle('crit', !!(r && r.crit));
       };
-      renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show });
+      renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show, cast });
       container.appendChild(row);
       return;
     }

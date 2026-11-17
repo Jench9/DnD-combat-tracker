@@ -7,8 +7,18 @@ const { tokenSizeFromNotes } = require('../monsters/model');
 const { mod } = require('../characters/model');
 const { writeHpToSheet } = require('./characterSync');
 
+const { isDm } = require('../../core/identity');
+
 const clampInit = (n) => Math.max(-10, Math.min(99, Math.round(n)));
 const rollD20 = () => 1 + Math.floor(Math.random() * 20);
+
+// Valid, distinct targets of a spell (at most 20); hidden ones only for the DM.
+function targetsOf(payload, identity) {
+  if (!Array.isArray(payload.targets)) return [];
+  return [...new Set(payload.targets)].slice(0, 20)
+    .map((id) => svc.findCombatant(id))
+    .filter((t) => t && (isDm(identity) || svc.visibleToPlayers(t)));
+}
 
 module.exports = {
   addCombatant(payload) {
@@ -97,6 +107,7 @@ module.exports = {
     const state = svc.getState();
     const idx = state.combatants.findIndex((c) => c.id === payload.id);
     if (idx === -1) return;
+    svc.endConcentration(state.combatants[idx]); // its spells on others end
     state.combatants.splice(idx, 1);
     if (idx < state.activeIndex) state.activeIndex--;
     if (state.activeIndex >= state.combatants.length) state.activeIndex = 0;
@@ -115,6 +126,8 @@ module.exports = {
     const c = svc.findCombatant(payload.id);
     if (!c || typeof payload.delta !== 'number' || !Number.isFinite(payload.delta)) return false;
     let delta = Math.round(payload.delta);
+    // Damage while concentrating calls for a CON save (temp HP or not).
+    if (delta < 0 && c.concentration) c.concentrationDc = svc.concentrationDc(-delta);
     if (delta < 0 && c.tempHp > 0) {
       const absorbed = Math.min(c.tempHp, -delta);
       c.tempHp -= absorbed;
@@ -124,6 +137,8 @@ module.exports = {
     if (c.hp > 0) {
       c.deathSuccess = 0;
       c.deathFail = 0;
+    } else {
+      svc.endConcentration(c); // down: concentration ends
     }
     return writeHpToSheet(c);
   },
@@ -139,14 +154,55 @@ module.exports = {
 
   addCondition(payload) {
     const c = svc.findCombatant(payload.id);
-    if (!c || c.conditions.includes(payload.condition)) return;
-    c.conditions.push(payload.condition);
+    const cond = typeof payload.condition === 'string' ? payload.condition.trim().slice(0, 30) : '';
+    if (!c || !cond || c.conditions.includes(cond) || c.conditions.length >= 20) return;
+    c.conditions.push(cond);
+    if (svc.ENDS_CONCENTRATION.includes(cond)) svc.endConcentration(c);
   },
 
   removeCondition(payload) {
     const c = svc.findCombatant(payload.id);
     if (!c) return;
     c.conditions = c.conditions.filter((x) => x !== payload.condition);
+  },
+
+  // Start concentrating on `spell` (ending any previous concentration and
+  // its effects). `targets`: combatant ids that get the spell's effect
+  // icon; players can only target combatants they can see.
+  setConcentration(payload, identity) {
+    const c = svc.findCombatant(payload.id);
+    const spell = typeof payload.spell === 'string' ? payload.spell.trim().slice(0, 40) : '';
+    if (!c || !spell) return;
+    svc.endConcentration(c);
+    c.concentration = spell;
+    targetsOf(payload, identity).forEach((t) => svc.addEffect(t, { name: spell, casterId: c.id, concentration: true }));
+  },
+
+  endConcentration(payload) {
+    svc.endConcentration(svc.findCombatant(payload.id));
+  },
+
+  // The CON save after damage: passed keeps the spell, failed ends it.
+  resolveConcentration(payload) {
+    const c = svc.findCombatant(payload.id);
+    if (!c || !c.concentrationDc) return;
+    if (payload.passed === true) c.concentrationDc = 0;
+    else if (payload.passed === false) svc.endConcentration(c);
+  },
+
+  // A spell effect without concentration (Mage Armor, Shield…), or one the
+  // DM adds by hand. `casterId` is optional.
+  addEffect(payload) {
+    const t = svc.findCombatant(payload.id);
+    const name = typeof payload.name === 'string' ? payload.name.trim().slice(0, 40) : '';
+    if (!t || !name) return;
+    const caster = typeof payload.casterId === 'string' ? svc.findCombatant(payload.casterId) : null;
+    svc.addEffect(t, { name, casterId: caster ? caster.id : '' });
+  },
+
+  removeEffect(payload) {
+    const t = svc.findCombatant(payload.id);
+    if (t) t.effects = t.effects.filter((e) => e.id !== payload.effectId);
   },
 
   toggleDeathSave(payload) {

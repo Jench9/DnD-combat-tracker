@@ -10,6 +10,7 @@
 // Players get a filtered state from the server: hidden combatants are
 // missing and monsters carry a `health` word instead of hp/maxHp/ac.
 import { CONDITIONS, conditionDescription } from './conditions.js';
+import { CONCENTRATION_ICON, conditionIcon, effectIcon } from '../core/effects.js';
 
 function mkHpBtn(label, fn, title) {
   const b = document.createElement('button');
@@ -32,21 +33,81 @@ function deathSaveDots(c, kind, filled, send, canEdit) {
   return wrap;
 }
 
-function renderConditions(c, send, rerender, canEdit) {
+// Concentration results shown under a row until the next roll ("CON save 14 vs DC 12").
+const concRolls = new Map();
+
+function chip(text, title, cls = '') {
+  const el = document.createElement('span');
+  el.className = 'chip' + cls;
+  el.title = title || '';
+  el.textContent = text;
+  return el;
+}
+function chipRemove(el, label, fn) {
+  const rm = document.createElement('button');
+  rm.textContent = '×';
+  rm.title = label;
+  rm.setAttribute('aria-label', label);
+  rm.addEventListener('click', fn);
+  el.appendChild(rm);
+}
+
+// Concentration: the spell, and after damage the CON save to keep it.
+function renderConcentration(c, ctx, canEdit) {
+  const { send } = ctx;
+  const wrap = document.createDocumentFragment();
+  const conc = chip(CONCENTRATION_ICON + ' Concentrating: ' + c.concentration,
+    'Ends when this creature fails a CON save after damage, drops to 0 HP or is incapacitated', ' conc');
+  if (canEdit) chipRemove(conc, 'End concentration', () => send('endConcentration', { id: c.id }));
+  wrap.appendChild(conc);
+  if (c.concentrationDc > 0) {
+    const check = document.createElement('span');
+    check.className = 'conc-check';
+    check.appendChild(document.createTextNode('CON save DC ' + c.concentrationDc));
+    if (canEdit) {
+      const btn = (label, title, fn) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        b.title = title;
+        b.addEventListener('click', fn);
+        check.appendChild(b);
+      };
+      const bonus = ctx.conSaveFor(c);
+      if (bonus !== null) {
+        btn('Roll', 'Roll d20 + CON save', () => {
+          const d = 1 + Math.floor(Math.random() * 20);
+          const total = d + bonus;
+          const passed = total >= c.concentrationDc;
+          concRolls.set(c.id, `CON save ${total} (d20 ${d} ${bonus < 0 ? '−' : '+'} ${Math.abs(bonus)}) vs DC ${c.concentrationDc}: `
+            + (passed ? 'still concentrating' : 'concentration lost'));
+          send('resolveConcentration', { id: c.id, passed });
+        });
+      }
+      btn('✓ Passed', 'Made the save: keep concentrating', () => { concRolls.delete(c.id); send('resolveConcentration', { id: c.id, passed: true }); });
+      btn('✗ Failed', 'Failed the save: concentration ends', () => { concRolls.delete(c.id); send('resolveConcentration', { id: c.id, passed: false }); });
+    }
+    wrap.appendChild(check);
+  }
+  return wrap;
+}
+
+function renderConditions(c, ctx, canEdit) {
+  const { send, rerender } = ctx;
   const condWrap = document.createElement('div');
   condWrap.className = 'conditions';
+  if (c.concentration) condWrap.appendChild(renderConcentration(c, ctx, canEdit));
   c.conditions.forEach((cond) => {
-    const chip = document.createElement('span');
-    chip.className = 'chip';
-    chip.title = conditionDescription(cond);
-    chip.textContent = cond;
-    if (canEdit) {
-      const rm = document.createElement('button');
-      rm.textContent = '×';
-      rm.addEventListener('click', () => send('removeCondition', { id: c.id, condition: cond }));
-      chip.appendChild(rm);
-    }
-    condWrap.appendChild(chip);
+    const el = chip(conditionIcon(cond) + ' ' + cond, conditionDescription(cond));
+    if (canEdit) chipRemove(el, 'Remove ' + cond, () => send('removeCondition', { id: c.id, condition: cond }));
+    condWrap.appendChild(el);
+  });
+  (c.effects || []).forEach((e) => {
+    const caster = e.casterId && ctx.combatantById(e.casterId);
+    const el = chip(effectIcon(e.name) + ' ' + e.name,
+      (caster ? 'From ' + caster.name : 'Spell effect') + (e.concentration ? ' — ends with their concentration' : ''), ' effect');
+    if (canEdit || (caster && ctx.canControl(caster))) chipRemove(el, 'Remove ' + e.name, () => send('removeEffect', { id: c.id, effectId: e.id }));
+    condWrap.appendChild(el);
   });
 
   const addCondBtn = document.createElement('button');
@@ -55,26 +116,33 @@ function renderConditions(c, send, rerender, canEdit) {
   addCondBtn.addEventListener('click', () => {
     const menu = document.createElement('select');
     menu.style.fontSize = '11px';
-    const blank = document.createElement('option');
-    blank.textContent = 'Choose…';
-    blank.value = '';
-    menu.appendChild(blank);
-    CONDITIONS.forEach(([n]) => {
-      if (!c.conditions.includes(n)) {
-        const opt = document.createElement('option');
-        opt.value = n;
-        opt.textContent = n;
-        menu.appendChild(opt);
-      }
-    });
+    const opt = (value, text) => {
+      const o = document.createElement('option');
+      o.value = value;
+      o.textContent = text;
+      menu.appendChild(o);
+    };
+    opt('', 'Choose…');
+    CONDITIONS.forEach(([n]) => { if (!c.conditions.includes(n)) opt('c:' + n, conditionIcon(n) + ' ' + n); });
+    opt('concentration', CONCENTRATION_ICON + ' Concentrating on…');
+    opt('effect', '✨ Spell effect…');
     menu.addEventListener('change', () => {
-      if (menu.value) send('addCondition', { id: c.id, condition: menu.value });
+      const v = menu.value;
+      if (v.startsWith('c:')) send('addCondition', { id: c.id, condition: v.slice(2) });
+      else if (v === 'concentration') ctx.onConcentrate(c);
+      else if (v === 'effect') ctx.onAddEffect(c);
     });
     condWrap.replaceChild(menu, addCondBtn);
     menu.focus();
     menu.addEventListener('blur', () => rerender());
   });
   if (canEdit) condWrap.appendChild(addCondBtn);
+  if (concRolls.has(c.id)) {
+    const res = document.createElement('div');
+    res.className = 'conc-result';
+    res.textContent = concRolls.get(c.id);
+    condWrap.appendChild(res);
+  }
   return condWrap;
 }
 
@@ -258,7 +326,7 @@ function renderRow(c, idx, state, ctx) {
     chip.textContent = c.health;
     hl.appendChild(chip);
     main.appendChild(hl);
-    main.appendChild(renderConditions(c, send, rerender, false));
+    main.appendChild(renderConditions(c, ctx, false));
     row.appendChild(main);
     const spacer = document.createElement('div');
     spacer.className = 'row-actions'; // empty: keeps the desktop grid, hidden on phones
@@ -307,7 +375,7 @@ function renderRow(c, idx, state, ctx) {
     main.appendChild(ds);
   }
 
-  main.appendChild(renderConditions(c, send, rerender, canEdit));
+  main.appendChild(renderConditions(c, ctx, canEdit));
   const notes = notesFor(c);
   if (notes) main.appendChild(renderStats(c, notes));
   const fillActions = canEdit && actionsFor(c);
@@ -337,11 +405,17 @@ function renderRow(c, idx, state, ctx) {
   return row;
 }
 
+// `conSaveFor(c)`: a PC's CON save bonus (null = no sheet: Passed/Failed
+// only); `onConcentrate(c)` / `onAddEffect(c)`: open the spell dialog.
 export function renderCombat(state, {
   send, rerender, portraitFor = () => '', notesFor = () => '', actionsFor = () => null,
-  canControl = () => true, isDm = true,
+  canControl = () => true, isDm = true, conSaveFor = () => null, onConcentrate = () => {}, onAddEffect = () => {},
 }) {
-  const ctx = { send, rerender, portraitFor, notesFor, actionsFor, canControl, isDm };
+  const byId = new Map(state.combatants.map((c) => [c.id, c]));
+  const ctx = {
+    send, rerender, portraitFor, notesFor, actionsFor, canControl, isDm, conSaveFor, onConcentrate, onAddEffect,
+    combatantById: (id) => byId.get(id),
+  };
   document.getElementById('roundNum').textContent = state.round;
   const list = document.getElementById('list');
   list.innerHTML = '';

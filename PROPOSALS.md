@@ -17,7 +17,7 @@ Large / Huge / Gargantuan creatures take up a single cell today.
   `size × size` cells (CSS grid `span`).
 - Keep the wire shape: `positions[id]` stays `{ x, y }` (top-left corner).
 
-### 1.2 Conditions on tokens — S
+### 1.2 ~~Conditions on tokens~~ — done
 Conditions only show in the combat list. Add small badges to the token corner
 (first letter or emoji: 🔥 burning, 💤 unconscious, ⛓ grappled/restrained…),
 with the full list in the tooltip. Players already receive `conditions`, so no
@@ -45,7 +45,7 @@ Pinch-zoom and two-finger pan on the board instead of relying on sideways scroll
 
 ## 2. Combat tracker
 
-### 2.1 Concentration tracking — S
+### 2.1 ~~Concentration tracking~~ — done (plus spell-effect icons on targets)
 A "Concentrating on…" chip on the combatant (spell name). When it takes
 damage, show the CON save DC (`max(10, damage/2)`) next to the HP change, and
 offer "Drop" to end it. Set it automatically when a concentration spell is cast
@@ -132,7 +132,7 @@ reachable beyond the home network.
 If you want a coherent "next session" scope, these fit together and are all S:
 
 1. ~~**2.4** Persist combat + map~~ (done, along with 1.1 token sizes).
-2. **1.2** Condition badges on tokens (pairs with the new name labels).
-3. **2.1** Concentration tracking.
+2. ~~**1.2** Condition badges on tokens~~ (done).
+3. ~~**2.1** Concentration tracking~~ (done).
 4. **3.2** Roll initiative for all monsters.
 5. **1.3** Distance ruler.

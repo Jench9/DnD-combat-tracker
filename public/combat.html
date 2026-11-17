@@ -111,6 +111,22 @@
   </details>
 </div>
 
+<!-- Concentration / spell effect: spell name + who it affects. -->
+<dialog id="spellDlg" class="spell-dlg">
+  <form method="dialog" id="spellForm">
+    <h3 id="spellDlgTitle">Spell</h3>
+    <label class="spell-dlg-field">Spell
+      <input id="spellDlgName" maxlength="40" autocomplete="off" required>
+    </label>
+    <label class="spell-dlg-check"><input type="checkbox" id="spellDlgConc"> Concentration (ends when the caster stops concentrating)</label>
+    <div class="spell-dlg-sub" id="spellDlgTargetsLbl">Targets (they get the spell's icon)</div>
+    <div class="spell-dlg-targets" id="spellDlgTargets"></div>
+    <div class="spell-dlg-btns">
+      <button type="button" class="btn secondary small" id="spellDlgCancel">Cancel</button>
+      <button type="submit" class="btn small" id="spellDlgOk">Apply</button>
+    </div>
+  </form>
+</dialog>
 <script type="module" src="js/combat/main.js"></script>
 </body>
 </html>

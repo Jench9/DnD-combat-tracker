@@ -134,3 +134,17 @@
 /* With a name the HP bar moves to the top edge so the two don't overlap. */
 .token.named .tok-hp { bottom: auto; top: -5px; }
 .names-toggle { margin-left: auto; cursor: pointer; }
+
+/* Condition / concentration / spell-effect icons: a column over the token's
+   left edge (the HP bar is on top, the name at the bottom). */
+.tok-badges {
+  position: absolute; left: -6px; top: 1px; z-index: 3;
+  display: flex; flex-direction: column; gap: 1px; pointer-events: none;
+}
+.tok-badge {
+  display: flex; align-items: center; justify-content: center;
+  width: max(13px, calc(var(--cell, 40px) * 0.28)); height: max(13px, calc(var(--cell, 40px) * 0.28));
+  font-size: max(8px, calc(var(--cell, 40px) * 0.18)); line-height: 1;
+  border-radius: 50%; background: rgba(15, 12, 10, 0.82); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+.tok-badge.more { color: #f4efe6; font-weight: 700; font-family: var(--font-display); }

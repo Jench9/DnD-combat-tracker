@@ -1,6 +1,32 @@
 // Pure-ish view for the battle map: draws the tray and the grid from the
 // current combat + map state. Interaction lives in interact.js.
 import { $ } from '../core/dom.js';
+import { badgesFor } from '../core/effects.js';
+
+const MAX_BADGES = 3; // per cell of token size; more shows "+n"
+
+// Condition / concentration / spell-effect icons along the token's top edge.
+function badgeRow(c) {
+  const badges = badgesFor(c);
+  if (!badges.length) return null;
+  const row = document.createElement('span');
+  row.className = 'tok-badges';
+  const max = MAX_BADGES * tokenSize(c);
+  const shown = badges.length > max ? badges.slice(0, max - 1) : badges;
+  shown.forEach((b) => {
+    const s = document.createElement('span');
+    s.className = 'tok-badge';
+    s.textContent = b.icon;
+    row.appendChild(s);
+  });
+  if (shown.length < badges.length) {
+    const more = document.createElement('span');
+    more.className = 'tok-badge more';
+    more.textContent = '+' + (badges.length - shown.length);
+    row.appendChild(more);
+  }
+  return row;
+}
 
 // Column letters like a spreadsheet: A..Z, AA, AB...
 export function colLabel(x) {
@@ -75,6 +101,8 @@ export function tokenNode(c, { active, selected, portrait, where, locked, showNa
   const hp = c.health || (Math.max(0, c.hp) + '/' + c.maxHp + ' HP');
   t.title = [c.name, where, size > 1 ? SIZE_NAMES[size] : '', hp, c.ac !== undefined ? 'AC ' + c.ac : '', c.hidden ? 'hidden from players' : '']
     .filter(Boolean).join(' — ');
+  const badges = badgesFor(c);
+  if (badges.length) t.title += '\n' + badges.map((b) => b.icon + ' ' + b.label).join('\n');
   t.setAttribute('aria-label', t.title);
 
   if (portrait) {
@@ -88,6 +116,11 @@ export function tokenNode(c, { active, selected, portrait, where, locked, showNa
     ini.className = 'ini';
     ini.textContent = ((c.name || '?').trim().charAt(0) || '?').toUpperCase();
     t.appendChild(ini);
+  }
+
+  if (onBoard) {
+    const row = badgeRow(c);
+    if (row) t.appendChild(row);
   }
 
   if (showName) {
