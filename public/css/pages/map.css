@@ -105,3 +105,23 @@
 .tok-hp span { display: block; height: 100%; background: var(--good); }
 .tok-hp span.mid { background: var(--gold); }
 .tok-hp span.low { background: var(--wax); }
+
+/* Name label over the bottom of the token; its color says how hurt it is.
+   Dark pill so it reads on any background map, in both themes. */
+.tok-name {
+  position: absolute; left: 50%; bottom: -3px; transform: translateX(-50%); z-index: 2;
+  display: flex; max-width: calc(var(--cell, 40px) + 10px);
+  padding: 0 3px; border-radius: 3px;
+  background: rgba(15, 12, 10, 0.78); color: #f4efe6;
+  font-size: max(9px, calc(var(--cell, 40px) * 0.2)); line-height: 1.25; font-weight: 600;
+  white-space: nowrap; pointer-events: none;
+}
+.tok-name .base { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tok-name .num { flex-shrink: 0; margin-left: 0.25em; font-weight: 800; }
+.tok-name.lvl-hurt { color: #ffe066; }
+.tok-name.lvl-bloodied { color: #ff9f40; }
+.tok-name.lvl-critical { color: #ff4d4d; }
+.tok-name.lvl-down { color: #ff4d4d; text-decoration: line-through; }
+/* With a name the HP bar moves to the top edge so the two don't overlap. */
+.token.named .tok-hp { bottom: auto; top: -5px; }
+.names-toggle { margin-left: auto; cursor: pointer; }

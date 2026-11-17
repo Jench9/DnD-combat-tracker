@@ -13,7 +13,17 @@ const view = {
   combat: { round: 1, activeIndex: 0, combatants: [] },
   map: { cols: 20, rows: 15, positions: {} },
   selectedId: null,
+  showNames: true,
 };
+
+// Name labels on the board: a per-browser preference.
+try { view.showNames = localStorage.getItem('kit-map-names') !== '0'; } catch { /* storage blocked */ }
+$('namesToggle').checked = view.showNames;
+$('namesToggle').addEventListener('change', (e) => {
+  view.showNames = e.target.checked;
+  try { localStorage.setItem('kit-map-names', view.showNames ? '1' : '0'); } catch { /* storage blocked */ }
+  render();
+});
 
 const pics = createPortraitLookup(); // character portraits + monster icons
 const { portraitFor } = pics;

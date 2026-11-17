@@ -10,8 +10,38 @@ export function colLabel(x) {
 }
 export const cellLabel = (x, y) => colLabel(x) + (y + 1);
 
+// How hurt a combatant is, as a CSS level for the name label. Same thresholds
+// as the server's health words (players get the word, the DM the numbers).
+const HEALTH_LEVEL = { Unhurt: 'ok', Hurt: 'hurt', Bloodied: 'bloodied', 'Near death': 'critical', Down: 'down' };
+export function healthLevel(c) {
+  if (c.health) return HEALTH_LEVEL[c.health] || 'ok';
+  if (c.hp <= 0) return 'down';
+  if (!(c.maxHp > 0) || c.hp >= c.maxHp) return 'ok';
+  const pct = c.hp / c.maxHp;
+  return pct > 0.5 ? 'hurt' : pct > 0.25 ? 'bloodied' : 'critical';
+}
+
+// Small name under the token. A trailing number ("Goblin 3") is kept in its
+// own span so a long name is cut with "…" but the number always shows.
+function nameLabel(c) {
+  const label = document.createElement('span');
+  label.className = 'tok-name lvl-' + healthLevel(c);
+  const m = /^(.*?)\s*(\d+)$/.exec((c.name || '?').trim());
+  const base = document.createElement('span');
+  base.className = 'base';
+  base.textContent = m && m[1] ? m[1] : (c.name || '?').trim();
+  label.appendChild(base);
+  if (m && m[1]) {
+    const num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = m[2];
+    label.appendChild(num);
+  }
+  return label;
+}
+
 // Players get monsters with a `health` word instead of hp/maxHp/ac.
-export function tokenNode(c, { active, selected, portrait, where, locked }) {
+export function tokenNode(c, { active, selected, portrait, where, locked, showName }) {
   const down = c.health ? c.health === 'Down' : c.hp <= 0;
   const t = document.createElement('div');
   t.className = 'token ' + (c.type === 'pc' ? 'pc' : 'mon')
@@ -38,6 +68,11 @@ export function tokenNode(c, { active, selected, portrait, where, locked }) {
     t.appendChild(ini);
   }
 
+  if (showName) {
+    t.classList.add('named');
+    t.appendChild(nameLabel(c));
+  }
+
   if (c.health) return t; // no numbers to draw a bar from
   const bar = document.createElement('span');
   bar.className = 'tok-hp';
@@ -50,9 +85,9 @@ export function tokenNode(c, { active, selected, portrait, where, locked }) {
   return t;
 }
 
-// view: { combat, map, selectedId, portraitFor, canMove(combatant) }
+// view: { combat, map, selectedId, portraitFor, canMove(combatant), showNames }
 export function renderMap(view) {
-  const { combat, map, selectedId, portraitFor, canMove } = view;
+  const { combat, map, selectedId, portraitFor, canMove, showNames } = view;
   const active = combat.combatants[combat.activeIndex];
   const byId = new Map(combat.combatants.map((c) => [c.id, c]));
 
@@ -149,7 +184,7 @@ export function renderMap(view) {
       cell.dataset.x = x;
       cell.dataset.y = y;
       const c = at[x + ',' + y];
-      if (c) cell.appendChild(tokenNode(c, opts(c, cellLabel(x, y))));
+      if (c) cell.appendChild(tokenNode(c, { ...opts(c, cellLabel(x, y)), showName: showNames }));
       board.appendChild(cell);
     }
   }

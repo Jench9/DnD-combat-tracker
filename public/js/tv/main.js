@@ -63,7 +63,7 @@ function renderBoard() {
       const c = at[x + ',' + y];
       if (c) {
         cell.appendChild(tokenNode(c, {
-          active: active && active.id === c.id, selected: false, portrait: pics.portraitFor(c), where: cellLabel(x, y), locked: true,
+          active: active && active.id === c.id, selected: false, portrait: pics.portraitFor(c), where: cellLabel(x, y), locked: true, showName: true,
         }));
       }
       board.appendChild(cell);
