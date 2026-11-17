@@ -254,9 +254,23 @@ export function renderMap(view) {
 }
 
 // Fit cells to the available width (32–64px); narrower screens scroll.
-export function sizeBoard(cols) {
-  const scroll = $('boardScroll');
+// The zoom (pinch / Ctrl+wheel / buttons, map/zoom.js) scales that fit.
+export const MIN_CELL = 16;
+export const MAX_CELL = 128;
+let zoom = 1;
+export const getZoom = () => zoom;
+export function fitCell(cols) {
   const labelW = 26;
-  const cell = Math.max(32, Math.min(64, Math.floor((scroll.clientWidth - labelW - 2) / cols)));
+  return Math.max(32, Math.min(64, Math.floor(($('boardScroll').clientWidth - labelW - 2) / cols)));
+}
+export function setZoom(z, cols) {
+  const fit = fitCell(cols);
+  zoom = Math.max(MIN_CELL / fit, Math.min(MAX_CELL / fit, z));
+  sizeBoard(cols);
+}
+// Returns the cell size in px.
+export function sizeBoard(cols) {
+  const cell = Math.round(fitCell(cols) * zoom);
   $('board').style.setProperty('--cell', cell + 'px');
+  return cell;
 }

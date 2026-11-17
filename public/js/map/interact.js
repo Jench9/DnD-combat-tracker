@@ -16,6 +16,14 @@ export function isDragging() {
   return !!(drag && drag.ghost);
 }
 
+// A second finger on the board starts a pinch: drop the drag without moving.
+// Returns true when there was a press or drag to cancel.
+export function cancelDrag() {
+  if (!drag) return false;
+  endDrag();
+  return true;
+}
+
 function dropTarget(x, y) {
   const el = document.elementFromPoint(x, y);
   if (!el) return null;

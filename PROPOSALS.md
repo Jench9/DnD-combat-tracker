@@ -38,7 +38,7 @@ The DM paints covered cells, and players and the TV see them as solid black.
 Filter on the server (`map/service.playerView`) so tokens under fog aren't
 sent to players, which matches the "never send secrets" rule.
 
-### 1.6 Pan & zoom on phones — S
+### 1.6 ~~Pan & zoom on phones~~ — done
 Pinch-zoom and two-finger pan on the board instead of relying on sideways scrolling.
 
 ---

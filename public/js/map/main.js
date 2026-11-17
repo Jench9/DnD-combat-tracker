@@ -3,7 +3,8 @@ import { $ } from '../core/dom.js';
 import { renderNav } from '../core/nav.js';
 import { connectSocket } from '../core/socket.js';
 import { renderMap, sizeBoard, tokenSize } from './render.js';
-import { initInteract, isDragging } from './interact.js';
+import { initInteract, isDragging, cancelDrag } from './interact.js';
+import { initZoom } from './zoom.js';
 import { initTokenCard } from './card.js';
 import { combatActionsFor } from '../core/combatActions.js';
 import { createPortraitLookup } from '../core/portraits.js';
@@ -47,6 +48,8 @@ const card = initTokenCard({
   }) : null),
 });
 
+let zoom = null; // set up below, once the board exists
+
 // Hold redraws while a token is being dragged (it would vanish from
 // under the pointer); catch up when the drag ends.
 function render() {
@@ -65,6 +68,7 @@ function render() {
     if (tok) tok.focus({ preventScroll: true });
   }
   card.refresh();
+  zoom?.refresh();
 }
 
 const socket = connectSocket({
@@ -176,5 +180,12 @@ $('bgDeleteBtn').addEventListener('click', () => {
   if (b && confirm('Delete the map "' + b.name + '"? The image file is removed.')) send('deleteBackground', { id: b.id });
 });
 
-window.addEventListener('resize', () => sizeBoard(view.map.cols));
+// Pinch / Ctrl+wheel / buttons. A second finger cancels a token drag.
+zoom = initZoom({
+  getCols: () => view.map.cols,
+  onGestureStart: () => { if (cancelDrag()) render(); },
+  onZoom: () => card.refresh(),
+});
+
+window.addEventListener('resize', () => { sizeBoard(view.map.cols); zoom.refresh(); });
 render();

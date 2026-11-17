@@ -41,6 +41,8 @@
 
 /* ---- board ---- */
 .board-scroll { overflow-x: auto; padding-bottom: 6px; }
+.zoom-tools { display: flex; justify-content: flex-end; gap: 4px; margin-bottom: 6px; }
+.zoom-tools .btn { min-width: 38px; font-variant-numeric: tabular-nums; }
 .board {
   --cell: 40px;
   display: grid;

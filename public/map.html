@@ -66,10 +66,15 @@
     <div class="tray" id="tray" data-drop="tray"></div>
   </div>
 
+  <div class="zoom-tools" role="group" aria-label="Zoom the board">
+    <button class="btn secondary small" id="zoomOutBtn" title="Zoom out (or pinch / Ctrl + wheel)" aria-label="Zoom out">−</button>
+    <button class="btn secondary small" id="zoomFitBtn" title="Fit the board to the width">100%</button>
+    <button class="btn secondary small" id="zoomInBtn" title="Zoom in (or pinch / Ctrl + wheel)" aria-label="Zoom in">+</button>
+  </div>
   <div class="board-scroll" id="boardScroll">
     <div class="board" id="board"></div>
   </div>
-  <div class="map-hint"><span class="player-only">You can move your own token. </span>Drag a token onto the grid, or click it and then click a cell. With a token selected: arrow keys move it, Delete puts it back in the tray, Esc deselects. Hover over a token (or tap it) to see its details.</div>
+  <div class="map-hint"><span class="player-only">You can move your own token. </span>Drag a token onto the grid, or click it and then click a cell. With a token selected: arrow keys move it, Delete puts it back in the tray, Esc deselects. Hover over a token (or tap it) to see its details. Pinch with two fingers to zoom and move them together to pan (Ctrl + wheel on a computer).</div>
 </div>
 
 <script type="module" src="js/map/main.js"></script>
