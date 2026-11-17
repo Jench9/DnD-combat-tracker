@@ -39,6 +39,65 @@ test('mapDndBeyondData maps core fields', () => {
   assert.match(notesPrefix, /best-effort/);
 });
 
+test('mapDndBeyondData ability scores: background, race, feat and item bonuses', () => {
+  const { patch } = mapDndBeyondData({
+    stats: [1, 2, 3, 4, 5, 6].map((id) => ({ id, value: 10 })),
+    classes: [{ level: 4, definition: { name: 'Warlock', hitDice: 8 } }],
+    modifiers: {
+      // 2024 background (e.g. The Haunted One on D&D Beyond): +2 / +1
+      background: [
+        { type: 'bonus', subType: 'charisma-score', value: 2 },
+        { type: 'bonus', subType: 'wisdom-score', value: 1 },
+        { type: 'proficiency', subType: 'arcana' },
+      ],
+      race: [{ type: 'bonus', subType: 'dexterity-score', value: 2 }], // ignored: the background gives the increases
+      feat: [{ type: 'bonus', subType: 'charisma-score', value: 1 }], // e.g. a half-feat
+      item: [
+        { type: 'set', subType: 'strength-score', value: 19, componentId: 101 }, // gauntlets, attuned
+        { type: 'set', subType: 'intelligence-score', value: 19, componentId: 102 }, // headband, not attuned
+        { type: 'bonus', subType: 'constitution-score', value: 2, componentId: 103 }, // not equipped
+      ],
+    },
+    inventory: [
+      { equipped: true, isAttuned: true, definition: { id: 101, name: 'Gauntlets of Ogre Power', canAttune: true } },
+      { equipped: true, isAttuned: false, definition: { id: 102, name: 'Headband of Intellect', canAttune: true } },
+      { equipped: false, definition: { id: 103, name: 'Amulet of Health', canAttune: false } },
+    ],
+  });
+  assert.deepStrictEqual(patch.abilities, { str: 19, dex: 10, con: 10, int: 10, wis: 11, cha: 13 });
+  assert.ok(patch.skillProf.Arcana);
+});
+
+// Shape of a real 2024 character (Elf, Scribe background): D&D Beyond lists
+// the species' +2/+1 *and* the background's (as a feat); only the
+// background's count, as on D&D Beyond.
+test('mapDndBeyondData ability scores: 2024 background increases replace the species ones', () => {
+  const stats = [8, 15, 14, 15, 10, 8].map((value, i) => ({ id: i + 1, value }));
+  const species = [
+    { type: 'bonus', subType: 'intelligence-score', value: 2, componentId: 3727523 },
+    { type: 'bonus', subType: 'dexterity-score', value: 1, componentId: 3727523 },
+  ];
+  const background = [
+    { type: 'bonus', subType: 'dexterity-score', value: 2, componentId: 1789184 },
+    { type: 'bonus', subType: 'intelligence-score', value: 1, componentId: 1789184 },
+  ];
+  const feats = [{ definition: { id: 1789184, name: 'Scribe Ability Score Improvements' } }, { definition: { id: 1789131, name: 'Dueling' } }];
+  const both = mapDndBeyondData({ stats, feats, modifiers: { race: species, feat: background } }).patch.abilities;
+  assert.deepStrictEqual(both, { str: 8, dex: 17, con: 14, int: 16, wis: 10, cha: 8 });
+
+  // A background without increases (2014 rules / legacy background): the species' count.
+  const legacy = mapDndBeyondData({ stats, feats: [], modifiers: { race: species } }).patch.abilities;
+  assert.deepStrictEqual(legacy, { str: 8, dex: 16, con: 14, int: 17, wis: 10, cha: 8 });
+
+  // A 2024 "Ability Score Improvement" feat (level 4) is not a background: species still count.
+  const asi = mapDndBeyondData({
+    stats,
+    feats: [{ definition: { id: 77, name: 'Ability Score Improvement' } }],
+    modifiers: { race: species, feat: [{ type: 'bonus', subType: 'strength-score', value: 2, componentId: 77 }] },
+  }).patch.abilities;
+  assert.deepStrictEqual(asi, { str: 10, dex: 16, con: 14, int: 17, wis: 10, cha: 8 });
+});
+
 test('mapDndBeyondData HP: per-level bonuses and override', () => {
   const base = {
     stats: [1, 2, 3, 4, 5, 6].map((id) => ({ id, value: id === 3 ? 16 : 10 })),

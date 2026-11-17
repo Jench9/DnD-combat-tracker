@@ -12,7 +12,45 @@ function extractDdbCharacterId(input) {
   return m ? m[1] : null;
 }
 
-function ddbStatValue(data, statId) {
+// Ability score modifiers from every source D&D Beyond keeps them in:
+// species/race, class, background, feats (ASIs, half-feats) and magic
+// items — an item's only while equipped (and attuned, if it needs
+// attunement); D&D Beyond ties an item's modifiers to it by
+// `componentId` = definition id.
+//
+// 2024 rules: when the background gives the ability increases (+2/+1),
+// the species' own increases are ignored. D&D Beyond still lists both — a
+// 2024 character's species can carry an "Ability Score Increases" trait,
+// and legacy races keep their fixed bonuses — so race bonuses only count
+// when the background gives none. The background's increases come either
+// as `modifiers.background` or as a feat named "<Background> Ability Score
+// Improvements" (e.g. "Scribe Ability Score Improvements").
+const isScoreBonus = (m) => m && m.type === 'bonus' && /-score$/.test(String(m.subType || ''));
+
+function backgroundGivesScores(groups, data) {
+  if ((Array.isArray(groups.background) ? groups.background : []).some(isScoreBonus)) return true;
+  const feats = Array.isArray(data.feats) ? data.feats : [];
+  const asiFeatIds = new Set(feats
+    .filter((f) => /ability score improvements$/i.test(String(f && f.definition && f.definition.name)))
+    .map((f) => f.definition.id));
+  return (Array.isArray(groups.feat) ? groups.feat : []).some((m) => isScoreBonus(m) && asiFeatIds.has(m.componentId));
+}
+
+function abilityModifiers(data) {
+  const groups = data.modifiers && typeof data.modifiers === 'object' ? data.modifiers : {};
+  const list = (g) => (Array.isArray(groups[g]) ? groups[g] : []);
+  const activeItems = new Set((Array.isArray(data.inventory) ? data.inventory : [])
+    .filter((i) => i && i.equipped && i.definition && (!i.definition.canAttune || i.isAttuned))
+    .map((i) => i.definition.id));
+  const out = [];
+  const skipRaceScores = backgroundGivesScores(groups, data);
+  list('race').forEach((m) => { if (!(skipRaceScores && isScoreBonus(m))) out.push(m); });
+  ['class', 'background', 'feat'].forEach((g) => out.push(...list(g)));
+  list('item').forEach((m) => { if (m && activeItems.has(m.componentId)) out.push(m); });
+  return out.filter(Boolean);
+}
+
+function ddbStatValue(data, statId, mods = abilityModifiers(data)) {
   const base = (data.stats || []).find((s) => s.id === statId);
   const bonus = (data.bonusStats || []).find((s) => s.id === statId);
   const override = (data.overrideStats || []).find((s) => s.id === statId);
@@ -23,14 +61,17 @@ function ddbStatValue(data, statId) {
 
   const baseVal = base && typeof base.value === 'number' ? base.value : 10;
   const bonusVal = bonus && typeof bonus.value === 'number' ? bonus.value : 0;
+  const subType = `${DDB_STAT_NAMES[statId]}-score`;
 
-  const abilityName = DDB_STAT_NAMES[statId];
-
-  const featBonus = (data.modifiers?.feat || [])
-    .filter((m) => m.type === 'bonus' && m.subType === `${abilityName}-score`)
+  const modBonus = mods
+    .filter((m) => m.type === 'bonus' && m.subType === subType)
     .reduce((sum, m) => sum + (Number(m.value) || 0), 0);
+  // "Your score becomes N" (Gauntlets of Ogre Power, Headband of Intellect…).
+  const setTo = mods
+    .filter((m) => m.type === 'set' && m.subType === subType)
+    .reduce((max, m) => Math.max(max, Number(m.value) || 0), 0);
 
-  return baseVal + bonusVal + featBonus;
+  return Math.max(baseVal + bonusVal + modBonus, setTo);
 }
 
 // Proficiencies live scattered across several modifier arrays
@@ -114,8 +155,9 @@ function mapHitDice(classes) {
 
 function mapDndBeyondData(data, ddbId) {
   const abilities = {};
+  const mods = abilityModifiers(data);
   ABILITY_KEYS.forEach((key, i) => {
-    abilities[key] = ddbStatValue(data, i + 1);
+    abilities[key] = ddbStatValue(data, i + 1, mods);
   });
 
   const classes = Array.isArray(data.classes) ? data.classes : [];

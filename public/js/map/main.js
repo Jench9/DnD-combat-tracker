@@ -4,6 +4,8 @@ import { renderNav } from '../core/nav.js';
 import { connectSocket } from '../core/socket.js';
 import { renderMap, sizeBoard, tokenSize } from './render.js';
 import { initInteract, isDragging } from './interact.js';
+import { initTokenCard } from './card.js';
+import { combatActionsFor } from '../core/combatActions.js';
 import { createPortraitLookup } from '../core/portraits.js';
 import { isDm, ownsCharacter, identityHeaders } from '../core/identity.js';
 
@@ -30,6 +32,21 @@ const { portraitFor } = pics;
 // The DM moves everything; a player only their own character's token.
 const canMove = (c) => isDm() || (!!c.characterId && ownsCharacter(c.characterId));
 
+// Hover / tap a token for its details (HP, AC, conditions, effects…) and,
+// for your own character, its actions. Sheets and libraries for those:
+let characters = [];
+let items = [];
+let spells = [];
+const card = initTokenCard({
+  getView: () => view,
+  lookup: pics,
+  isDragging,
+  isDm,
+  actionsFor: (c) => (canMove(c) ? combatActionsFor(c, {
+    characters, items, spells, state: view.combat, send, isDm: isDm(), ownsCharacter,
+  }) : null),
+});
+
 // Hold redraws while a token is being dragged (it would vanish from
 // under the pointer); catch up when the drag ends.
 function render() {
@@ -42,17 +59,21 @@ function render() {
   const selected = view.combat.combatants.find((c) => c.id === view.selectedId);
   $('tokenSizeField').hidden = !selected;
   if (selected && document.activeElement !== $('tokenSizeSelect')) $('tokenSizeSelect').value = String(tokenSize(selected));
-  if (view.selectedId && !['INPUT', 'SELECT'].includes(document.activeElement?.tagName)) {
+  const busy = ['INPUT', 'SELECT'].includes(document.activeElement?.tagName) || document.activeElement?.closest('.token-card, dialog');
+  if (view.selectedId && !busy) {
     const tok = document.querySelector('.token[data-id="' + view.selectedId + '"]');
     if (tok) tok.focus({ preventScroll: true });
   }
+  card.refresh();
 }
 
 const socket = connectSocket({
   handlers: {
     state: (msg) => { view.combat = msg.state; render(); },
     mapState: (msg) => { view.map = msg.map; render(); },
-    charState: (msg) => { pics.setCharacters(msg.characters); render(); },
+    charState: (msg) => { characters = msg.characters; pics.setCharacters(msg.characters); render(); },
+    itemState: (msg) => { items = msg.items; render(); },
+    spellState: (msg) => { spells = msg.spells; render(); },
     monsterState: (msg) => { pics.setMonsters(msg.monsters); render(); },
   },
 });

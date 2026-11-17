@@ -135,6 +135,7 @@ export function initInteract({ getView, place, remove, select }) {
   document.addEventListener('keydown', (e) => {
     const { selectedId, map } = getView();
     if (!selectedId || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+    if (document.activeElement?.closest('.token-card, dialog')) return; // keys belong to the card's buttons
     if (e.key === 'Escape') { select(null); return; }
     if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); remove(selectedId); return; }
     const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];

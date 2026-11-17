@@ -84,7 +84,9 @@ function nameLabel(c) {
 
 // Players get monsters with a `health` word instead of hp/maxHp/ac.
 // `onBoard`: drawn at its real size (size × size cells) from its cell.
-export function tokenNode(c, { active, selected, portrait, where, locked, showName, onBoard }) {
+// `card`: the page shows a details card on hover (map.js), so skip the
+// browser's own tooltip there.
+export function tokenNode(c, { active, selected, portrait, where, locked, showName, onBoard, card }) {
   const down = c.health ? c.health === 'Down' : c.hp <= 0;
   const t = document.createElement('div');
   t.className = 'token ' + (c.type === 'pc' ? 'pc' : 'mon')
@@ -103,7 +105,8 @@ export function tokenNode(c, { active, selected, portrait, where, locked, showNa
     .filter(Boolean).join(' — ');
   const badges = badgesFor(c);
   if (badges.length) t.title += '\n' + badges.map((b) => b.icon + ' ' + b.label).join('\n');
-  t.setAttribute('aria-label', t.title);
+  t.setAttribute('aria-label', t.title.replace(/\n/g, ', '));
+  if (card) t.removeAttribute('title');
 
   if (portrait) {
     const img = document.createElement('img');
@@ -157,7 +160,7 @@ export function renderMap(view) {
 
   const opts = (c, where) => ({
     active: active && active.id === c.id, selected: selectedId === c.id, portrait: portraitFor(c), where,
-    locked: !canMove(c),
+    locked: !canMove(c), card: true,
   });
 
   // Tray: combatants not on the map, in initiative order.

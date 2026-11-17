@@ -124,9 +124,9 @@ adventurers-kit/
 │   └── js/                        ES modules, no build step
 │       ├── core/                  socket (reconnecting WebSocket), dom helpers, nav, tool registry, image resize, portrait lookup
 │       ├── home/
-│       ├── combat/                main, render, conditions data, spells (concentration/targets dialog), party (add characters), bestiary (add monsters)
+│       ├── combat/                main, render, conditions data, party (add characters), bestiary (add monsters)
 │       ├── monsters/              monster library page
-│       ├── map/                   main, render (grid + tokens), interact (drag, click, keyboard)
+│       ├── map/                   main, render (grid + tokens), interact (drag, click, keyboard), card (token details + your actions on hover/tap)
 │       └── characters/            main, store (state + pending-edit tracking), list, import, rules, editor/
 ├── test/                          node:test suites
 ├── package.json, package-lock.json

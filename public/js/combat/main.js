@@ -7,9 +7,9 @@ import { initParty, setPartyData } from './party.js';
 import { initBestiary, setBestiary } from './bestiary.js';
 import { createPortraitLookup } from '../core/portraits.js';
 import { isDm, ownsCharacter } from '../core/identity.js';
-import { renderActions } from '../core/attacks.js';
+import { combatActionsFor } from '../core/combatActions.js';
 import { abilityMod, profBonusForLevel } from '../characters/rules.js';
-import { ENDS_CONCENTRATION_CONDITIONS, openSpellDialog } from './spells.js';
+import { openSpellDialog } from '../core/spellDialog.js';
 
 renderNav();
 
@@ -54,48 +54,8 @@ let stale = false;
 const { portraitFor } = pics;
 const notesFor = (c) => (pics.monsterFor(c) || {}).notes || '';
 
-// A PC's actions (attacks from equipped weapons, usable items, spells) as
-// a function that fills a container, or null. Using an item spends it from
-// the character's inventory; casting a leveled spell spends a slot.
-function actionsFor(c) {
-  const ch = c.characterId && characters.find((x) => x.id === c.characterId);
-  if (!ch) return null;
-  return (container) => renderActions(container, {
-    character: ch,
-    items,
-    spells,
-    canUse: ownsCharacter(ch.id),
-    onToggleModifier: (modId) => send('updateCharacter', {
-      id: ch.id,
-      patch: { modifiers: ch.modifiers.map((m) => (m.id === modId ? { ...m, active: !m.active } : m)) },
-    }),
-    onSpendSlot: (level) => send('updateCharacter', {
-      id: ch.id,
-      patch: { spellSlots: ch.spellSlots.map((s, i) => (i === level - 1 ? { ...s, used: Math.min(s.max, s.used + 1) } : s)) },
-    }),
-    // Casting: blocked while incapacitated; a new concentration spell ends
-    // the old one; lasting spells then ask for their targets.
-    cast: {
-      blocked: castBlockedReason(c),
-      before: (sp) => !(sp.concentration && c.concentration)
-        || confirm(`${c.name} is concentrating on ${c.concentration}. Casting ${sp.name} ends it. Continue?`),
-      after: (sp) => {
-        if (sp.concentration || !/^instant/i.test(sp.duration || '')) {
-          openSpellDialog({ state, caster: c, spell: sp.name, concentration: !!sp.concentration, send, canTargetHidden: isDm() });
-        }
-      },
-    },
-    onUse: (entryId) => send('updateCharacter', {
-      id: ch.id,
-      patch: { inventory: ch.inventory.map((e) => (e.id === entryId ? { ...e, qty: Math.max(0, e.qty - 1) } : e)) },
-    }),
-  });
-}
-function castBlockedReason(c) {
-  const cond = c.conditions.find((x) => ENDS_CONCENTRATION_CONDITIONS.includes(x));
-  if (cond) return `Can't cast spells while ${cond}`;
-  return '';
-}
+// A PC's actions (attacks, items, spells), or null (core/combatActions.js).
+const actionsFor = (c) => combatActionsFor(c, { characters, items, spells, state, send, isDm: isDm(), ownsCharacter });
 
 // A PC's CON saving throw bonus, from their sheet (null without one).
 function conSaveFor(c) {
