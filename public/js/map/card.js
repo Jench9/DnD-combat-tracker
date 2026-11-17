@@ -246,7 +246,7 @@ export function initTokenCard({ getView, lookup, isDragging, actionsFor = () => 
     later(() => { hoverId = tok.dataset.id; refresh(); }, SHOW_DELAY_MS);
   });
   document.addEventListener('pointerout', (e) => {
-    if (e.pointerType !== 'mouse') return;
+    if (e.pointerType !== 'mouse' || document.querySelector('dialog[open]')) return;
     const from = box.contains(e.target) ? box : e.target.closest('.token');
     if (!from || (e.relatedTarget && from.contains(e.relatedTarget))) return;
     later(() => { hoverId = null; refresh(); }, HIDE_DELAY_MS);
@@ -255,7 +255,10 @@ export function initTokenCard({ getView, lookup, isDragging, actionsFor = () => 
   // Click / tap a token to keep its card open (again, Esc, or a click
   // elsewhere closes it). Dragging still works: the card hides meanwhile.
   document.addEventListener('click', (e) => {
-    if (box.contains(e.target) || !e.target.isConnected) return;
+    // Using the card (Attack, Cast…) keeps it open, also while a dice or
+    // targets dialog covers the page.
+    if (box.contains(e.target)) { if (shownId) pinnedId = shownId; return; }
+    if (!e.target.isConnected) return;
     const tok = e.target.closest('.token');
     if (tok && !tok.classList.contains('ghost')) {
       pinnedId = pinnedId === tok.dataset.id ? null : tok.dataset.id;

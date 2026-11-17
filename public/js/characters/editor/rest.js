@@ -6,7 +6,7 @@
 // - Spells tab: Pact Magic (which slots a short rest restores).
 // The rest rules themselves run on the server (src/features/characters/rest.js).
 import { $ } from '../../core/dom.js';
-import { rollDie } from '../../core/dice.js';
+import { rollDie, rollBatch, RollCancelled } from '../../core/dice.js';
 import { store, cur, patchChar, touch, untouch } from '../store.js';
 import { abilityMod, fmtMod } from '../rules.js';
 
@@ -77,10 +77,18 @@ function renderHitDice(c) {
   $('srPactNote').textContent = pact.count > 0 && pact.level > 0 ? ` and ${pact.count} pact slot${pact.count === 1 ? '' : 's'}` : '';
 }
 
-function spendDie(size) {
-  const c = cur();
+async function spendDie(size) {
+  let c = cur();
   if (!c) return;
-  const roll = rollDie(size);
+  let roll;
+  try {
+    roll = await rollBatch(`Short rest: spend a Hit Die (d${size})`, () => rollDie(size, `d${size} Hit Die`));
+  } catch (err) {
+    if (err instanceof RollCancelled) return;
+    throw err;
+  }
+  c = cur(); // the sheet may have changed meanwhile
+  if (!c) return;
   const con = abilityMod(c.abilities.con);
   const healed = Math.max(0, roll + con);
   const gained = Math.min(c.hpMax, c.hpCurrent + healed) - c.hpCurrent;

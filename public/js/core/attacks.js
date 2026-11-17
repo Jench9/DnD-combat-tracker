@@ -14,7 +14,7 @@
 // features, weapon mastery, Hex…; see modifiers.js) add to hit, damage,
 // extra dice, reroll rules, a wider crit range and rules notes.
 import { abilityMod, profBonusForLevel, fmtMod } from '../characters/rules.js';
-import { roll, rollDie, formatDice, addDice, scaleDice } from './dice.js';
+import { roll, rollDie, rollBatch, RollCancelled, formatDice, addDice, scaleDice } from './dice.js';
 import { slotLabel, spellHeader } from '../spells/format.js';
 import { effectsFor, unarmedOverride, resolveModifiers } from './modifiers.js';
 
@@ -145,12 +145,34 @@ const toHitText = (a) => `${fmtMod(a.toHit)}${(a.toHitDice || []).map((d) => ` +
 // next damage roll.
 const results = new Map(); // key -> { text, crit, armed }
 
+// Shows a roll result on every copy of that action on the page (the list
+// may have been redrawn while the player was entering their dice).
+function showResult(key) {
+  const r = results.get(key);
+  document.querySelectorAll('.action-result').forEach((out) => {
+    if (out.dataset.key !== key) return;
+    out.textContent = r ? r.text : '';
+    out.classList.toggle('crit', !!(r && r.crit));
+  });
+}
+
+// Runs a roll (asking for the dice if the player rolls their own); false
+// if they cancelled.
+async function rolled(title, fn) {
+  try {
+    return await rollBatch(title, fn);
+  } catch (err) {
+    if (err instanceof RollCancelled) return false;
+    throw err;
+  }
+}
+
 function rollGrip(g, crit) {
-  const main = roll(g.main.dice, g.main.mod, { crit, reroll: g.main.reroll, critExtraDice: g.main.critExtraDice });
+  const main = roll(g.main.dice, g.main.mod, { crit, reroll: g.main.reroll, critExtraDice: g.main.critExtraDice, label: g.main.type });
   const lines = [`${Math.max(0, main.total)} ${g.main.type} (${main.text})`];
   let total = Math.max(0, main.total);
   g.parts.forEach((p) => {
-    const r = roll(p.dice, 0, { crit });
+    const r = roll(p.dice, 0, { crit, label: [p.type, p.label].filter(Boolean).join(' ') });
     lines.push(`${r.total} ${p.type}${p.label ? ` ${p.label}` : ''} (${r.text})`.replace(/\s+\(/, ' ('));
     total += r.total;
   });
@@ -159,8 +181,8 @@ function rollGrip(g, crit) {
 
 // d20 + to hit (+ Bless-style dice); a critical on critRange or higher.
 function rollAttack(a) {
-  const d20 = rollDie(20);
-  const extra = (a.toHitDice || []).map((d) => ({ d, r: roll(d.dice) }));
+  const d20 = rollDie(20, 'd20 to hit');
+  const extra = (a.toHitDice || []).map((d) => ({ d, r: roll(d.dice, 0, { label: d.label }) }));
   const total = d20 + a.toHit + extra.reduce((s, x) => s + x.r.total, 0);
   const crit = d20 >= (a.critRange || 20);
   const note = crit ? (d20 === 20 ? ' — natural 20, critical hit!' : ` — natural ${d20}, critical hit!`) : d20 === 1 ? ' — natural 1, miss' : '';
@@ -199,37 +221,49 @@ function spellStat(sp, sc, slot, charLevel, fx) {
   return dmg + extra;
 }
 
-// Casts: rolls everything the spell needs, returns the result text.
-function castText(sp, sc, slot, charLevel, fx) {
+// Casts: rolls everything the spell needs, returns the result text (or
+// false if the player cancelled entering their dice). A spell attack's
+// damage is a second roll: a critical hit doubles its dice.
+async function castRoll(sp, sc, slot, charLevel, fx) {
   const d = spellDice(sp, slot, charLevel);
   const mod = sp.addMod && sc ? sc.mod : 0;
   const at = sp.level > 0 ? ` (${slotLabel(slot)}-level slot)` : '';
   const dmgRoll = (crit) => {
-    const main = roll(d, mod + fx.flat, { crit, reroll: fx.reroll });
+    const main = roll(d, mod + fx.flat, { crit, reroll: fx.reroll, label: sp.damageType });
     let text = `${Math.max(0, main.total)} ${sp.damageType} (${main.text})`;
     if (sp.extraDice) {
-      const ex = roll(sp.extraDice, 0, { crit, reroll: fx.reroll });
+      const ex = roll(sp.extraDice, 0, { crit, reroll: fx.reroll, label: sp.extraDamageType });
       text += ` + ${ex.total} ${sp.extraDamageType} (${ex.text})`;
     }
     fx.parts.forEach((p) => {
-      const r = roll(p.dice, 0, { crit });
+      const r = roll(p.dice, 0, { crit, label: [p.type, p.label].filter(Boolean).join(' ') });
       text += ` + ${r.total} ${p.type} ${p.label} (${r.text})`;
     });
     return text;
   };
   if (sp.mechanic === 'attack' && sc) {
-    const r = rollAttack({ toHit: sc.attack + fx.toHit, toHitDice: fx.toHitDice, critRange: 20 });
-    return { crit: r.crit, text: `${sp.name}${at}: ${r.text.replace(/^Attack/, 'attack')}` + (d ? ` · ${r.crit ? 'CRITICAL ' : ''}damage ${dmgRoll(r.crit)}` : '') };
+    const r = await rolled(`${sp.name}: spell attack`, () => rollAttack({ toHit: sc.attack + fx.toHit, toHitDice: fx.toHitDice, critRange: 20 }));
+    if (!r) return false;
+    const dmg = d ? await rolled(`${sp.name}: ${r.crit ? 'critical ' : ''}damage`, () => dmgRoll(r.crit)) : '';
+    if (dmg === false) return false;
+    return { crit: r.crit, text: `${sp.name}${at}: ${r.text.replace(/^Attack/, 'attack')}` + (dmg ? ` · ${r.crit ? 'CRITICAL ' : ''}damage ${dmg}` : '') };
   }
   if (sp.mechanic === 'save' && sc) {
     const onSave = sp.saveSuccess === 'half' ? ', half on a success' : '';
-    return { crit: false, text: `${sp.name}${at}: DC ${sc.dc} ${sp.saveAbility.toUpperCase()} save` + (d ? ` · ${dmgRoll(false)}${onSave}` : '') };
+    const dmg = d ? await rolled(`${sp.name}: damage`, () => dmgRoll(false)) : '';
+    if (dmg === false) return false;
+    return { crit: false, text: `${sp.name}${at}: DC ${sc.dc} ${sp.saveAbility.toUpperCase()} save` + (dmg ? ` · ${dmg}${onSave}` : '') };
   }
   if (sp.mechanic === 'heal' && d) {
-    const r = roll(d, mod);
+    const r = await rolled(`${sp.name}: healing`, () => roll(d, mod, { label: 'healing' }));
+    if (!r) return false;
     return { crit: false, text: `${sp.name}${at}: heals ${Math.max(0, r.total)} (${r.text})` };
   }
-  if (sp.mechanic === 'auto' && d) return { crit: false, text: `${sp.name}${at}: ${dmgRoll(false)}` };
+  if (sp.mechanic === 'auto' && d) {
+    const dmg = await rolled(`${sp.name}: damage`, () => dmgRoll(false));
+    if (dmg === false) return false;
+    return { crit: false, text: `${sp.name}${at}: ${dmg}` };
+  }
   return { crit: false, text: `Cast ${sp.name}${at}.` };
 }
 
@@ -298,12 +332,14 @@ function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show
       cast.disabled = true;
       cast.title = castHooks.blocked;
     }
-    cast.addEventListener('click', () => {
+    cast.addEventListener('click', async () => {
       if (castHooks.before && !castHooks.before(sp)) return;
-      const r = castText(sp, sc, slot, character.level, fx);
+      const castSlot = slot;
+      const r = await castRoll(sp, sc, castSlot, character.level, fx);
+      if (!r) return; // cancelled while entering the dice: nothing spent
       results.set(key, r);
-      show();
-      if (sp.level > 0) onSpendSlot(slot);
+      showResult(key);
+      if (sp.level > 0) onSpendSlot(castSlot);
       if (castHooks.after) castHooks.after(sp);
     });
     btns.appendChild(cast);
@@ -365,6 +401,7 @@ export function renderActions(container, {
       row.className = 'action-row spell';
       const out = document.createElement('div');
       out.className = 'action-result';
+      out.dataset.key = key;
       const show = () => {
         const r = results.get(key);
         out.textContent = r ? r.text : '';
@@ -404,6 +441,7 @@ export function renderActions(container, {
 
     const out = document.createElement('div');
     out.className = 'action-result';
+    out.dataset.key = key;
     const show = () => {
       const r = results.get(key);
       out.textContent = r ? r.text : '';
@@ -419,24 +457,31 @@ export function renderActions(container, {
         b.className = 'btn secondary small';
         b.textContent = label;
         if (title) b.title = title;
-        b.addEventListener('click', () => { fn(); show(); });
+        b.addEventListener('click', async () => { if (await fn() !== false) showResult(key); });
         btns.appendChild(b);
       };
       if (a.kind === 'attack') {
-        button('Attack', () => {
-          const r = rollAttack(a);
+        button('Attack', async () => {
+          const r = await rolled(`${a.name}: attack`, () => rollAttack(a));
+          if (!r) return false;
           results.set(key, { text: r.text, crit: r.crit, armed: r.crit });
+          return true;
         }, 'Roll d20 + to hit');
-        a.grips.forEach((g) => button(g.label, () => {
+        a.grips.forEach((g) => button(g.label, async () => {
           const prev = results.get(key);
           const crit = !!(prev && prev.armed);
-          results.set(key, { text: rollGrip(g, crit), crit, armed: false });
+          const text = await rolled(`${a.name}: ${crit ? 'critical ' : ''}damage`, () => rollGrip(g, crit));
+          if (text === false) return false;
+          results.set(key, { text, crit, armed: false });
+          return true;
         }, 'Roll damage (doubled dice after a critical hit)'));
       } else {
-        button('Use', () => {
-          const r = roll(a.effect.dice);
+        button('Use', async () => {
+          const r = await rolled(`${a.name}`, () => roll(a.effect.dice, 0, { label: a.effect.type }));
+          if (!r) return false;
           results.set(key, { text: `${a.name}: ${r.total} ${a.effect.type} (${r.text}) — one used`, crit: false });
           onUse(a.key);
+          return true;
         }, 'Roll the effect and use one up');
       }
       row.appendChild(btns);

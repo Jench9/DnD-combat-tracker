@@ -104,6 +104,18 @@ body.is-dm .player-only { display: none !important; }
   padding: 5px 12px; font-size: 12.5px; font-weight: 600;
 }
 .id-badge:hover { background: rgba(255, 255, 255, 0.16); }
+.dice-toggle.on { background: rgba(212, 174, 76, 0.28); }
+
+/* "Roll my own dice" dialog (core/diceDialog.js); shares .spell-dlg. */
+.dice-rows { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 4px; max-height: 50vh; overflow-y: auto; }
+.dice-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; }
+.dice-name { overflow-wrap: anywhere; }
+.dice-row input {
+  width: 72px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px;
+  background: var(--bg); color: var(--ink); font: inherit; text-align: center;
+}
+.dice-msg { color: var(--wax); font-size: 12.5px; min-height: 1em; }
+.dice-dlg .spell-dlg-btns { flex-wrap: wrap; }
 
 .join-overlay {
   position: fixed; inset: 0; z-index: 1000; background: rgba(10, 11, 12, 0.6);

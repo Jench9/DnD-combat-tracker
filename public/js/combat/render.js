@@ -11,6 +11,7 @@
 // missing and monsters carry a `health` word instead of hp/maxHp/ac.
 import { CONDITIONS, conditionDescription } from './conditions.js';
 import { CONCENTRATION_ICON, conditionIcon, effectIcon } from '../core/effects.js';
+import { rollBatch, rollDie, RollCancelled } from '../core/dice.js';
 
 function mkHpBtn(label, fn, title) {
   const b = document.createElement('button');
@@ -75,8 +76,14 @@ function renderConcentration(c, ctx, canEdit) {
       };
       const bonus = ctx.conSaveFor(c);
       if (bonus !== null) {
-        btn('Roll', 'Roll d20 + CON save', () => {
-          const d = 1 + Math.floor(Math.random() * 20);
+        btn('Roll', 'Roll d20 + CON save', async () => {
+          let d;
+          try {
+            d = await rollBatch(`${c.name}: concentration save (DC ${c.concentrationDc})`, () => rollDie(20, 'd20 CON save'));
+          } catch (err) {
+            if (err instanceof RollCancelled) return;
+            throw err;
+          }
           const total = d + bonus;
           const passed = total >= c.concentrationDc;
           concRolls.set(c.id, `CON save ${total} (d20 ${d} ${bonus < 0 ? '−' : '+'} ${Math.abs(bonus)}) vs DC ${c.concentrationDc}: `
