@@ -95,3 +95,25 @@ test('a damaged combat file loads safely', () => {
   assert.strictEqual(out.map.cols, 50);
   assert.deepStrictEqual(out.map.positions, { a1: { x: 1, y: 2 } });
 });
+
+test('library monsters with an unedited older SRD stat block get the new one (usage on action names)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-persist-'));
+  const { SRD_MONSTERS } = require('../src/srd');
+  const st = SRD_MONSTERS.find((m) => m.name === 'Adult Red Dragon');
+  assert.match(st.notes, /^Fire Breath \(Recharge 5–6\): /m);
+  const old = st.notes.replace(/^Fire Breath \(Recharge 5–6\):/m, 'Fire Breath:');
+  fs.writeFileSync(path.join(dir, 'monsters.json'), JSON.stringify([
+    { id: 'drg1', name: 'Adult Red Dragon', notes: old },
+    { id: 'drg2', name: 'adult red dragon', notes: old + '\nMy own note.' }, // edited: kept
+  ]));
+  const out = JSON.parse(run(dir, `
+    const s = require('./src/features/monsters/service');
+    require('./src/core/jsonStore').flushAllStores();
+    process.stdout.write(JSON.stringify(s.all()));
+  `));
+  assert.strictEqual(out.find((m) => m.id === 'drg1').notes, st.notes);
+  assert.match(out.find((m) => m.id === 'drg2').notes, /My own note\.$/);
+  assert.doesNotMatch(out.find((m) => m.id === 'drg2').notes, /Recharge/);
+  const saved = JSON.parse(fs.readFileSync(path.join(dir, 'monsters.json'), 'utf8'));
+  assert.strictEqual(saved.find((m) => m.id === 'drg1').notes, st.notes, 'saved to disk');
+});

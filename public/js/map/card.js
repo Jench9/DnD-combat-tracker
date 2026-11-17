@@ -71,7 +71,7 @@ function buildCard(c, { view, lookup, actions }) {
     img.src = portrait;
     img.alt = '';
     pic.appendChild(img);
-  } else pic.textContent = ((c.name || '?').trim().charAt(0) || '?').toUpperCase();
+  } else pic.textContent = lookup.glyphFor(c);
   const title = el('div', 'tc-title');
   title.appendChild(el('div', 'tc-name', c.name));
   const ch = c.characterId ? lookup.characterFor(c) : null;

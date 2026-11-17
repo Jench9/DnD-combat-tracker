@@ -1,8 +1,9 @@
 // A combatant's Actions (attacks, items, spells) wired to the server, for
 // the Combat Tracker rows and the Battle Map token card.
 //
-//   combatActionsFor(c, { characters, items, spells, state, send, isDm, ownsCharacter })
-//     → fill(container) for a combatant made from a character sheet, or null.
+//   combatActionsFor(c, { characters, items, spells, state, send, isDm, ownsCharacter, monsterFor })
+//     → fill(container) for a combatant made from a character sheet, or —
+//     for the DM — a library monster with actions in its stat block; else null.
 //
 // Using an item spends it from the inventory; casting a leveled spell
 // spends a slot. Casting is blocked while incapacitated; a new
@@ -10,15 +11,21 @@
 // open the target dialog (core/spellDialog.js).
 import { renderActions } from './attacks.js';
 import { openSpellDialog, ENDS_CONCENTRATION_CONDITIONS } from './spellDialog.js';
+import { renderMonsterActions, parseMonsterActions } from './monsterActions.js';
 
 export function castBlockedReason(c) {
   const cond = (c.conditions || []).find((x) => ENDS_CONCENTRATION_CONDITIONS.includes(x));
   return cond ? `Can't cast spells while ${cond}` : '';
 }
 
-export function combatActionsFor(c, { characters, items, spells, state, send, isDm, ownsCharacter }) {
+export function combatActionsFor(c, { characters, items, spells, state, send, isDm, ownsCharacter, monsterFor = () => null }) {
   const ch = c.characterId && characters.find((x) => x.id === c.characterId);
-  if (!ch) return null;
+  if (!ch) {
+    // Monsters: only the DM's browser has their stat blocks.
+    const monster = isDm && c.monsterId ? monsterFor(c) : null;
+    if (!monster || !parseMonsterActions(monster.notes).length) return null;
+    return (container) => renderMonsterActions(container, { combatant: c, monster });
+  }
   return (container) => renderActions(container, {
     character: ch,
     items,

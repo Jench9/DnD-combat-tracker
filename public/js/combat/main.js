@@ -55,7 +55,9 @@ const { portraitFor } = pics;
 const notesFor = (c) => (pics.monsterFor(c) || {}).notes || '';
 
 // A PC's actions (attacks, items, spells), or null (core/combatActions.js).
-const actionsFor = (c) => combatActionsFor(c, { characters, items, spells, state, send, isDm: isDm(), ownsCharacter });
+const actionsFor = (c) => combatActionsFor(c, {
+  characters, items, spells, state, send, isDm: isDm(), ownsCharacter, monsterFor: pics.monsterFor,
+});
 
 // A PC's CON saving throw bonus, from their sheet (null without one).
 function conSaveFor(c) {
@@ -69,7 +71,7 @@ function render() {
   if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && $('list').contains(el)) { stale = true; return; }
   stale = false;
   renderCombat(state, {
-    send, rerender: render, portraitFor, notesFor, actionsFor, isDm: isDm(), conSaveFor,
+    send, rerender: render, portraitFor, notesFor, actionsFor, isDm: isDm(), conSaveFor, glyphFor: pics.glyphFor,
     onConcentrate: (c) => openSpellDialog({ state, caster: c, spell: '', concentration: true, send, canTargetHidden: isDm() }),
     onAddEffect: (c) => openSpellDialog({ state, target: c, send, canTargetHidden: isDm() }),
     canControl: (c) => isDm() || (!!c.characterId && ownsCharacter(c.characterId)),

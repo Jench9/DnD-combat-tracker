@@ -299,7 +299,7 @@ function renderRow(c, idx, state, ctx) {
     img.alt = '';
     pic.appendChild(img);
   } else {
-    pic.textContent = ((c.name || '?').trim().charAt(0) || '?').toUpperCase();
+    pic.textContent = ctx.glyphFor(c);
   }
   nameLine.appendChild(pic);
 
@@ -417,10 +417,11 @@ function renderRow(c, idx, state, ctx) {
 export function renderCombat(state, {
   send, rerender, portraitFor = () => '', notesFor = () => '', actionsFor = () => null,
   canControl = () => true, isDm = true, conSaveFor = () => null, onConcentrate = () => {}, onAddEffect = () => {},
+  glyphFor = (c) => ((c.name || '?').trim().charAt(0) || '?').toUpperCase(),
 }) {
   const byId = new Map(state.combatants.map((c) => [c.id, c]));
   const ctx = {
-    send, rerender, portraitFor, notesFor, actionsFor, canControl, isDm, conSaveFor, onConcentrate, onAddEffect,
+    send, rerender, portraitFor, notesFor, actionsFor, canControl, isDm, conSaveFor, onConcentrate, onAddEffect, glyphFor,
     combatantById: (id) => byId.get(id),
   };
   document.getElementById('roundNum').textContent = state.round;

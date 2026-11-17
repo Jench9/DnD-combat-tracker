@@ -1,5 +1,7 @@
 // Monsters page: the saved monster library (name, AC, HP, initiative
 // bonus, icon, notes). Monsters are added to fights from the combat page.
+import { creatureIcon } from '../core/creatureIcons.js';
+import { parseMonsterActions, renderMonsterActions } from '../core/monsterActions.js';
 import { $, uid, debounce } from '../core/dom.js';
 import { renderNav } from '../core/nav.js';
 import { connectSocket } from '../core/socket.js';
@@ -63,7 +65,7 @@ function start() {
       img.alt = '';
       d.appendChild(img);
     } else {
-      d.textContent = ((m.name || '?').trim().charAt(0) || '?').toUpperCase();
+      d.textContent = creatureIcon(m);
     }
     return d;
   }
@@ -120,9 +122,31 @@ function start() {
       stats.innerHTML = `<span><b>${m.ac}</b> AC</span><span><b>${m.hpMax}</b> HP</span><span><b>${signed(m.initBonus)}</b> init</span>`
         + (m.cr ? `<span><b>${m.cr}</b> CR</span>` : '');
       body.append(name, stats);
+      const acts = actionSummary(m);
+      if (acts) {
+        const line = document.createElement('div');
+        line.className = 'mon-card-actions';
+        line.textContent = acts;
+        body.appendChild(line);
+      }
       card.appendChild(body);
       grid.appendChild(card);
     });
+  }
+
+  // "Bite +14 · Claw +14 · Fire Breath DC 21 ⟳" — the main actions at a
+  // glance (Multiattack left out), parsed once per stat block.
+  const summaries = new Map(); // notes -> text
+  function actionSummary(m) {
+    if (!m.notes) return '';
+    if (summaries.has(m.notes)) return summaries.get(m.notes);
+    const actions = (parseMonsterActions(m.notes).find((s) => s.title === 'Actions') || { entries: [] }).entries
+      .filter((e) => !/^multiattack/i.test(e.name) && (e.attack || e.save || e.damage.length));
+    const label = (e) => e.name.replace(/\s*\((?:Recharge|Recharges|\d+\/Day)[^)]*\)/i, '')
+      + (e.attack ? ` +${e.attack.toHit}` : e.save ? ` DC ${e.save.dc}` : '') + (e.recharge ? ' ⟳' : '');
+    const shown = actions.slice(0, 3).map(label).join(' · ') + (actions.length > 3 ? ` · +${actions.length - 3} more` : '');
+    summaries.set(m.notes, shown);
+    return shown;
   }
 
   // ---- editor
@@ -131,6 +155,20 @@ function start() {
     if (src) $('iconImg').src = src; else $('iconImg').removeAttribute('src');
     $('iconPh').hidden = !!src;
     $('iconRemove').hidden = !src;
+    const m = current();
+    $('iconEmoji').textContent = m ? creatureIcon(m) : '';
+  }
+
+  // The open monster's actions with roll buttons (redrawn when its stat
+  // block or name changes; roll results are kept across redraws).
+  let drawnActions = '';
+  function renderActionsPanel(m) {
+    const sig = m.id + '\n' + m.name + '\n' + m.notes;
+    if (sig === drawnActions) return;
+    drawnActions = sig;
+    const has = parseMonsterActions(m.notes).length > 0;
+    $('monActions').hidden = !has;
+    if (has) renderMonsterActions($('monActionsBody'), { combatant: { id: 'lib-' + m.id, name: m.name || 'Monster' }, monster: m });
   }
 
   // Fill the form from state, skipping the field being typed in.
@@ -141,6 +179,7 @@ function start() {
       if (document.activeElement !== $(id)) $(id).value = m[prop];
     });
     setIcon(m.icon);
+    renderActionsPanel(m);
   }
 
   function openEditor(id) {

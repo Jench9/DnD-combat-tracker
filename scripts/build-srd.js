@@ -293,7 +293,17 @@ function monster(m, edition) {
   const saves = (m.proficiencies || []).filter((p) => /^Saving Throw/.test(p.proficiency.name));
   const skills = (m.proficiencies || []).filter((p) => /^Skill/.test(p.proficiency.name));
   const list = (label, arr) => (arr && arr.length ? `${label}: ${arr.map((x) => (typeof x === 'string' ? x : x.name)).join(', ')}` : '');
-  const block = (title, arr) => (arr && arr.length ? [title ? `— ${title} —` : '', ...arr.map((a) => `${a.name}: ${a.desc}`)].filter(Boolean) : []);
+  // "Fire Breath (Recharge 5–6)", "Fireball (3/Day)": the monster action
+  // buttons (public/js/core/monsterActions.js) read the recharge from it.
+  const usage = (u) => {
+    if (!u || !u.type) return '';
+    if (/recharge on roll/i.test(u.type) && u.min_value) return u.min_value >= 6 ? ' (Recharge 6)' : ` (Recharge ${u.min_value}–6)`;
+    if (/per day/i.test(u.type) && u.times) return ` (${u.times}/Day)`;
+    if (/recharge after rest/i.test(u.type)) return ` (Recharges after a ${(u.rest_types || ['long']).map((r) => r.charAt(0).toUpperCase() + r.slice(1)).join(' or ')} Rest)`;
+    return '';
+  };
+  const named = (a) => (/\((recharge|\d+\/day)/i.test(a.name) ? a.name : a.name + usage(a.usage));
+  const block = (title, arr) => (arr && arr.length ? [title ? `— ${title} —` : '', ...arr.map((a) => `${named(a)}: ${a.desc}`)].filter(Boolean) : []);
   const lines = [
     `CR ${cr} · ${type}`,
     `AC ${(m.armor_class || []).map((a) => a.value + (a.type && a.type !== 'dex' ? ` (${a.type})` : '')).join(', ')} · HP ${m.hit_points} (${m.hit_points_roll || m.hit_dice}) · Speed ${speed}`,

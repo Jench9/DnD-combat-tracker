@@ -1,6 +1,7 @@
 // "Add monsters" panel on the combat page: the saved monster library, with
 // how many to add. Each copy gets its own initiative roll on the server
 // (d20 + bonus); fix any of them by editing the initiative in the list.
+import { creatureIcon } from '../core/creatureIcons.js';
 import { $ } from '../core/dom.js';
 
 let monsters = [];
@@ -23,7 +24,7 @@ function renderRow(m) {
     img.alt = '';
     pic.appendChild(img);
   } else {
-    pic.textContent = ((m.name || '?').trim().charAt(0) || '?').toUpperCase();
+    pic.textContent = creatureIcon(m);
   }
   const text = document.createElement('div');
   const name = document.createElement('div');

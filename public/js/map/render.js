@@ -86,7 +86,7 @@ function nameLabel(c) {
 // `onBoard`: drawn at its real size (size × size cells) from its cell.
 // `card`: the page shows a details card on hover (map.js), so skip the
 // browser's own tooltip there.
-export function tokenNode(c, { active, selected, portrait, where, locked, showName, onBoard, card }) {
+export function tokenNode(c, { active, selected, portrait, glyph, where, locked, showName, onBoard, card }) {
   const down = c.health ? c.health === 'Down' : c.hp <= 0;
   const t = document.createElement('div');
   t.className = 'token ' + (c.type === 'pc' ? 'pc' : 'mon')
@@ -117,7 +117,8 @@ export function tokenNode(c, { active, selected, portrait, where, locked, showNa
   } else {
     const ini = document.createElement('span');
     ini.className = 'ini';
-    ini.textContent = ((c.name || '?').trim().charAt(0) || '?').toUpperCase();
+    ini.textContent = glyph || ((c.name || '?').trim().charAt(0) || '?').toUpperCase();
+    if (c.type === 'monster' && glyph) ini.classList.add('emoji');
     t.appendChild(ini);
   }
 
@@ -143,9 +144,9 @@ export function tokenNode(c, { active, selected, portrait, where, locked, showNa
   return t;
 }
 
-// view: { combat, map, selectedId, portraitFor, canMove(combatant), showNames }
+// view: { combat, map, selectedId, portraitFor, glyphFor, canMove(combatant), showNames }
 export function renderMap(view) {
-  const { combat, map, selectedId, portraitFor, canMove, showNames } = view;
+  const { combat, map, selectedId, portraitFor, glyphFor = () => '', canMove, showNames } = view;
   const active = combat.combatants[combat.activeIndex];
   const byId = new Map(combat.combatants.map((c) => [c.id, c]));
 
@@ -159,7 +160,7 @@ export function renderMap(view) {
   });
 
   const opts = (c, where) => ({
-    active: active && active.id === c.id, selected: selectedId === c.id, portrait: portraitFor(c), where,
+    active: active && active.id === c.id, selected: selectedId === c.id, portrait: portraitFor(c), glyph: glyphFor(c), where,
     locked: !canMove(c), card: true,
   });
 

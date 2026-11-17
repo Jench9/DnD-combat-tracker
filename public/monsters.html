@@ -34,7 +34,7 @@
       <div class="icon-col">
         <button type="button" class="mon-icon big" id="iconBtn" title="Change icon">
           <img id="iconImg" alt="" hidden>
-          <span id="iconPh">Add<br>icon</span>
+          <span id="iconPh"><span class="ph-emoji" id="iconEmoji"></span><span class="ph-text">Add icon</span></span>
         </button>
         <input type="file" id="iconInput" accept="image/*" hidden>
         <button type="button" class="link-btn" id="iconRemove" hidden>Remove</button>
@@ -44,9 +44,13 @@
         <div class="field"><label for="mAC">AC</label><input id="mAC" type="number" min="0" max="40"></div>
         <div class="field"><label for="mHP">Max HP</label><input id="mHP" type="number" min="1" max="9999"></div>
         <div class="field"><label for="mInit">Initiative bonus</label><input id="mInit" type="number" min="-10" max="20"></div>
-        <div class="field wide"><label for="mNotes">Notes</label><textarea id="mNotes" rows="3" maxlength="2000" placeholder="Attacks, abilities, tactics…"></textarea></div>
+        <div class="field wide"><label for="mNotes">Notes</label><textarea id="mNotes" rows="3" maxlength="12000" placeholder="Attacks, abilities, tactics… (a stat block with a “— Actions —” line gets roll buttons below)"></textarea></div>
       </div>
     </div>
+    <details class="mon-actions" id="monActions" open>
+      <summary>Actions</summary>
+      <div class="actions-body" id="monActionsBody"></div>
+    </details>
     <div class="mon-editor-actions">
       <button class="btn secondary small" id="deleteMonsterBtn">Delete</button>
       <button class="btn small" id="doneBtn">Done</button>

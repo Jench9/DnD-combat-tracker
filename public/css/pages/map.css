@@ -88,6 +88,8 @@
 .token.mon { border-color: var(--wax); }
 .token img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; pointer-events: none; }
 .token .ini { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--ink); pointer-events: none; }
+.token .ini.emoji { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; font-weight: 400; font-size: calc(var(--cell, 40px) * 0.5); line-height: 1; }
+.token.big .ini.emoji { font-size: calc(var(--cell, 40px) * 0.5 * var(--size)); }
 .token.active { box-shadow: 0 0 0 3px var(--gold-glow), 0 0 10px var(--gold-glow); }
 .token.selected { outline: 2px dashed var(--blue); outline-offset: 3px; }
 .token.down { filter: grayscale(1); opacity: 0.55; }

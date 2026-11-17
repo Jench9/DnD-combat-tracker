@@ -21,6 +21,30 @@ function persist() {
   store.save(monsters);
 }
 
+// Stat blocks saved before the SRD build put usage on action names
+// ("Fire Breath (Recharge 5–6)", "Fireball (3/Day)"; a few names had it in
+// the source already). A monster whose notes match the current SRD stat
+// block apart from those suffixes (i.e. never edited) gets the new one —
+// the Recharge buttons read it.
+const USAGE_RE = /^([^:\n]+?) \((?:Recharge [\d–-]+|Recharges after a [^)]*|\d+\/Day)\):/gm;
+const withoutUsage = (notes) => notes.replace(USAGE_RE, '$1:');
+function refreshStatBlocks() {
+  let changed = 0;
+  const byName = new Map(SRD_MONSTERS.map((st) => [st.name.toLowerCase(), st]));
+  monsters.forEach((m) => {
+    const st = byName.get(m.name.trim().toLowerCase());
+    if (!st || m.notes === st.notes) return;
+    const fresh = sanitizeMonsterPatch(m, { notes: st.notes }).notes;
+    if (fresh === m.notes) return;
+    if (withoutUsage(m.notes).trim() === withoutUsage(fresh).trim()) {
+      m.notes = fresh;
+      changed++;
+    }
+  });
+  return changed;
+}
+if (refreshStatBlocks()) persist();
+
 function all() {
   return monsters;
 }

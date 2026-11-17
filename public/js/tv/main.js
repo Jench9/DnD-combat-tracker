@@ -64,7 +64,7 @@ function renderBoard() {
       if (c) {
         cell.classList.add('has-token');
         cell.appendChild(tokenNode(c, {
-          active: active && active.id === c.id, selected: false, portrait: pics.portraitFor(c), where: cellLabel(x, y), locked: true, showName: true, onBoard: true,
+          active: active && active.id === c.id, selected: false, portrait: pics.portraitFor(c), glyph: pics.glyphFor(c), where: cellLabel(x, y), locked: true, showName: true, onBoard: true,
         }));
       }
       board.appendChild(cell);
@@ -92,7 +92,7 @@ function avatar(c) {
     img.alt = '';
     a.appendChild(img);
   } else {
-    a.textContent = ((c.name || '?').trim().charAt(0) || '?').toUpperCase();
+    a.textContent = pics.glyphFor(c);
   }
   return a;
 }
