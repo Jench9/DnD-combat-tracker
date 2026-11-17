@@ -90,7 +90,9 @@ test('D&D Beyond: multiclass hit dice, spent dice, pact magic and limited uses',
   const { patch } = mapDndBeyondData(data, '1');
   assert.strictEqual(patch.hitDice, '3d10 + 2d8');
   assert.deepStrictEqual(patch.hitDiceUsed, { d6: 0, d8: 0, d10: 1, d12: 0 });
-  assert.strictEqual(patch.rulesEdition, '2014');
+  assert.strictEqual(patch.rulesEdition, '2024', '2024 unless D&D Beyond marks it as legacy');
+  const legacy = { ...data, classes: data.classes.map((c) => ({ ...c, definition: { ...c.definition, isLegacy: true } })) };
+  assert.strictEqual(mapDndBeyondData(legacy, '1').patch.rulesEdition, '2014');
 
   let n = 0;
   const res = planResources(data, { level: 5, abilities: { con: 16 } }, () => 'id' + n++);

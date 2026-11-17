@@ -13,9 +13,9 @@
 //
 // Output entries are already in the app's item / spell / monster shapes;
 // the libraries validate them again when loading. When a name exists in
-// both editions, the 2014 version keeps the plain name and the 2024 one is
-// "Name (2024)", so names stay unique (D&D Beyond imports and pickers
-// match by name).
+// both editions, the 2024 version (the table's main rules) keeps the plain
+// name and the 2014 one is "Name (2014)", so names stay unique (D&D Beyond
+// imports and pickers match by name).
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -44,11 +44,12 @@ const parseDice = (s) => {
 const costText = (c) => (c && c.quantity ? `${c.quantity.toLocaleString('en-US')} ${c.unit}` : '');
 const feet = (s) => String(s || '').replace(/\bfeet\b|\bfoot\b/gi, 'ft').replace(/ft\./g, 'ft');
 
-// Disambiguate names shared by both editions: the 2024 entry gets " (2024)".
+// Disambiguate names shared by both editions: 2024 is the baseline and
+// keeps the plain name; the 2014 entry gets " (2014)". 2024 entries first.
 function nameEditions(list2014, list2024) {
-  const in2014 = new Set(list2014.map((e) => lower(e.name)));
-  list2024.forEach((e) => { if (in2014.has(lower(e.name))) e.name = `${e.name} (2024)`; });
-  return [...list2014, ...list2024];
+  const in2024 = new Set(list2024.map((e) => lower(e.name)));
+  list2014.forEach((e) => { if (in2024.has(lower(e.name))) e.name = `${e.name} (2014)`; });
+  return [...list2024, ...list2014];
 }
 
 // ---------------------------------------------------------------- spells

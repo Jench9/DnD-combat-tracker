@@ -142,3 +142,12 @@ test('D&D Beyond import and sync bring spells, slots and ability', async (t) => 
   assert.ok(synced.spells.some((x) => x.name === 'Counterspell' && x.prepared));
   assert.strictEqual(require('../src/features/spells/service').all().length, before, 'Frost Lance reused, not duplicated');
 });
+
+test('planSpells: a 2014 (legacy) character gets the 2014 version of a spell in both editions', () => {
+  const lib = (name) => LIBRARY.find((s) => s.name === name);
+  const plan = (data) => planSpells(data, LIBRARY, () => 'x').spells.find((s) => /^Fireball/.test(s.name));
+  const wizard = (isLegacy) => ({ classes: [{ id: 1, level: 5, definition: { name: 'Wizard', isLegacy } }], classSpells: [{ characterClassId: 1, spells: [entry({ name: 'Fireball', level: 3 }, { prepared: true })] }] });
+  assert.strictEqual(plan(wizard(false)).spellId, lib('Fireball').id);
+  assert.strictEqual(lib('Fireball').edition, '2024');
+  assert.strictEqual(plan(wizard(true)).spellId, lib('Fireball (2014)').id);
+});

@@ -35,7 +35,8 @@ test('detected preset keys all exist in the client catalog', () => {
 
 const feature = (name, requiredLevel = 1) => ({ definition: { name, requiredLevel } });
 const BARB_2014 = {
-  classes: [{ level: 9, definition: { name: 'Barbarian' }, classFeatures: [feature('Rage'), feature('Brutal Critical', 9), feature('Relentless Rage', 11)] }],
+  // D&D Beyond marks 2014 content as legacy; without it a character reads as 2024.
+  classes: [{ level: 9, definition: { name: 'Barbarian', isLegacy: true }, classFeatures: [feature('Rage'), feature('Brutal Critical', 9), feature('Relentless Rage', 11)] }],
   feats: [{ definition: { name: 'Great Weapon Master' } }],
 };
 const FIGHTER_2024 = {

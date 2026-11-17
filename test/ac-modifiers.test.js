@@ -67,5 +67,7 @@ test('D&D Beyond: Defense, Unarmored Defense per class, Draconic Resilience by e
   assert.deepStrictEqual(detectPresets({ classes: [{ level: 3, definition: { name: 'Barbarian' }, classFeatures: [feature('Unarmored Defense')] }] }), ['unarmored-defense-barbarian']);
   assert.deepStrictEqual(detectPresets({ classes: [{ level: 3, definition: { name: 'Monk' }, classFeatures: [feature('Unarmored Defense')] }] }), ['unarmored-defense-monk']);
   assert.deepStrictEqual(detectPresets({ options: { class: [{ definition: { name: 'Defense' } }] } }), ['defense']);
-  assert.deepStrictEqual(detectPresets({ classes: [{ level: 1, definition: { name: 'Sorcerer' }, subclassDefinition: { classFeatures: [feature('Draconic Resilience')] } }] }), ['draconic-resilience-2014']);
+  // 2024 unless D&D Beyond marks the class as legacy (2014) content.
+  assert.deepStrictEqual(detectPresets({ classes: [{ level: 1, definition: { name: 'Sorcerer' }, subclassDefinition: { classFeatures: [feature('Draconic Resilience')] } }] }), ['draconic-resilience-2024']);
+  assert.deepStrictEqual(detectPresets({ classes: [{ level: 1, definition: { name: 'Sorcerer', isLegacy: true }, subclassDefinition: { classFeatures: [feature('Draconic Resilience')] } }] }), ['draconic-resilience-2014']);
 });

@@ -113,3 +113,10 @@ test('D&D Beyond import and sync map the inventory into the library', async (t) 
   const libraryNow = require('../src/features/items/service').all();
   assert.strictEqual(libraryNow.length, before, 'sync reuses the items created by the first import');
 });
+
+test('planInventory: items in both editions are taken in the character\'s edition', () => {
+  const longsword = (data) => planInventory({ ...data, inventory: [ddb('Longsword', { equipped: true }, { filterType: 'Weapon' })] }, LIBRARY, () => 'x').inventory[0].itemId;
+  assert.strictEqual(longsword({}), libId('Longsword'));
+  assert.strictEqual(LIBRARY.find((i) => i.id === libId('Longsword')).edition, '2024');
+  assert.strictEqual(longsword({ classes: [{ level: 1, definition: { name: 'Fighter', isLegacy: true } }] }), libId('Longsword (2014)'));
+});

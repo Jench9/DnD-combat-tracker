@@ -43,7 +43,29 @@ function refreshStatBlocks() {
   });
   return changed;
 }
-if (refreshStatBlocks()) persist();
+// SRD creatures added while 2014 had the plain names ("Aboleth" = 2014,
+// "Aboleth (2024)") follow the 2024 baseline: "Aboleth" = 2024, "Aboleth
+// (2014)". Only monsters whose name is the SRD name with or without the
+// edition suffix, with that SRD edition, and never onto a name in use.
+const baseName = (n) => String(n || '').trim().replace(/ \((?:2014|2024)\)$/, '').toLowerCase();
+function renameForEditions() {
+  const srd = new Map(SRD_MONSTERS.map((st) => [`${st.edition}:${baseName(st.name)}`, st]));
+  let changed = 0;
+  for (let pass = 0; pass < 3; pass++) { // a 2014 rename frees the plain name for the 2024 one
+    let moved = 0;
+    monsters.forEach((m) => {
+      const st = m.edition && srd.get(`${m.edition}:${baseName(m.name)}`);
+      if (!st || m.name === st.name) return;
+      if (monsters.some((o) => o !== m && o.name.trim().toLowerCase() === st.name.toLowerCase())) return;
+      m.name = st.name;
+      moved++;
+    });
+    changed += moved;
+    if (!moved) break;
+  }
+  return changed;
+}
+if (renameForEditions() + refreshStatBlocks()) persist();
 
 function all() {
   return monsters;

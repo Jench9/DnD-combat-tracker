@@ -117,3 +117,20 @@ test('library monsters with an unedited older SRD stat block get the new one (us
   const saved = JSON.parse(fs.readFileSync(path.join(dir, 'monsters.json'), 'utf8'));
   assert.strictEqual(saved.find((m) => m.id === 'drg1').notes, st.notes, 'saved to disk');
 });
+
+test('SRD monsters saved with the 2014-baseline names are renamed to the 2024 baseline', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-persist-'));
+  fs.writeFileSync(path.join(dir, 'monsters.json'), JSON.stringify([
+    { id: 'w14', name: 'Wolf', edition: '2014', notes: '' },
+    { id: 'w24', name: 'Wolf (2024)', edition: '2024', notes: '' },
+    { id: 'kob', name: 'Kobold', edition: '2014', notes: '' }, // 2014-only: stays plain
+    { id: 'my', name: 'Wolf (2024)', edition: '', notes: '' }, // custom: untouched
+  ]));
+  const out = JSON.parse(run(dir, `
+    const s = require('./src/features/monsters/service');
+    require('./src/core/jsonStore').flushAllStores();
+    process.stdout.write(JSON.stringify(s.all()));
+  `));
+  const name = (id) => out.find((m) => m.id === id).name;
+  assert.deepStrictEqual([name('w14'), name('w24'), name('kob'), name('my')], ['Wolf (2014)', 'Wolf', 'Kobold', 'Wolf (2024)']);
+});

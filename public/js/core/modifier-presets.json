@@ -24,19 +24,6 @@
   "note": "Dueling: +2 damage while holding the weapon in one hand and no other weapon."
  },
  {
-  "key": "gwf-2014",
-  "name": "Great Weapon Fighting (2014)",
-  "category": "Fighting style",
-  "edition": "2014",
-  "when": {
-   "kind": "weapon",
-   "range": "melee",
-   "twoHandedGrip": true
-  },
-  "reroll": "gwf-2014",
-  "note": "Great Weapon Fighting: 1s and 2s on the weapon's damage dice are rerolled once."
- },
- {
   "key": "gwf-2024",
   "name": "Great Weapon Fighting (2024)",
   "category": "Fighting style",
@@ -48,6 +35,19 @@
   },
   "reroll": "gwf-2024",
   "note": "Great Weapon Fighting: 1s and 2s on the weapon's damage dice count as 3."
+ },
+ {
+  "key": "gwf-2014",
+  "name": "Great Weapon Fighting (2014)",
+  "category": "Fighting style",
+  "edition": "2014",
+  "when": {
+   "kind": "weapon",
+   "range": "melee",
+   "twoHandedGrip": true
+  },
+  "reroll": "gwf-2014",
+  "note": "Great Weapon Fighting: 1s and 2s on the weapon's damage dice are rerolled once."
  },
  {
   "key": "thrown-weapon-fighting",
@@ -74,8 +74,22 @@
   }
  },
  {
+  "key": "gwm-2024",
+  "name": "Great Weapon Master (2024)",
+  "category": "Feat",
+  "edition": "2024",
+  "when": {
+   "kind": "weapon",
+   "props": [
+    "heavy"
+   ]
+  },
+  "damage": "PROF",
+  "note": "Great Weapon Master: +PB damage on a hit as part of the Attack action; Hew — bonus-action attack after a critical hit or dropping a creature to 0 HP."
+ },
+ {
   "key": "gwm-2014",
-  "name": "Great Weapon Master (2014) \u22125/+10",
+  "name": "Great Weapon Master (2014) −5/+10",
   "category": "Feat",
   "edition": "2014",
   "when": {
@@ -91,22 +105,19 @@
   "note": "Great Weapon Master: also a bonus-action attack after a critical hit or dropping a creature to 0 HP."
  },
  {
-  "key": "gwm-2024",
-  "name": "Great Weapon Master (2024)",
+  "key": "ss-2024",
+  "name": "Sharpshooter (2024)",
   "category": "Feat",
   "edition": "2024",
   "when": {
    "kind": "weapon",
-   "props": [
-    "heavy"
-   ]
+   "range": "ranged"
   },
-  "damage": "PROF",
-  "note": "Great Weapon Master: +PB damage on a hit as part of the Attack action; Hew \u2014 bonus-action attack after a critical hit or dropping a creature to 0 HP."
+  "note": "Sharpshooter: ignore half and three-quarters cover; no disadvantage at long range or with an enemy within 5 ft."
  },
  {
   "key": "ss-2014",
-  "name": "Sharpshooter (2014) \u22125/+10",
+  "name": "Sharpshooter (2014) −5/+10",
   "category": "Feat",
   "edition": "2014",
   "when": {
@@ -117,17 +128,6 @@
   "damage": 10,
   "toggle": true,
   "note": "Sharpshooter: no disadvantage at long range; ignore half and three-quarters cover."
- },
- {
-  "key": "ss-2024",
-  "name": "Sharpshooter (2024)",
-  "category": "Feat",
-  "edition": "2024",
-  "when": {
-   "kind": "weapon",
-   "range": "ranged"
-  },
-  "note": "Sharpshooter: ignore half and three-quarters cover; no disadvantage at long range or with an enemy within 5 ft."
  },
  {
   "key": "savage-attacker",
@@ -227,7 +227,7 @@
  },
  {
   "key": "divine-smite-2014",
-  "name": "Divine Smite (2014) \u2014 1st-level slot",
+  "name": "Divine Smite (2014) — 1st-level slot",
   "category": "Class feature",
   "edition": "2014",
   "when": {
@@ -266,7 +266,7 @@
  },
  {
   "key": "improved-critical",
-  "name": "Improved Critical (crit on 19\u201320)",
+  "name": "Improved Critical (crit on 19–20)",
   "category": "Class feature",
   "edition": "",
   "when": {
@@ -276,44 +276,13 @@
  },
  {
   "key": "superior-critical",
-  "name": "Superior Critical (crit on 18\u201320)",
+  "name": "Superior Critical (crit on 18–20)",
   "category": "Class feature",
   "edition": "",
   "when": {
    "kind": "weapon"
   },
   "critRange": 18
- },
- {
-  "key": "martial-arts-2014",
-  "name": "Martial Arts (2014 Monk)",
-  "category": "Class feature",
-  "edition": "2014",
-  "when": {
-   "kind": "unarmed"
-  },
-  "unarmed": {
-   "class": "monk",
-   "table": [
-    [
-     1,
-     "1d4"
-    ],
-    [
-     5,
-     "1d6"
-    ],
-    [
-     11,
-     "1d8"
-    ],
-    [
-     17,
-     "1d10"
-    ]
-   ],
-   "dex": true
-  }
  },
  {
   "key": "martial-arts-2024",
@@ -341,6 +310,37 @@
     [
      17,
      "1d12"
+    ]
+   ],
+   "dex": true
+  }
+ },
+ {
+  "key": "martial-arts-2014",
+  "name": "Martial Arts (2014 Monk)",
+  "category": "Class feature",
+  "edition": "2014",
+  "when": {
+   "kind": "unarmed"
+  },
+  "unarmed": {
+   "class": "monk",
+   "table": [
+    [
+     1,
+     "1d4"
+    ],
+    [
+     5,
+     "1d6"
+    ],
+    [
+     11,
+     "1d8"
+    ],
+    [
+     17,
+     "1d10"
     ]
    ],
    "dex": true
@@ -412,18 +412,6 @@
   "note": "Unarmored Defense: without armor or a shield, AC = 10 + DEX + WIS."
  },
  {
-  "key": "draconic-resilience-2014",
-  "name": "Draconic Resilience (2014 Sorcerer)",
-  "category": "Class feature",
-  "edition": "2014",
-  "ac": {
-   "base": 13,
-   "add": [
-    "DEX"
-   ]
-  }
- },
- {
   "key": "draconic-resilience-2024",
   "name": "Draconic Resilience (2024 Sorcerer)",
   "category": "Class feature",
@@ -433,6 +421,18 @@
    "add": [
     "DEX",
     "CHA"
+   ]
+  }
+ },
+ {
+  "key": "draconic-resilience-2014",
+  "name": "Draconic Resilience (2014 Sorcerer)",
+  "category": "Class feature",
+  "edition": "2014",
+  "ac": {
+   "base": 13,
+   "add": [
+    "DEX"
    ]
   }
  },
@@ -450,17 +450,6 @@
   "toggle": true
  },
  {
-  "key": "hunters-mark-2014",
-  "name": "Hunter's Mark (2014, target marked)",
-  "category": "Spell effect",
-  "edition": "2014",
-  "when": {
-   "kind": "weapon"
-  },
-  "dice": "1d6",
-  "toggle": true
- },
- {
   "key": "hunters-mark-2024",
   "name": "Hunter's Mark (2024, target marked)",
   "category": "Spell effect",
@@ -471,6 +460,17 @@
   },
   "dice": "1d6",
   "diceType": "force",
+  "toggle": true
+ },
+ {
+  "key": "hunters-mark-2014",
+  "name": "Hunter's Mark (2014, target marked)",
+  "category": "Spell effect",
+  "edition": "2014",
+  "when": {
+   "kind": "weapon"
+  },
+  "dice": "1d6",
   "toggle": true
  },
  {

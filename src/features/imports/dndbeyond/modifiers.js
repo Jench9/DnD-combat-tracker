@@ -59,15 +59,19 @@ function featureNames(data) {
 }
 
 // -> preset keys, deduplicated, in catalog-ish order.
-// 2024 rules if the character has Weapon Mastery (2024 martial classes).
-// A 2024 character without it (e.g. a wizard) reads as 2014 — fixable on the sheet.
+// 2024 is the table's baseline. A character is read as 2014 only when D&D
+// Beyond marks its class or species as legacy (2014) content — and it has
+// no Weapon Mastery, a 2024-only feature. Fixable on the sheet either way.
 function detectEdition(data) {
-  return new Set(featureNames(data)).has('weapon mastery') ? '2024' : '2014';
+  if (new Set(featureNames(data)).has('weapon mastery')) return '2024';
+  const legacy = (d) => !!(d && d.isLegacy === true);
+  const classes = Array.isArray(data.classes) ? data.classes : [];
+  return classes.some((c) => legacy(c.definition)) || legacy(data.race) ? '2014' : '2024';
 }
 
 function detectPresets(data) {
   const names = new Set(featureNames(data));
-  const edition = names.has('weapon mastery') ? '2024' : '2014';
+  const edition = detectEdition(data);
   const keys = [];
   Object.entries(BY_NAME).forEach(([name, key]) => {
     if (!names.has(name)) return;

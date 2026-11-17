@@ -27,8 +27,9 @@ test('an existing library gets the SRD merged in once, keeping ids and custom en
 
   const items = lastJson(run(dir, DUMP('items')));
   const by = (id) => items.find((i) => i.id === id);
-  assert.deepStrictEqual([by('old1').damage, by('old1').versatileDamage, by('old1').edition], ['1d8', '1d10', '2014'], 'updated in place');
-  assert.deepStrictEqual([by('old2').name, by('old2').baseAc], ['Half Plate Armor', 15], 'matched despite the name difference');
+  // Entries saved before editions existed match the plain (2024) name.
+  assert.deepStrictEqual([by('old1').damage, by('old1').versatileDamage, by('old1').edition], ['1d8', '1d10', '2024'], 'updated in place');
+  assert.deepStrictEqual([by('old2').name, by('old2').baseAc], ['Half-Plate Armor', 15], 'matched despite the name difference');
   assert.deepStrictEqual([by('mine').damage, by('mine').source], ['3d6', 'custom'], "the table's own item is untouched");
   // Everything else was added; the custom "Dagger" blocks the SRD "Dagger".
   assert.strictEqual(items.length, SRD_ITEMS.length + 1 - 1);
@@ -43,9 +44,34 @@ test('a fresh install is seeded with the full SRD (both editions)', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-srd-'));
   const spells = lastJson(run(dir, DUMP('spells')));
   assert.strictEqual(spells.length, SRD_SPELLS.length);
+  // 2024 is the baseline: plain names; the 2014 version of a shared name is "Name (2014)".
   const fb = spells.find((s) => s.name === 'Fireball');
-  const fb24 = spells.find((s) => s.name === 'Fireball (2024)');
-  assert.deepStrictEqual([fb.edition, fb24.edition, fb.source], ['2014', '2024', 'srd']);
-  assert.ok(spells.some((s) => s.name === 'Hex' && s.edition === '2024'), '2024-only spells keep plain names');
+  const fb14 = spells.find((s) => s.name === 'Fireball (2014)');
+  assert.deepStrictEqual([fb.edition, fb14.edition, fb.source], ['2024', '2014', 'srd']);
+  assert.ok(!spells.some((s) => / \(2024\)$/.test(s.name)), 'no "(2024)" names');
+  assert.ok(spells.some((s) => s.name === 'Hex' && s.edition === '2024'));
+  assert.strictEqual(new Set(spells.map((s) => s.name.toLowerCase())).size, spells.length, 'names are unique');
+});
+
+// Libraries saved while 2014 had the plain names ("Fireball" = 2014,
+// "Fireball (2024)" = 2024): the merge follows each entry's edition, so
+// ids stay with their edition (characters' spells/items keep their rules)
+// while the names swap.
+test('a library from the 2014-baseline naming is renamed per edition, keeping ids', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-srd-'));
+  fs.writeFileSync(path.join(dir, 'spells.json'), JSON.stringify([
+    { id: 'fb14', name: 'Fireball', level: 3, edition: '2014', source: 'srd', createdBy: 'dm' },
+    { id: 'fb24', name: 'Fireball (2024)', level: 3, edition: '2024', source: 'srd', createdBy: 'dm' },
+    { id: 'hex', name: 'Hex', level: 1, edition: '2024', source: 'srd', createdBy: 'dm' },
+    { id: 'mine', name: 'Lyra\'s Lights', level: 1, source: 'custom', createdBy: 'lyra' },
+  ]));
+  fs.writeFileSync(path.join(dir, 'spells.srd-version'), 'older');
+  const spells = lastJson(run(dir, DUMP('spells')));
+  const by = (id) => spells.find((s) => s.id === id);
+  assert.deepStrictEqual([by('fb14').name, by('fb14').edition], ['Fireball (2014)', '2014']);
+  assert.deepStrictEqual([by('fb24').name, by('fb24').edition], ['Fireball', '2024']);
+  assert.strictEqual(by('hex').name, 'Hex');
+  assert.strictEqual(by('mine').source, 'custom');
+  assert.strictEqual(spells.length, SRD_SPELLS.length + 1, 'nothing duplicated');
   assert.strictEqual(new Set(spells.map((s) => s.name.toLowerCase())).size, spells.length, 'names are unique');
 });

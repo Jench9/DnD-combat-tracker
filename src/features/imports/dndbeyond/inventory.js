@@ -9,6 +9,9 @@
 //   }
 //
 // D&D Beyond's character JSON is unofficial; fields are read defensively.
+// An item in both SRD editions ("Longsword" 2024, "Longsword (2014)") is
+// taken in the character's edition, then custom, then the other edition.
+const { detectEdition } = require('./modifiers');
 
 const ARMOR_TYPE_BY_ID = { 1: 'light', 2: 'medium', 3: 'heavy', 4: 'shield' };
 const PROPERTY_NAMES = ['ammunition', 'finesse', 'heavy', 'light', 'loading', 'reach', 'special', 'thrown', 'two-handed'];
@@ -46,9 +49,10 @@ function indexLibrary(library) {
 // SRD lists e.g. "Flame Tongue" as a (dice-less) magic item, and matching
 // a flame tongue longsword to it would lose its attack.
 const WANT_TYPE = { Weapon: 'weapon', Armor: 'armor' };
-function findInLibrary(idx, name, filterType) {
+function findInLibrary(idx, name, filterType, edition = '2024') {
   const want = WANT_TYPE[filterType];
-  const candidates = nameKeys(name).flatMap((k) => idx.get(k) || []);
+  const rank = (it) => (it.edition === edition ? 0 : !it.edition ? 1 : 2);
+  const candidates = nameKeys(name).flatMap((k) => idx.get(k) || []).sort((a, b) => rank(a) - rank(b));
   return want ? candidates.find((it) => it.type === want) : candidates[0];
 }
 
@@ -122,6 +126,7 @@ function itemFromDefinition(def, library) {
 function planInventory(data, library, newId) {
   const ddbItems = Array.isArray(data.inventory) ? data.inventory : [];
   const idx = indexLibrary(library);
+  const edition = detectEdition(data);
   const inventory = [];
   const newItems = [];
   const created = new Map(); // normalised name -> new item id (dedupe within one import)
@@ -133,7 +138,7 @@ function planInventory(data, library, newId) {
     const qty = Math.max(1, parseInt(entry.quantity, 10) || 1);
     const equipped = !!entry.equipped;
 
-    const lib = findInLibrary(idx, def.name, def.filterType);
+    const lib = findInLibrary(idx, def.name, def.filterType, edition);
     if (lib) {
       inventory.push({ id: newId(), itemId: lib.id, name: lib.name, qty: bundleQty(lib, qty), equipped });
       return;

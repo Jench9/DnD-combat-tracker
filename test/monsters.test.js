@@ -90,7 +90,9 @@ test('monsters: starter set is added once, keeping existing ones', async (t) => 
   assert.match(kobold.notes, /^CR 1\/8 · Small humanoid/);
   assert.match(kobold.notes, /\nDagger: Melee Weapon Attack: \+4 to hit/);
   assert.deepStrictEqual([kobold.creatureType, kobold.cr, kobold.edition], ['humanoid', '1/8', '2014']);
-  assert.ok(after.monsters.some((x) => x.name === 'Wolf (2024)' && x.edition === '2024'));
+  // 2024 is the baseline: plain name; the 2014 version of a shared name gets "(2014)".
+  assert.ok(after.monsters.some((x) => x.name === 'Wolf' && x.edition === '2024'));
+  assert.ok(after.monsters.some((x) => x.name === 'Wolf (2014)' && x.edition === '2014'));
 
   c.send('addStarterMonsters'); // nothing new
   c.send('addMonster', { id: 'marker', patch: { name: 'Marker' } });

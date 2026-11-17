@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Adventurer's Kit: a self-hosted D&D 5e table toolkit (combat tracker, character sheets with D&D Beyond/PDF import, monster/item/spell libraries, battle map, TV view), synced live to every browser over WebSocket. Node + Express + `ws` on the server; plain HTML/CSS/ES modules on the client — **no framework, no build step, no database, no accounts**.
+Adventurer's Kit: a self-hosted D&D 5e table toolkit (combat tracker, character sheets with D&D Beyond/PDF import, monster/item/spell libraries, battle map, TV view), synced live to every browser over WebSocket. **D&D 2024 rules are the baseline**; 2014 is supported as the legacy option. Node + Express + `ws` on the server; plain HTML/CSS/ES modules on the client — **no framework, no build step, no database, no accounts**.
 
 `PROJECT_CONTEXT.md` is a detailed, feature-by-feature description (data shapes, action names, permissions, importer field mappings, known gaps). Read the relevant section before changing a feature, and update it when you change behavior it describes. `Readme.md` has the user-facing overview.
 
@@ -34,7 +34,7 @@ No linter is configured. `sharp` is optional at runtime (loaded lazily via `src/
 
 **Persistence**: `src/core/jsonStore.js` (debounced atomic writes to `DATA_DIR`, default `./data`, flushed on SIGINT/SIGTERM). Everything is saved: characters, campaigns, monsters, items, spells, map backgrounds, and also combat state and map token positions (`combat.json`/`map.json`, saved after every combat/map action via `core/savingActions.js`). Feature services load at `require` time, so tests set `DATA_DIR` to a temp dir in `test/helpers.js` before requiring the app, and reset module-level combat/map state per test.
 
-**Libraries + SRD** (`src/core/library.js`): items and spells are seeded from `src/srd/*.json` on first start and merged once when `src/srd/version.json` changes (`source: 'srd'` entries updated in place keeping ids; `custom` entries never touched; a damaged file is never replaced). `source`/`createdBy` are set by the server, never by clients. SRD data must only come from 5e-bits/5e-database (CC-BY-4.0, see `NOTICE.md`) — never 5e.tools or paid books.
+**Libraries + SRD** (`src/core/library.js`): items and spells are seeded from `src/srd/*.json` on first start and merged once when `src/srd/version.json` changes (`source: 'srd'` entries updated in place keeping ids, matched by edition + base name; `custom` entries never touched; a damaged file is never replaced). Names shared by both editions: plain = 2024, "Name (2014)" = 2014 (`scripts/build-srd.js` `nameEditions`). `source`/`createdBy` are set by the server, never by clients. SRD data must only come from 5e-bits/5e-database (CC-BY-4.0, see `NOTICE.md`) — never 5e.tools or paid books.
 
 **Derived values**: AC is computed server-side (`characters/derived.js` `computeAc`, sent with `acBreakdown`); `combat/characterSync.js` keeps sheet-based combatants' AC and HP in sync both ways. Attack/spell/modifier math is client-side (`public/js/core/attacks.js`, `modifiers.js`, `dice.js`). The modifier catalog `public/js/core/modifier-presets.json` is read by **both** the browser and the server; D&D Beyond detection (`imports/dndbeyond/modifiers.js`) must only reference keys that exist there (a test checks this).
 

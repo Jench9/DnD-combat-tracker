@@ -9,6 +9,9 @@
 //   }
 //
 // D&D Beyond's character JSON is unofficial; fields are read defensively.
+// A spell in both SRD editions is "Name" (2024) and "Name (2014)" in the
+// library: a 2014 character gets the 2014 version when there is one.
+const { detectEdition } = require('./modifiers');
 
 const ABILITY_BY_ID = { 1: 'str', 2: 'dex', 3: 'con', 4: 'int', 5: 'wis', 6: 'cha' };
 const CLASS_ABILITY = { bard: 'cha', cleric: 'wis', druid: 'wis', paladin: 'cha', ranger: 'wis', sorcerer: 'cha', warlock: 'cha', wizard: 'int', artificer: 'int' };
@@ -185,6 +188,7 @@ function allSpellEntries(data, classes) {
 function planSpells(data, library, newId) {
   const classes = classInfo(data);
   const byName = new Map(library.map((sp) => [lower(sp.name), sp]));
+  const edition = detectEdition(data);
   const spells = [];
   const newSpells = [];
   const seen = new Set();
@@ -202,7 +206,7 @@ function planSpells(data, library, newId) {
       return;
     }
     seen.add(key);
-    let lib = byName.get(key);
+    let lib = (edition === '2014' && byName.get(`${key} (2014)`)) || byName.get(key);
     if (!lib) {
       const id = newId();
       const patch = spellFromDefinition(def);

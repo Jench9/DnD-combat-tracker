@@ -9,7 +9,7 @@ export const CONDITION_ICONS = {
 };
 export const conditionIcon = (name) => CONDITION_ICONS[name] || '❗';
 
-// Spell effects by name ("(2024)" and case ignored); anything else ✨.
+// Spell effects by name (an edition suffix like "(2014)" and case ignored); anything else ✨.
 const SPELL_ICONS = {
   bless: '🙏', bane: '👎', hex: '🧿', "hunter's mark": '🎯', haste: '⚡', slow: '🐌',
   'shield of faith': '🛡️', shield: '🛡️', 'mage armor': '🔷', 'hold person': '🧊', 'hold monster': '🧊',
