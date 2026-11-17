@@ -27,6 +27,7 @@ function syncCombatantsFromSheets() {
       changed = true;
     }
   });
+  if (changed) combat.save();
   return changed;
 }
 

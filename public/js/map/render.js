@@ -10,6 +10,22 @@ export function colLabel(x) {
 }
 export const cellLabel = (x, y) => colLabel(x) + (y + 1);
 
+// Token footprint in cells (1 Medium or smaller, 2 Large, 3 Huge, 4 Gargantuan).
+export const tokenSize = (c) => (c && Number.isInteger(c.size) ? Math.max(1, Math.min(4, c.size)) : 1);
+export const SIZE_NAMES = { 1: 'Medium or smaller', 2: 'Large', 3: 'Huge', 4: 'Gargantuan' };
+
+// Same rule as the server: on the grid and not overlapping another token.
+export function canPlace(map, combatants, id, x, y) {
+  const sizeOf = (cid) => tokenSize(combatants.find((c) => c.id === cid));
+  const size = sizeOf(id);
+  if (x < 0 || y < 0 || x + size > map.cols || y + size > map.rows) return false;
+  return !Object.entries(map.positions).some(([other, p]) => {
+    if (other === id) return false;
+    const s = sizeOf(other);
+    return x < p.x + s && p.x < x + size && y < p.y + s && p.y < y + size;
+  });
+}
+
 // How hurt a combatant is, as a CSS level for the name label. Same thresholds
 // as the server's health words (players get the word, the DM the numbers).
 const HEALTH_LEVEL = { Unhurt: 'ok', Hurt: 'hurt', Bloodied: 'bloodied', 'Near death': 'critical', Down: 'down' };
@@ -41,17 +57,23 @@ function nameLabel(c) {
 }
 
 // Players get monsters with a `health` word instead of hp/maxHp/ac.
-export function tokenNode(c, { active, selected, portrait, where, locked, showName }) {
+// `onBoard`: drawn at its real size (size × size cells) from its cell.
+export function tokenNode(c, { active, selected, portrait, where, locked, showName, onBoard }) {
   const down = c.health ? c.health === 'Down' : c.hp <= 0;
   const t = document.createElement('div');
   t.className = 'token ' + (c.type === 'pc' ? 'pc' : 'mon')
     + (active ? ' active' : '') + (selected ? ' selected' : '') + (down ? ' down' : '')
     + (c.hidden ? ' hidden-tok' : '') + (locked ? ' locked' : '');
   t.dataset.id = c.id;
+  const size = tokenSize(c);
+  if (onBoard && size > 1) {
+    t.classList.add('big');
+    t.style.setProperty('--size', size);
+  }
   if (locked) t.dataset.locked = '1';
   t.tabIndex = locked ? -1 : 0;
   const hp = c.health || (Math.max(0, c.hp) + '/' + c.maxHp + ' HP');
-  t.title = [c.name, where, hp, c.ac !== undefined ? 'AC ' + c.ac : '', c.hidden ? 'hidden from players' : '']
+  t.title = [c.name, where, size > 1 ? SIZE_NAMES[size] : '', hp, c.ac !== undefined ? 'AC ' + c.ac : '', c.hidden ? 'hidden from players' : '']
     .filter(Boolean).join(' — ');
   t.setAttribute('aria-label', t.title);
 
@@ -184,7 +206,10 @@ export function renderMap(view) {
       cell.dataset.x = x;
       cell.dataset.y = y;
       const c = at[x + ',' + y];
-      if (c) cell.appendChild(tokenNode(c, { ...opts(c, cellLabel(x, y)), showName: showNames }));
+      if (c) {
+        cell.classList.add('has-token');
+        cell.appendChild(tokenNode(c, { ...opts(c, cellLabel(x, y)), showName: showNames, onBoard: true }));
+      }
       board.appendChild(cell);
     }
   }

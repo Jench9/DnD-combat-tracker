@@ -37,6 +37,14 @@
       <div class="panel-title">Not on the map</div>
       <label class="size-field names-toggle"><input type="checkbox" id="namesToggle" checked> Names</label>
       <div class="map-tools dm-only">
+        <label class="size-field" id="tokenSizeField" hidden>Token
+          <select id="tokenSizeSelect" aria-label="Size of the selected token">
+            <option value="1">Medium or smaller (1×1)</option>
+            <option value="2">Large (2×2)</option>
+            <option value="3">Huge (3×3)</option>
+            <option value="4">Gargantuan (4×4)</option>
+          </select>
+        </label>
         <label class="size-field">Grid
           <input id="colsInput" type="number" min="5" max="50" aria-label="Columns"> ×
           <input id="rowsInput" type="number" min="5" max="50" aria-label="Rows">

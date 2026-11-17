@@ -30,4 +30,14 @@ function sanitizeMonsterPatch(existing, patch) {
   return next;
 }
 
-module.exports = { ID_RE, blankMonster, sanitizeMonsterPatch };
+// Map footprint in cells, from the size in the stat block ("CR 10 · Large
+// aberration"), looked for in the first two lines only so prose further
+// down ("a large cave") doesn't count. Tiny/Small/Medium — or no size
+// written — take one cell; the DM can change it on the map.
+const SIZE_CELLS = { tiny: 1, small: 1, medium: 1, large: 2, huge: 3, gargantuan: 4 };
+function tokenSizeFromNotes(notes) {
+  const m = /\b(tiny|small|medium|large|huge|gargantuan)\b/i.exec(String(notes || '').split('\n').slice(0, 2).join(' '));
+  return m ? SIZE_CELLS[m[1].toLowerCase()] : 1;
+}
+
+module.exports = { ID_RE, blankMonster, sanitizeMonsterPatch, tokenSizeFromNotes };

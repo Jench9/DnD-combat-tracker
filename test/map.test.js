@@ -146,3 +146,42 @@ test('the TV view is served at /tv', async (t) => {
   assert.match(html, /id="board"/);
   assert.match(html, /\/js\/tv\/main\.js/);
 });
+
+test('map: big tokens cover size × size cells, from the stat block or set by the DM', async (t) => {
+  const { c, elf, gob } = await setup(t);
+  c.send('addMonster', { id: 'drg', patch: { name: 'Dragon', ac: 19, hpMax: 200, notes: 'CR 14 · Huge dragon\nAC 19' } });
+  c.send('addMonsterToCombat', { monsterId: 'drg', init: 5 });
+  const st = await c.next('state', (m) => m.state.combatants.length === 3);
+  const drg = st.state.combatants.find((x) => x.name === 'Dragon');
+  assert.strictEqual(drg.size, 3);
+  assert.strictEqual(st.state.combatants.find((x) => x.id === elf.id).size, 1);
+
+  c.send('placeToken', { id: elf.id, x: 5, y: 5 });
+  c.send('placeToken', { id: drg.id, x: 3, y: 3 }); // would cover 5,5: rejected
+  c.send('placeToken', { id: drg.id, x: 18, y: 0 }); // runs off the edge: rejected
+  c.send('placeToken', { id: drg.id, x: 6, y: 5 }); // right next to the elf: fine
+  let m = await c.next('mapState', (x) => pos(x, drg.id) !== undefined);
+  assert.deepStrictEqual(pos(m, drg.id), { x: 6, y: 5 });
+
+  // The goblin can't step into any cell the dragon covers.
+  c.send('placeToken', { id: gob.id, x: 8, y: 7 });
+  c.send('placeToken', { id: gob.id, x: 9, y: 7 });
+  m = await c.next('mapState', (x) => pos(x, gob.id) !== undefined);
+  assert.deepStrictEqual(pos(m, gob.id), { x: 9, y: 7 });
+
+  // Shrinking keeps it in place; growing into the goblin moves it to a free spot nearby.
+  c.send('setTokenSize', { id: drg.id, size: 1 });
+  await c.next('state', (x) => x.state.combatants.find((y) => y.id === drg.id)?.size === 1);
+  c.send('placeToken', { id: gob.id, x: 7, y: 5 });
+  await c.next('mapState', (x) => pos(x, gob.id)?.x === 7);
+  c.send('setTokenSize', { id: drg.id, size: 2 });
+  await c.next('state', (x) => x.state.combatants.find((y) => y.id === drg.id)?.size === 2);
+  m = await c.next('mapState', (x) => pos(x, drg.id) && (pos(x, drg.id).x !== 6 || pos(x, drg.id).y !== 5));
+  const p = pos(m, drg.id);
+  assert.ok(!(p.x <= 7 && 7 < p.x + 2 && p.y <= 5 && 5 < p.y + 2), 'no overlap with the goblin');
+
+  // Shrinking the grid sends a token that no longer fits back to the tray.
+  c.send('setMapSize', { cols: 5, rows: 5 });
+  m = await c.next('mapState', (x) => x.map.cols === 5);
+  assert.strictEqual(pos(m, drg.id), undefined);
+});

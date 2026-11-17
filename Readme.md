@@ -2,7 +2,7 @@
 
 A self-hosted D&D 5e toolkit for the table: a **Combat Tracker**, **Character Sheets** (with D&D Beyond and PDF import), a **Monsters** library, an **Items** library (SRD weapons/armor/gear + custom items), a **Spells** library (common SRD spells + custom ones; characters get spell slots and cast from their Actions) and a grid **Battle Map**, synced live across every device connected to the server. One player bumps a monster's HP and everyone's screen updates instantly.
 
-A small Node server holds all state in memory (character sheets are also saved to disk) and pushes updates to every browser over WebSocket. No accounts, no database, no build step.
+A small Node server holds the state (saved to JSON files on disk, including the current fight) and pushes updates to every browser over WebSocket. No accounts, no database, no build step.
 
 ## Run it
 
@@ -68,7 +68,7 @@ Character sheets are saved to `data/characters.json` (half a second after each c
 
 Campaigns, the monster, item and spell libraries and the list of battle map backgrounds are saved the same way (`data/campaigns.json`, `data/monsters.json`, `data/map-backgrounds.json`); background images themselves are files in `data/maps/`.
 
-Combat state and token positions on the battle map are still **only in memory** and reset on restart.
+The current fight (combatants, HP, round, turn) and the battle map (grid size, token positions, background) are saved too, so a restart or a rebuild doesn't lose them. **Clear** on the Combat Tracker starts a new fight.
 
 ## How it works
 
@@ -110,7 +110,7 @@ adventurers-kit/
 │       ├── monsters/              monster library (model, service, actions), persisted
 │       ├── items/                 item library: model (dice validation), SRD starter set, service, actions
 │       ├── spells/                spell library: model, SRD starter set, service, actions
-│       ├── map/                   battle map: grid size + token positions (memory only), background images (saved) + upload route
+│       ├── map/                   battle map: grid size + token positions (Large/Huge/Gargantuan tokens cover 2×2–4×4 cells), background images + upload route
 │       └── imports/               REST importers, mounted at /api/import/<source>
 │           ├── dndbeyond/         constants, mapper (pure), client (network), route
 │           └── pdf/               aliases, mapper (pure), reader (pdf-lib / pdf-parse), route

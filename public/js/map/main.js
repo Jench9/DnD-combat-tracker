@@ -2,7 +2,7 @@
 import { $ } from '../core/dom.js';
 import { renderNav } from '../core/nav.js';
 import { connectSocket } from '../core/socket.js';
-import { renderMap, sizeBoard } from './render.js';
+import { renderMap, sizeBoard, tokenSize } from './render.js';
 import { initInteract, isDragging } from './interact.js';
 import { createPortraitLookup } from '../core/portraits.js';
 import { isDm, ownsCharacter, identityHeaders } from '../core/identity.js';
@@ -38,7 +38,11 @@ function render() {
   renderMap({ ...view, portraitFor, canMove });
   const active = view.combat.combatants[view.combat.activeIndex];
   $('nextTurnBtn').disabled = !(active ? canMove(active) : isDm());
-  if (view.selectedId) {
+  // DM: size picker for the selected token (Large, Huge… from the stat block).
+  const selected = view.combat.combatants.find((c) => c.id === view.selectedId);
+  $('tokenSizeField').hidden = !selected;
+  if (selected && document.activeElement !== $('tokenSizeSelect')) $('tokenSizeSelect').value = String(tokenSize(selected));
+  if (view.selectedId && !['INPUT', 'SELECT'].includes(document.activeElement?.tagName)) {
     const tok = document.querySelector('.token[data-id="' + view.selectedId + '"]');
     if (tok) tok.focus({ preventScroll: true });
   }
@@ -81,6 +85,11 @@ function sendSize() {
   $(id).addEventListener('change', sendSize);
   $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
   $(id).addEventListener('blur', render);
+});
+
+$('tokenSizeSelect').addEventListener('change', (e) => {
+  if (view.selectedId) send('setTokenSize', { id: view.selectedId, size: parseInt(e.target.value, 10) });
+  e.target.blur();
 });
 
 $('clearMapBtn').addEventListener('click', () => {

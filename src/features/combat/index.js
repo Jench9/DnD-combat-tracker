@@ -2,13 +2,14 @@ const service = require('./service');
 const actions = require('./actions');
 const permissions = require('./permissions');
 const { isDm } = require('../../core/identity');
+const { savingActions } = require('../../core/savingActions');
 
 module.exports = {
   name: 'combat',
   wire: { type: 'state', key: 'state' },
   snapshot: service.getState,
   snapshotFor: (identity) => (isDm(identity) ? service.getState() : service.playerView()),
-  actions,
+  actions: savingActions(actions, service.save), // persisted after every action
   permissions,
   // Map and monster slices depend on which combatants exist and which are
   // hidden or disguised, so refresh them when that changes.

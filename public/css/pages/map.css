@@ -94,6 +94,15 @@
 .token.dragging { opacity: 0.25; }
 .token.hidden-tok { border-style: dashed; opacity: 0.6; }
 .token.locked { cursor: default; }
+/* Large and bigger: drawn from the top-left cell over size × size cells. */
+.cell.has-token { z-index: 2; }
+.token.big {
+  position: absolute; left: 3px; top: 3px;
+  width: calc(var(--cell, 40px) * var(--size) - 6px); height: calc(var(--cell, 40px) * var(--size) - 6px);
+}
+.token.big .ini { font-size: calc(15px * var(--size)); }
+.token.big .tok-name { max-width: calc(var(--cell, 40px) * var(--size) + 10px); }
+.token.dragging { pointer-events: none; }
 .token.ghost {
   position: fixed; z-index: 100; pointer-events: none; cursor: grabbing;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);

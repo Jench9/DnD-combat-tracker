@@ -3,6 +3,7 @@ const svc = require('./service');
 const characters = require('../characters/service');
 const { withDerived } = require('../characters/derived');
 const monsters = require('../monsters/service');
+const { tokenSizeFromNotes } = require('../monsters/model');
 const { mod } = require('../characters/model');
 const { writeHpToSheet } = require('./characterSync');
 
@@ -56,6 +57,7 @@ module.exports = {
     const count = Math.max(1, Math.min(20, parseInt(payload.count, 10) || 1));
     const already = svc.getState().combatants.filter((c) => c.monsterId === m.id).length;
     const name = (m.name || 'Monster').slice(0, 26);
+    const size = tokenSizeFromNotes(m.notes);
     for (let i = 0; i < count; i++) {
       const init = typeof payload.init === 'number' && Number.isFinite(payload.init)
         ? payload.init
@@ -69,6 +71,7 @@ module.exports = {
         type: 'monster',
         monsterId: m.id,
         hidden,
+        size,
       });
     }
   },

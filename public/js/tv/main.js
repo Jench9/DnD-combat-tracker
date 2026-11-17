@@ -62,8 +62,9 @@ function renderBoard() {
       cell.className = 'cell';
       const c = at[x + ',' + y];
       if (c) {
+        cell.classList.add('has-token');
         cell.appendChild(tokenNode(c, {
-          active: active && active.id === c.id, selected: false, portrait: pics.portraitFor(c), where: cellLabel(x, y), locked: true, showName: true,
+          active: active && active.id === c.id, selected: false, portrait: pics.portraitFor(c), where: cellLabel(x, y), locked: true, showName: true, onBoard: true,
         }));
       }
       board.appendChild(cell);
