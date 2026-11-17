@@ -26,6 +26,17 @@
 
   <div class="live-note">Open on any device on the same server — everyone sees the same live state.</div>
 
+  <section class="panel backup-panel dm-only" aria-labelledby="backupTitle">
+    <h2 id="backupTitle">Backup &amp; restore</h2>
+    <p>Download everything the app saves — characters, campaigns, libraries, monsters, the current fight and the battle map with its images — as one file. Restoring a file replaces all of it for everyone (the current data is kept in <code>data/backups/</code> first).</p>
+    <div class="backup-btns">
+      <button class="btn" id="backupBtn">⬇ Download backup</button>
+      <button class="btn secondary" id="restoreBtn">⬆ Restore from file…</button>
+      <input type="file" id="restoreInput" accept=".json,application/json" hidden>
+    </div>
+    <div class="backup-msg" id="backupMsg" role="status"></div>
+  </section>
+
 </div>
 <script type="module" src="js/home/main.js"></script>
 </body>

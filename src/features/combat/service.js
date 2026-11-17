@@ -76,6 +76,11 @@ function restore(saved) {
 const store = createJsonStore('combat', null);
 let state = restore(store.load());
 
+// Read the file again (after a restore).
+function reload() {
+  state = restore(store.load());
+}
+
 function getState() {
   return state;
 }
@@ -206,6 +211,7 @@ function playerView() {
 }
 
 module.exports = {
+  reload,
   MAX_TOKEN_SIZE, clampTokenSize, getState, save, reset, findCombatant,
   ENDS_CONCENTRATION, endConcentration, addEffect, concentrationDc, sortByInitiative, addCombatant, healthWord, visibleToPlayers, playerView,
 };

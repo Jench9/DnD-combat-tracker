@@ -14,9 +14,17 @@ const ID_RE = /^[a-f0-9]{8}$/;
 const TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
 
 const store = createJsonStore('map-backgrounds', []);
-const saved = store.load();
-let list = (Array.isArray(saved) ? saved : [])
-  .filter((b) => b && ID_RE.test(b.id) && TYPES[b.type] && fs.existsSync(path.join(DIR, b.file || '')));
+function load() {
+  const saved = store.load();
+  return (Array.isArray(saved) ? saved : [])
+    .filter((b) => b && ID_RE.test(b.id) && TYPES[b.type] && fs.existsSync(path.join(DIR, b.file || '')));
+}
+let list = load();
+
+// Read the list again (after a restore).
+function reload() {
+  list = load();
+}
 
 const cleanName = (n) => String(n || '').trim().slice(0, 60) || 'Untitled map';
 
@@ -78,4 +86,4 @@ function remove(id) {
   return true;
 }
 
-module.exports = { all, find, filePath, add, rename, remove };
+module.exports = { reload, all, find, filePath, add, rename, remove };

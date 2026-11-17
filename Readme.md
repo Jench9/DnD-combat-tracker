@@ -70,6 +70,8 @@ Campaigns, the monster, item and spell libraries and the list of battle map back
 
 The current fight (combatants, HP, round, turn) and the battle map (grid size, token positions, background) are saved too, so a restart or a rebuild doesn't lose them. **Clear** on the Combat Tracker starts a new fight.
 
+**Backups:** as the DM, use **Backup & restore** at the bottom of the Home page. *Download backup* saves everything above (map images included) as one `.json` file; *Restore from file…* puts such a file back for everyone at the table, live — the data it replaces is first saved in `data/backups/` (the last 5 restores are kept).
+
 ## How it works
 
 The server is the single source of truth. A client sends an action `{ type, payload }`; the server applies it and broadcasts the updated slice of state to **all** clients, including the sender. Clients only render what the server last sent them.
@@ -111,6 +113,7 @@ adventurers-kit/
 │       ├── items/                 item library: model (dice validation), SRD starter set, service, actions
 │       ├── spells/                spell library: model, SRD starter set, service, actions
 │       ├── map/                   battle map: grid size + token positions (Large/Huge/Gargantuan tokens cover 2×2–4×4 cells), background images + upload route
+│       ├── backup/                download all data as one file / restore it (DM only)
 │       └── imports/               REST importers, mounted at /api/import/<source>
 │           ├── dndbeyond/         constants, mapper (pure), client (network), route
 │           └── pdf/               aliases, mapper (pure), reader (pdf-lib / pdf-parse), route

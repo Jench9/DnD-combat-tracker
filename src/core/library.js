@@ -44,54 +44,61 @@ function createLibrary({ name, blank, sanitize, starter, starterVersion = '' }) 
     try { fs.writeFileSync(versionFile, starterVersion); } catch (err) { console.error(`Could not write ${versionFile}:`, err.message); }
   }
 
-  let entries;
-  if (!fs.existsSync(store.file)) {
-    entries = starter.map((e) => make(uid(), e, 'srd', 'dm'));
-    store.save(entries);
-    rememberVersion();
-  } else {
-    const saved = store.load();
-    entries = (Array.isArray(saved) ? saved : []).filter((e) => e && ID_RE.test(e.id)).map((e) => make(
-      e.id, e, e.source === 'srd' ? 'srd' : 'custom', typeof e.createdBy === 'string' ? e.createdBy.slice(0, 40) : '',
-    ));
-    let merged = '';
-    try { merged = fs.readFileSync(versionFile, 'utf8').trim(); } catch { /* never merged */ }
-    if (starterVersion && merged !== starterVersion && Array.isArray(saved)) {
-      const bySrd = new Map(); // srdKey -> index (SRD entries only)
-      const byName = new Map(); // nameKey -> index (any entry)
-      entries.forEach((e, i) => {
-        if (e.source === 'srd' && srdKey(e) && !bySrd.has(srdKey(e))) bySrd.set(srdKey(e), i);
-        if (!byName.has(nameKey(e.name))) byName.set(nameKey(e.name), i);
-      });
-      const matched = new Set(); // each existing entry is matched at most once
-      let updated = 0;
-      let added = 0;
-      starter.forEach((s) => {
-        const free = (i) => (i !== undefined && !matched.has(i) ? i : undefined);
-        // Same name: a custom entry (keeps the SRD one out) or an SRD entry
-        // saved before editions existed — never an SRD entry of the other edition.
-        const sameName = free(byName.get(nameKey(s.name)));
-        const nameOk = sameName !== undefined && !(entries[sameName].source === 'srd' && entries[sameName].edition && entries[sameName].edition !== s.edition);
-        const i = free(bySrd.get(srdKey(s))) ?? (nameOk ? sameName : undefined);
-        if (i === undefined) {
-          entries.push(make(uid(), s, 'srd', 'dm'));
-          added++;
-        } else {
-          matched.add(i);
-          if (entries[i].source === 'srd') {
-            entries[i] = make(entries[i].id, s, 'srd', 'dm');
-            updated++;
-          }
-        }
-      });
+  // Reads the library file (seeding or merging the SRD as described above).
+  function load() {
+    let entries;
+    if (!fs.existsSync(store.file)) {
+      entries = starter.map((e) => make(uid(), e, 'srd', 'dm'));
       store.save(entries);
       rememberVersion();
-      console.log(`${name}: merged SRD content ${starterVersion} (${updated} updated, ${added} added)`);
+    } else {
+      const saved = store.load();
+      entries = (Array.isArray(saved) ? saved : []).filter((e) => e && ID_RE.test(e.id)).map((e) => make(
+        e.id, e, e.source === 'srd' ? 'srd' : 'custom', typeof e.createdBy === 'string' ? e.createdBy.slice(0, 40) : '',
+      ));
+      let merged = '';
+      try { merged = fs.readFileSync(versionFile, 'utf8').trim(); } catch { /* never merged */ }
+      if (starterVersion && merged !== starterVersion && Array.isArray(saved)) {
+        const bySrd = new Map(); // srdKey -> index (SRD entries only)
+        const byName = new Map(); // nameKey -> index (any entry)
+        entries.forEach((e, i) => {
+          if (e.source === 'srd' && srdKey(e) && !bySrd.has(srdKey(e))) bySrd.set(srdKey(e), i);
+          if (!byName.has(nameKey(e.name))) byName.set(nameKey(e.name), i);
+        });
+        const matched = new Set(); // each existing entry is matched at most once
+        let updated = 0;
+        let added = 0;
+        starter.forEach((s) => {
+          const free = (i) => (i !== undefined && !matched.has(i) ? i : undefined);
+          // Same name: a custom entry (keeps the SRD one out) or an SRD entry
+          // saved before editions existed — never an SRD entry of the other edition.
+          const sameName = free(byName.get(nameKey(s.name)));
+          const nameOk = sameName !== undefined && !(entries[sameName].source === 'srd' && entries[sameName].edition && entries[sameName].edition !== s.edition);
+          const i = free(bySrd.get(srdKey(s))) ?? (nameOk ? sameName : undefined);
+          if (i === undefined) {
+            entries.push(make(uid(), s, 'srd', 'dm'));
+            added++;
+          } else {
+            matched.add(i);
+            if (entries[i].source === 'srd') {
+              entries[i] = make(entries[i].id, s, 'srd', 'dm');
+              updated++;
+            }
+          }
+        });
+        store.save(entries);
+        rememberVersion();
+        console.log(`${name}: merged SRD content ${starterVersion} (${updated} updated, ${added} added)`);
+      }
     }
+    return entries;
   }
+  let entries = load();
 
   return {
     file: store.file,
+    // Read the file again (after a restore).
+    reload() { entries = load(); },
     all: () => entries,
     find: (id) => entries.find((e) => e.id === id),
     add(id, patch, createdBy) {

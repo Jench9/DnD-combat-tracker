@@ -111,7 +111,7 @@ NPC allies and pregens.
 
 ## 5. Housekeeping
 
-### 5.1 Backup / restore — S
+### 5.1 ~~Backup / restore~~ — done
 `GET /api/backup` (DM only) zips or concatenates the `DATA_DIR` JSON files;
 "Restore" uploads it back. This adds a safety net beyond the Docker volume.
 

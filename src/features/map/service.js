@@ -35,6 +35,11 @@ function restore(saved) {
 const store = createJsonStore('map', null);
 let state = restore(store.load());
 
+// Read the file again (after a restore).
+function reload() {
+  state = restore(store.load());
+}
+
 // Call after changing the state (the map actions do it for you).
 function save() {
   store.save(state);
@@ -157,5 +162,6 @@ function deleteBackground(id) {
 }
 
 module.exports = {
+  reload,
   MIN_SIZE, MAX_SIZE, save, reset, snapshot, playerView, setBackground, deleteBackground, place, remove, resize, clear, setTokenSize,
 };

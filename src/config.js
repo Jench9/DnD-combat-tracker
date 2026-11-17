@@ -13,4 +13,5 @@ module.exports = {
   MAX_PORTRAIT_BYTES: 200 * 1024, // 200KB
   MAX_MAP_BYTES: 20 * 1024 * 1024, // 20MB — battle map background uploads
   MAP_MAX_SIDE: 2560, // px — larger backgrounds are shrunk (when sharp is available)
+  MAX_BACKUP_BYTES: 500 * 1024 * 1024, // 500MB — a restore upload (map images included)
 };

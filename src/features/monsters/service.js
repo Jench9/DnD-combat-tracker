@@ -12,10 +12,13 @@ const { ID_RE, blankMonster, sanitizeMonsterPatch } = require('./model');
 
 const store = createJsonStore('monsters', []);
 
-const saved = store.load();
-let monsters = (Array.isArray(saved) ? saved : [])
-  .filter((m) => m && ID_RE.test(m.id))
-  .map((m) => sanitizeMonsterPatch(blankMonster(m.id), m));
+function load() {
+  const saved = store.load();
+  return (Array.isArray(saved) ? saved : [])
+    .filter((m) => m && ID_RE.test(m.id))
+    .map((m) => sanitizeMonsterPatch(blankMonster(m.id), m));
+}
+let monsters = load();
 
 function persist() {
   store.save(monsters);
@@ -66,6 +69,12 @@ function renameForEditions() {
   return changed;
 }
 if (renameForEditions() + refreshStatBlocks()) persist();
+
+// Read the file again (after a restore), with the same upgrades as on start.
+function reload() {
+  monsters = load();
+  if (renameForEditions() + refreshStatBlocks()) persist();
+}
 
 function all() {
   return monsters;
@@ -126,4 +135,4 @@ function addStarters() {
   return { added: fresh.length, upgraded };
 }
 
-module.exports = { all, find, add, update, remove, addStarters };
+module.exports = { reload, all, find, add, update, remove, addStarters };

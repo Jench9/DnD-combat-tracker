@@ -10,6 +10,7 @@ const { PUBLIC_DIR, JSON_BODY_LIMIT } = require('./config');
 const { createHub } = require('./realtime/hub');
 const { createImportsRouter } = require('./features/imports');
 const { createMapRouter } = require('./features/map/route');
+const { createBackupRouter } = require('./features/backup/route');
 
 const combat = require('./features/combat');
 const characters = require('./features/characters');
@@ -21,7 +22,8 @@ const spells = require('./features/spells');
 
 function createApp() {
   const app = express();
-  app.use(express.json({ limit: JSON_BODY_LIMIT }));
+  // Restore uploads are big: their route reads the raw body itself.
+  app.use((req, res, next) => (req.path === '/api/restore' ? next() : express.json({ limit: JSON_BODY_LIMIT })(req, res, next)));
   app.use(express.static(PUBLIC_DIR));
   // Short address for the TV view (typed on a TV or shared): /tv
   app.get('/tv', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'tv.html')));
@@ -41,6 +43,11 @@ function createApp() {
   });
 
   app.use('/api/maps', createMapRouter({ onMapChanged: () => hub.broadcast('map') }));
+
+  // Backup / restore (DM only). After a restore every slice is resent.
+  app.use('/api', createBackupRouter({
+    onRestored: () => ['combat', 'characters', 'campaigns', 'map', 'monsters', 'items', 'spells'].forEach((f) => hub.broadcast(f)),
+  }));
 
   app.use('/api/import', createImportsRouter({
     onCharactersChanged: () => {

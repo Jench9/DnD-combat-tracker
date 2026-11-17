@@ -9,10 +9,18 @@ function cleanName(name) {
   return String(name || '').trim().slice(0, 60);
 }
 
-const saved = store.load();
-let campaigns = (Array.isArray(saved) ? saved : [])
-  .filter((c) => c && ID_RE.test(c.id) && cleanName(c.name))
-  .map((c) => ({ id: c.id, name: cleanName(c.name) }));
+function load() {
+  const saved = store.load();
+  return (Array.isArray(saved) ? saved : [])
+    .filter((c) => c && ID_RE.test(c.id) && cleanName(c.name))
+    .map((c) => ({ id: c.id, name: cleanName(c.name) }));
+}
+let campaigns = load();
+
+// Read the file again (after a restore).
+function reload() {
+  campaigns = load();
+}
 
 function persist() {
   store.save(campaigns);
@@ -48,4 +56,4 @@ function remove(id) {
   persist();
 }
 
-module.exports = { ID_RE, all, find, add, rename, remove };
+module.exports = { reload, ID_RE, all, find, add, rename, remove };

@@ -9,11 +9,19 @@ const store = createJsonStore('characters', []);
 
 // Run saved data back through the sanitizer so an old or hand-edited
 // file can't load a malformed character.
-const saved = store.load();
 // Characters saved before Auto AC existed keep their manual AC.
-let characters = (Array.isArray(saved) ? saved : [])
-  .filter((c) => c && typeof c.id === 'string')
-  .map((c) => ({ ...sanitizeCharacterPatch(blankCharacter(c.id), c), acAuto: c.acAuto === true }));
+function load() {
+  const saved = store.load();
+  return (Array.isArray(saved) ? saved : [])
+    .filter((c) => c && typeof c.id === 'string')
+    .map((c) => ({ ...sanitizeCharacterPatch(blankCharacter(c.id), c), acAuto: c.acAuto === true }));
+}
+let characters = load();
+
+// Read the file again (after a restore).
+function reload() {
+  characters = load();
+}
 
 function persist() {
   store.save(characters);
@@ -114,4 +122,4 @@ function clearCampaign(campaignId) {
   if (changed) persist();
 }
 
-module.exports = { all, find, addBlank, update, remove, addImported, refreshImported, clearCampaign };
+module.exports = { reload, all, find, addBlank, update, remove, addImported, refreshImported, clearCampaign };
