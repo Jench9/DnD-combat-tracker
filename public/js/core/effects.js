@@ -27,10 +27,13 @@ export function effectIcon(name) {
   return SPELL_ICONS[key] || '✨';
 }
 
-// Everything to show as small badges on a token: concentration first,
-// then conditions, then spell effects. [{ icon, label }]
-export function badgesFor(c) {
+// Everything to show as small badges on a token: Heroic Inspiration and
+// exhaustion (from the character sheet, if given), concentration, then
+// conditions, then spell effects. [{ icon, label }]
+export function badgesFor(c, sheet = null) {
   const out = [];
+  if (sheet && sheet.inspiration) out.push({ icon: '⭐', label: 'Heroic Inspiration' });
+  if (sheet && sheet.exhaustion > 0) out.push({ icon: '😩', label: `Exhaustion ${sheet.exhaustion}` });
   if (c.concentration) out.push({ icon: CONCENTRATION_ICON, label: 'Concentrating on ' + c.concentration });
   (c.conditions || []).forEach((n) => out.push({ icon: conditionIcon(n), label: n }));
   (c.effects || []).forEach((e) => out.push({ icon: effectIcon(e.name), label: e.name }));

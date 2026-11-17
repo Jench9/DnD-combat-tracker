@@ -79,5 +79,8 @@ export function blankCharacter(id) {
     pactMagic: { level: 0, count: 0 },
     resources: [],
     rulesEdition: '2024',
+    inspiration: false,
+    exhaustion: 0,
+    currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
   };
 }

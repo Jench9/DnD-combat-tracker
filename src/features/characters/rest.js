@@ -72,8 +72,8 @@ function shortRest(ch) {
 }
 
 // Long rest: full HP, temporary HP gone, every spell slot and resource back,
-// and Hit Dice — all of them (2024) or half the total, at least one (2014),
-// largest dice first.
+// one level of exhaustion less (both editions), and Hit Dice — all of them
+// (2024) or half the total, at least one (2014), largest dice first.
 function longRest(ch) {
   const used = usedOf(ch);
   if (ch.rulesEdition === '2014') {
@@ -93,6 +93,7 @@ function longRest(ch) {
     hitDiceUsed: used,
     spellSlots: (Array.isArray(ch.spellSlots) ? ch.spellSlots : []).map((s) => ({ ...s, used: 0 })),
     resources: resetResources(ch.resources, ['short', 'long']),
+    exhaustion: Math.max(0, (parseInt(ch.exhaustion, 10) || 0) - 1),
   };
 }
 

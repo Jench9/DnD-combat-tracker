@@ -77,7 +77,11 @@ function refreshImported(id, mappedPatch, { replaceInventory = false, replaceSpe
   if (idx === -1) return null;
   const old = characters[idx];
   const damage = Math.max(0, old.hpMax - old.hpCurrent);
-  const { notes, hpTemp, campaignId, inventory, acAuto, spellAbility, spellSlots, spells, hitDiceUsed, rulesEdition, ...patch } = mappedPatch;
+  // Inspiration and exhaustion are table state, like damage taken: kept.
+  // Coins come from D&D Beyond (where the party's purchases are tracked).
+  const {
+    notes, hpTemp, campaignId, inventory, acAuto, spellAbility, spellSlots, spells, hitDiceUsed, rulesEdition, inspiration, exhaustion, ...patch
+  } = mappedPatch;
   const fresh = {
     ...blankCharacter(id),
     portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp, campaignId: old.campaignId,
@@ -88,6 +92,8 @@ function refreshImported(id, mappedPatch, { replaceInventory = false, replaceSpe
     resources: old.resources,
     hitDiceUsed: old.hitDiceUsed,
     rulesEdition: old.rulesEdition, // detection is a guess; a choice made on the sheet wins
+    inspiration: old.inspiration,
+    exhaustion: old.exhaustion,
     ...(replaceSpells && Array.isArray(spells)
       ? { spellAbility: spellAbility || '', spellSlots, spells }
       : { spellAbility: old.spellAbility, spellSlots: old.spellSlots, spells: old.spells }),

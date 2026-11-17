@@ -12,6 +12,7 @@
 import { CONDITIONS, conditionDescription } from './conditions.js';
 import { CONCENTRATION_ICON, conditionIcon, effectIcon } from '../core/effects.js';
 import { rollBatch, rollDie, RollCancelled } from '../core/dice.js';
+import { exhaustionText, MAX_EXHAUSTION } from '../core/exhaustion.js';
 
 function mkHpBtn(label, fn, title) {
   const b = document.createElement('button');
@@ -104,6 +105,23 @@ function renderConditions(c, ctx, canEdit) {
   const condWrap = document.createElement('div');
   condWrap.className = 'conditions';
   if (c.concentration) condWrap.appendChild(renderConcentration(c, ctx, canEdit));
+  // A character's exhaustion lives on its sheet.
+  const ch = ctx.characterFor(c);
+  const setExhaustion = (n) => send('updateCharacter', { id: ch.id, patch: { exhaustion: Math.max(0, Math.min(MAX_EXHAUSTION, n)) } });
+  if (ch && ch.exhaustion > 0) {
+    const ex = chip(`😩 Exhaustion ${ch.exhaustion}`, exhaustionText(ch.exhaustion, ch.rulesEdition), ' exh');
+    if (canEdit) {
+      [['−', 'One level less', -1], ['+', 'One level more', 1]].forEach(([t, label, d]) => {
+        const b = document.createElement('button');
+        b.textContent = t;
+        b.title = label;
+        b.setAttribute('aria-label', label);
+        b.addEventListener('click', () => setExhaustion(ch.exhaustion + d));
+        ex.appendChild(b);
+      });
+    }
+    condWrap.appendChild(ex);
+  }
   c.conditions.forEach((cond) => {
     const el = chip(conditionIcon(cond) + ' ' + cond, conditionDescription(cond));
     if (canEdit) chipRemove(el, 'Remove ' + cond, () => send('removeCondition', { id: c.id, condition: cond }));
@@ -131,11 +149,13 @@ function renderConditions(c, ctx, canEdit) {
     };
     opt('', 'Choose…');
     CONDITIONS.forEach(([n]) => { if (!c.conditions.includes(n)) opt('c:' + n, conditionIcon(n) + ' ' + n); });
+    if (ch && !(ch.exhaustion > 0)) opt('exhaustion', '😩 Exhaustion');
     opt('concentration', CONCENTRATION_ICON + ' Concentrating on…');
     opt('effect', '✨ Spell effect…');
     menu.addEventListener('change', () => {
       const v = menu.value;
       if (v.startsWith('c:')) send('addCondition', { id: c.id, condition: v.slice(2) });
+      else if (v === 'exhaustion') setExhaustion(1);
       else if (v === 'concentration') ctx.onConcentrate(c);
       else if (v === 'effect') ctx.onAddEffect(c);
     });
@@ -316,6 +336,19 @@ function renderRow(c, idx, state, ctx) {
     acTag.textContent = 'AC ' + c.ac;
     nameLine.appendChild(acTag);
   }
+  const sheet = ctx.characterFor(c);
+  if (sheet) {
+    const star = document.createElement('button');
+    star.type = 'button';
+    star.className = 'insp-star' + (sheet.inspiration ? ' on' : '');
+    star.textContent = sheet.inspiration ? '★' : '☆';
+    star.title = sheet.inspiration ? 'Has Heroic Inspiration — click when it\'s used' : 'No Heroic Inspiration — click to give it';
+    star.setAttribute('aria-label', 'Heroic Inspiration for ' + c.name);
+    star.setAttribute('aria-pressed', String(!!sheet.inspiration));
+    star.disabled = !canEdit;
+    star.addEventListener('click', () => send('updateCharacter', { id: sheet.id, patch: { inspiration: !sheet.inspiration } }));
+    nameLine.appendChild(star);
+  }
   if (c.hidden) {
     const tag = document.createElement('span');
     tag.className = 'hidden-tag';
@@ -417,11 +450,12 @@ function renderRow(c, idx, state, ctx) {
 export function renderCombat(state, {
   send, rerender, portraitFor = () => '', notesFor = () => '', actionsFor = () => null,
   canControl = () => true, isDm = true, conSaveFor = () => null, onConcentrate = () => {}, onAddEffect = () => {},
-  glyphFor = (c) => ((c.name || '?').trim().charAt(0) || '?').toUpperCase(),
+  glyphFor = (c) => ((c.name || '?').trim().charAt(0) || '?').toUpperCase(), characterFor = () => null,
 }) {
   const byId = new Map(state.combatants.map((c) => [c.id, c]));
   const ctx = {
     send, rerender, portraitFor, notesFor, actionsFor, canControl, isDm, conSaveFor, onConcentrate, onAddEffect, glyphFor,
+    characterFor: (c) => (c.characterId ? characterFor(c) : null),
     combatantById: (id) => byId.get(id),
   };
   document.getElementById('roundNum').textContent = state.round;

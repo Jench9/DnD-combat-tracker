@@ -153,6 +153,18 @@ function mapHitDice(classes) {
   return { text, used };
 }
 
+// D&D Beyond conditions: [{ id, level }]; id 4 is Exhaustion.
+function ddbExhaustion(data) {
+  const ex = (Array.isArray(data.conditions) ? data.conditions : []).find((c) => c && c.id === 4);
+  return ex ? Math.max(0, Math.min(6, parseInt(ex.level, 10) || 0)) : 0;
+}
+
+function ddbCurrency(data) {
+  const c = data.currencies && typeof data.currencies === 'object' ? data.currencies : {};
+  const n = (v) => Math.max(0, parseInt(v, 10) || 0);
+  return { cp: n(c.cp), sp: n(c.sp), ep: n(c.ep), gp: n(c.gp), pp: n(c.pp) };
+}
+
 function mapDndBeyondData(data, ddbId) {
   const abilities = {};
   const mods = abilityModifiers(data);
@@ -202,6 +214,9 @@ function mapDndBeyondData(data, ddbId) {
       hitDice: mapHitDice(classes).text,
       hitDiceUsed: mapHitDice(classes).used,
       rulesEdition: detectEdition(data),
+      inspiration: !!data.inspiration,
+      exhaustion: ddbExhaustion(data),
+      currency: ddbCurrency(data),
       abilities,
       hpMax,
       hpCurrent: Math.max(0, hpMax - (data.removedHitPoints || 0)),

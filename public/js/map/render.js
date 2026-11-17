@@ -6,8 +6,8 @@ import { badgesFor } from '../core/effects.js';
 const MAX_BADGES = 3; // per cell of token size; more shows "+n"
 
 // Condition / concentration / spell-effect icons along the token's top edge.
-function badgeRow(c) {
-  const badges = badgesFor(c);
+function badgeRow(c, sheet) {
+  const badges = badgesFor(c, sheet);
   if (!badges.length) return null;
   const row = document.createElement('span');
   row.className = 'tok-badges';
@@ -86,7 +86,7 @@ function nameLabel(c) {
 // `onBoard`: drawn at its real size (size × size cells) from its cell.
 // `card`: the page shows a details card on hover (map.js), so skip the
 // browser's own tooltip there.
-export function tokenNode(c, { active, selected, portrait, glyph, where, locked, showName, onBoard, card }) {
+export function tokenNode(c, { active, selected, portrait, glyph, sheet, where, locked, showName, onBoard, card }) {
   const down = c.health ? c.health === 'Down' : c.hp <= 0;
   const t = document.createElement('div');
   t.className = 'token ' + (c.type === 'pc' ? 'pc' : 'mon')
@@ -103,7 +103,7 @@ export function tokenNode(c, { active, selected, portrait, glyph, where, locked,
   const hp = c.health || (Math.max(0, c.hp) + '/' + c.maxHp + ' HP');
   t.title = [c.name, where, size > 1 ? SIZE_NAMES[size] : '', hp, c.ac !== undefined ? 'AC ' + c.ac : '', c.hidden ? 'hidden from players' : '']
     .filter(Boolean).join(' — ');
-  const badges = badgesFor(c);
+  const badges = badgesFor(c, sheet);
   if (badges.length) t.title += '\n' + badges.map((b) => b.icon + ' ' + b.label).join('\n');
   t.setAttribute('aria-label', t.title.replace(/\n/g, ', '));
   if (card) t.removeAttribute('title');
@@ -123,7 +123,7 @@ export function tokenNode(c, { active, selected, portrait, glyph, where, locked,
   }
 
   if (onBoard) {
-    const row = badgeRow(c);
+    const row = badgeRow(c, sheet);
     if (row) t.appendChild(row);
   }
 
@@ -146,7 +146,7 @@ export function tokenNode(c, { active, selected, portrait, glyph, where, locked,
 
 // view: { combat, map, selectedId, portraitFor, glyphFor, canMove(combatant), showNames }
 export function renderMap(view) {
-  const { combat, map, selectedId, portraitFor, glyphFor = () => '', canMove, showNames } = view;
+  const { combat, map, selectedId, portraitFor, glyphFor = () => '', sheetFor = () => null, canMove, showNames } = view;
   const active = combat.combatants[combat.activeIndex];
   const byId = new Map(combat.combatants.map((c) => [c.id, c]));
 
@@ -160,7 +160,7 @@ export function renderMap(view) {
   });
 
   const opts = (c, where) => ({
-    active: active && active.id === c.id, selected: selectedId === c.id, portrait: portraitFor(c), glyph: glyphFor(c), where,
+    active: active && active.id === c.id, selected: selectedId === c.id, portrait: portraitFor(c), glyph: glyphFor(c), sheet: sheetFor(c), where,
     locked: !canMove(c), card: true,
   });
 

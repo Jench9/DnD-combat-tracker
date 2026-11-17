@@ -25,6 +25,8 @@
 // `entry.only` (comma-separated) limits a modifier to weapons/spells with
 // those names, or to damage of those types.
 
+import { d20Penalty } from './exhaustion.js';
+
 export const MASTERY_NOTES = {
   cleave: 'Cleave — on a hit, make a melee attack against a second creature within 5 ft of the first and within your reach; on a hit it takes the weapon damage without your ability modifier (unless negative). Once per turn.',
   graze: 'Graze — if the attack misses, deal {MOD} {TYPE} damage anyway.',
@@ -159,6 +161,12 @@ export function effectsFor(a, env) {
     if (def.note && !def.mastery) { out.notes.push(fillNote(def.note, vars)); used = true; }
     if (used || def.toggle) out.applied.push(def.name);
   });
+  // 2024 Exhaustion: −2 per level on d20 Tests (core/exhaustion.js).
+  const exh = a.attackRoll ? d20Penalty(env.ch) : 0;
+  if (exh) {
+    out.toHit += exh;
+    out.applied.push(`Exhaustion −${Math.abs(exh)}`);
+  }
   return out;
 }
 

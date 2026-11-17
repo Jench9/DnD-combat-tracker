@@ -124,6 +124,16 @@
         <div class="field"><label>Temp</label><input id="csHpTemp" type="number" value="0"></div>
       </div>
       <div class="hpbar" style="margin-top:12px;"><div class="fill" id="hpFill"></div></div>
+      <div class="status-row">
+        <button type="button" class="insp-btn" id="csInspiration" aria-pressed="false" title="Heroic Inspiration: reroll any die once (2024); spend it to use it">☆ Heroic Inspiration</button>
+        <label class="exh-field">Exhaustion
+          <select id="csExhaustion" aria-label="Exhaustion level">
+            <option value="0">None</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+          </select>
+        </label>
+        <span class="exh-text" id="exhText"></span>
+      </div>
       <div class="rest-bar">
         <div class="hd-left"><span class="hd-label">Hit Dice</span> <span id="hdLeft"></span></div>
         <div class="rest-buttons">
@@ -267,6 +277,16 @@
           <button class="btn" id="invAddBtn">Add</button>
         </div>
         <div class="inv-hint" id="invHint"></div>
+      </div>
+      <div class="panel">
+        <div class="subhead">Coins</div>
+        <div class="coins">
+          <label class="coin">CP<input id="coin-cp" type="number" min="0" inputmode="numeric"></label>
+          <label class="coin">SP<input id="coin-sp" type="number" min="0" inputmode="numeric"></label>
+          <label class="coin">EP<input id="coin-ep" type="number" min="0" inputmode="numeric"></label>
+          <label class="coin gp">GP<input id="coin-gp" type="number" min="0" inputmode="numeric"></label>
+          <label class="coin">PP<input id="coin-pp" type="number" min="0" inputmode="numeric"></label>
+        </div>
       </div>
       <div class="panel">
         <div class="subhead">Other equipment <span class="subhead-note">(free text)</span></div>

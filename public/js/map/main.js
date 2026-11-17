@@ -52,7 +52,7 @@ const card = initTokenCard({
 function render() {
   if (isDragging()) return;
   if (view.selectedId && !view.combat.combatants.some((c) => c.id === view.selectedId)) view.selectedId = null;
-  renderMap({ ...view, portraitFor, glyphFor: pics.glyphFor, canMove });
+  renderMap({ ...view, portraitFor, glyphFor: pics.glyphFor, sheetFor: pics.characterFor, canMove });
   const active = view.combat.combatants[view.combat.activeIndex];
   $('nextTurnBtn').disabled = !(active ? canMove(active) : isDm());
   // DM: size picker for the selected token (Large, Huge… from the stat block).

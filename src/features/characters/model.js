@@ -19,6 +19,8 @@
 //     spellSlots, that come back on a short rest,
 //   resources: [{ id, name, max, used, recharge: 'short'|'long'|'none' }] —
 //     limited-use features (Second Wind, Ki, Rage, Channel Divinity…),
+//   inspiration: bool (Heroic Inspiration), exhaustion: 0–6,
+//   currency: { cp, sp, ep, gp, pp },
 //   rulesEdition: '2014' | '2024' — rest rules (Hit Dice back on a long rest),
 //   spells: [{ id, spellId, name, prepared }] — from the spell library
 //     (cantrips are always ready; leveled spells need `prepared`),
@@ -55,8 +57,14 @@ function blankCharacter(id) {
     pactMagic: { level: 0, count: 0 },
     resources: [],
     rulesEdition: '2024',
+    inspiration: false,
+    exhaustion: 0,
+    currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
   };
 }
+
+const COINS = ['cp', 'sp', 'ep', 'gp', 'pp'];
+const MAX_COINS = 9999999;
 
 const INV_ID_RE = /^[a-z0-9]{1,20}$/;
 const MAX_INVENTORY = 200;
@@ -202,6 +210,15 @@ function sanitizeCharacterPatch(existing, patch) {
   }
   if (Array.isArray(patch.resources)) next.resources = sanitizeResources(patch.resources);
   if (patch.rulesEdition === '2014' || patch.rulesEdition === '2024') next.rulesEdition = patch.rulesEdition;
+  if (patch.inspiration !== undefined) next.inspiration = !!patch.inspiration;
+  if (patch.exhaustion !== undefined) next.exhaustion = clampInt(patch.exhaustion, 0, 6);
+  if (patch.currency && typeof patch.currency === 'object') {
+    next.currency = { ...(existing.currency || {}) };
+    COINS.forEach((k) => {
+      if (patch.currency[k] !== undefined) next.currency[k] = clampInt(patch.currency[k], 0, MAX_COINS);
+      else next.currency[k] = clampInt(next.currency[k], 0, MAX_COINS);
+    });
+  }
   if (patch.hpMax !== undefined) next.hpMax = Math.max(1, parseInt(patch.hpMax, 10) || 1);
   if (patch.hpCurrent !== undefined) next.hpCurrent = Math.max(0, parseInt(patch.hpCurrent, 10) || 0);
   if (patch.hpTemp !== undefined) next.hpTemp = Math.max(0, parseInt(patch.hpTemp, 10) || 0);
@@ -247,4 +264,4 @@ function sanitizeCharacterPatch(existing, patch) {
   return next;
 }
 
-module.exports = { MAX_PORTRAIT_CHARS, ABILITY_KEYS, blankCharacter, mod, sanitizeCharacterPatch };
+module.exports = { MAX_PORTRAIT_CHARS, ABILITY_KEYS, COINS, blankCharacter, mod, sanitizeCharacterPatch };

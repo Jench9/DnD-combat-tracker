@@ -11,6 +11,7 @@ import { initInventory, refreshInventoryUi } from './inventory.js';
 import { initSpellbook, refreshSpellbookUi } from './spellbook.js';
 import { initModifierList, refreshModifierUi } from './modifierList.js';
 import { initRest, refreshRestUi, resetRestUi } from './rest.js';
+import { initStatus, refreshStatusUi } from './status.js';
 
 let equipEd;
 let featEd;
@@ -31,6 +32,7 @@ export function initEditor() {
   initSpellbook(refreshInventoryUi); // spell changes also redraw the Actions tab
   initModifierList(refreshInventoryUi); // so do modifier changes
   initRest();
+  initStatus();
 }
 
 export function openEditor(id) {
@@ -54,6 +56,7 @@ export function openEditor(id) {
   refreshSpellbookUi(ch);
   refreshModifierUi(ch);
   refreshRestUi(ch);
+  refreshStatusUi(ch);
   applyAccess(ch);
 
   $('char-list-view').style.display = 'none';
@@ -83,6 +86,7 @@ export function refreshEditorFromServer() {
   refreshSpellbookUi(ch);
   if (!$('modList').contains(document.activeElement)) refreshModifierUi(ch); // not under the cursor
   refreshRestUi(ch);
+  refreshStatusUi(ch);
   applyAccess(ch);
   return true;
 }

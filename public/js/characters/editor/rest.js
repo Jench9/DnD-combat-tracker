@@ -123,8 +123,8 @@ export function longRest() {
   const c = cur();
   if (!c) return;
   const hd = c.rulesEdition === '2014' ? 'half your Hit Dice (at least one)' : 'all your Hit Dice';
-  if (!confirm(`Long rest for ${c.name || 'this character'}?\n\nHP back to max, temporary HP gone, every spell slot and resource back, and ${hd}.`)) return;
-  untouch('f:hpCurrent', 'f:hpTemp', 'f:hitDiceUsed', 'f:spellSlots', 'f:resources');
+  if (!confirm(`Long rest for ${c.name || 'this character'}?\n\nHP back to max, temporary HP gone, every spell slot and resource back, ${c.exhaustion > 0 ? `${hd}, and one level of exhaustion less` : `and ${hd}`}.`)) return;
+  untouch('f:hpCurrent', 'f:hpTemp', 'f:hitDiceUsed', 'f:spellSlots', 'f:resources', 'f:exhaustion');
   store.send('longRest', { id: c.id });
   closeShortRest();
   say('Long rest finished — HP, spell slots and resources restored.');

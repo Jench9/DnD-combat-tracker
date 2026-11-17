@@ -16,6 +16,7 @@
 import { CONCENTRATION_ICON, conditionIcon, effectIcon } from '../core/effects.js';
 import { conditionDescription } from '../combat/conditions.js';
 import { abilityMod, fmtMod, profBonusForLevel } from '../characters/rules.js';
+import { exhaustionText, effectiveSpeed } from '../core/exhaustion.js';
 import { healthLevel, tokenSize, SIZE_NAMES, cellLabel } from './render.js';
 
 const SHOW_DELAY_MS = 120;
@@ -42,7 +43,8 @@ function sheetLines(ch) {
   const prof = profBonusForLevel(ch.level);
   const wis = abilityMod(ch.abilities?.wis);
   const passive = 10 + wis + (ch.skillProf?.Perception ? prof : 0);
-  const bits = [`Speed ${ch.speed || 30} ft`, `Passive Perception ${passive}`];
+  const speed = effectiveSpeed(ch);
+  const bits = [`Speed ${speed} ft${speed !== (ch.speed || 30) ? ` (normally ${ch.speed || 30})` : ''}`, `Passive Perception ${passive}`];
   if (ch.spellAbility) {
     const mod = abilityMod(ch.abilities?.[ch.spellAbility]);
     bits.push(`Spell save DC ${8 + mod + prof}`, `Spell attack ${fmtMod(mod + prof)}`);
@@ -114,8 +116,12 @@ function buildCard(c, { view, lookup, actions }) {
     card.appendChild(el('div', 'tc-line warn', `Death saves: ${c.deathSuccess || 0} ✓ · ${c.deathFail || 0} ✗`));
   }
 
-  // Sheet numbers.
-  if (ch) sheetLines(ch).forEach((l) => card.appendChild(el('div', 'tc-line', l)));
+  // Sheet numbers, Heroic Inspiration and exhaustion.
+  if (ch) {
+    sheetLines(ch).forEach((l) => card.appendChild(el('div', 'tc-line', l)));
+    if (ch.inspiration) card.appendChild(el('div', 'tc-line insp', '★ Heroic Inspiration'));
+    if (ch.exhaustion > 0) card.appendChild(el('div', 'tc-line warn', `😩 Exhaustion ${ch.exhaustion}: ${exhaustionText(ch.exhaustion, ch.rulesEdition)}`));
+  }
 
   // Concentration, conditions, spell effects.
   const list = el('ul', 'tc-list');

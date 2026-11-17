@@ -9,6 +9,7 @@ import { createPortraitLookup } from '../core/portraits.js';
 import { isDm, ownsCharacter } from '../core/identity.js';
 import { combatActionsFor } from '../core/combatActions.js';
 import { abilityMod, profBonusForLevel } from '../characters/rules.js';
+import { d20Penalty } from '../core/exhaustion.js';
 import { openSpellDialog } from '../core/spellDialog.js';
 
 renderNav();
@@ -63,7 +64,7 @@ const actionsFor = (c) => combatActionsFor(c, {
 function conSaveFor(c) {
   const ch = c.characterId && characters.find((x) => x.id === c.characterId);
   if (!ch) return null;
-  return abilityMod(ch.abilities?.con) + (ch.saveProf?.con ? profBonusForLevel(ch.level) : 0);
+  return abilityMod(ch.abilities?.con) + (ch.saveProf?.con ? profBonusForLevel(ch.level) : 0) + d20Penalty(ch);
 }
 
 function render() {
@@ -71,7 +72,7 @@ function render() {
   if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && $('list').contains(el)) { stale = true; return; }
   stale = false;
   renderCombat(state, {
-    send, rerender: render, portraitFor, notesFor, actionsFor, isDm: isDm(), conSaveFor, glyphFor: pics.glyphFor,
+    send, rerender: render, portraitFor, notesFor, actionsFor, isDm: isDm(), conSaveFor, glyphFor: pics.glyphFor, characterFor: pics.characterFor,
     onConcentrate: (c) => openSpellDialog({ state, caster: c, spell: '', concentration: true, send, canTargetHidden: isDm() }),
     onAddEffect: (c) => openSpellDialog({ state, target: c, send, canTargetHidden: isDm() }),
     canControl: (c) => isDm() || (!!c.characterId && ownsCharacter(c.characterId)),

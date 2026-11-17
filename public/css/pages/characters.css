@@ -376,3 +376,30 @@ textarea.big { min-height: 160px; resize: vertical; font-family: var(--font-body
   .rest-buttons { flex: 1; }
   .rest-buttons .btn { flex: 1; }
 }
+
+/* ---------- quick status: Heroic Inspiration, Exhaustion (editor/status.js) ---------- */
+.status-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-top: 12px; }
+.insp-btn {
+  padding: 6px 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--bg);
+  color: var(--ink-soft); font: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
+}
+.insp-btn.on { border-color: var(--gold); color: var(--gold); background: rgba(212, 174, 76, 0.14); }
+.exh-field { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); font-weight: 600; }
+.exh-field select {
+  padding: 5px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); font: inherit;
+}
+.exh-text { flex: 1 1 220px; font-size: 12.5px; color: var(--ink-soft); }
+.exh-text.bad { color: var(--wax); }
+
+/* ---------- coins ---------- */
+.coins { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.coin {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  font-family: var(--font-display); font-weight: 700; font-size: 12px; letter-spacing: 0.6px; color: var(--ink-soft);
+}
+.coin input {
+  width: 100%; text-align: center; padding: 6px 4px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg); color: var(--ink); font: inherit; font-size: 16px;
+}
+.coin.gp { color: var(--gold); }
+@media (max-width: 420px) { .coins { grid-template-columns: repeat(3, 1fr); } }

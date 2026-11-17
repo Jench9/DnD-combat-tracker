@@ -93,7 +93,7 @@ yet, then sort. Same-type groups can optionally share one roll.
 
 ## 4. Character sheet
 
-### 4.1 Quick status block — S
+### 4.1 ~~Quick status block~~ — done
 These are on the sheet but missing from the model today: inspiration (toggle), exhaustion level
 (0–6, 2014 and 2024 effects as a tooltip), currency (cp/sp/ep/gp/pp). Add them
 to `blankCharacter` / `sanitizeCharacterPatch` and fill them from D&D Beyond
