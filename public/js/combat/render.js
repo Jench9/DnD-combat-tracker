@@ -312,7 +312,7 @@ function renderRow(c, idx, state, ctx) {
   // Icon: the character's portrait / monster's icon, or their initial.
   const portrait = portraitFor(c);
   const pic = document.createElement('span');
-  pic.className = 'c-portrait' + (c.type === 'pc' ? ' pc' : ' mon');
+  pic.className = 'c-portrait' + (c.type === 'monster' ? ' mon' : ' pc') + (c.type === 'familiar' ? ' fam' : '');
   if (portrait) {
     const img = document.createElement('img');
     img.src = portrait;

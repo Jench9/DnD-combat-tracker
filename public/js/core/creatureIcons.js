@@ -64,6 +64,6 @@ const initial = (name) => ((name || '?').trim().charAt(0) || '?').toUpperCase();
 // browser has one), a character's initial. Players see disguised (aliased)
 // monsters by their alias, so the emoji follows the alias too.
 export function glyphFor(c, monster) {
-  if (c.type !== 'monster') return initial(c.name);
+  if (c.type !== 'monster' && c.type !== 'familiar') return initial(c.name);
   return creatureIcon({ name: (monster && monster.name) || c.name, creatureType: monster && monster.creatureType });
 }

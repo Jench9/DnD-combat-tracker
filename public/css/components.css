@@ -1,38 +1,71 @@
 /* components.css — shared UI pieces: top nav, buttons, panels, form fields, connection status. */
 
-/* ---- top nav, shared across every page ---- */
+/* ---- top nav, shared across every page (core/nav.js) ----
+   Tabs on the left scroll sideways when they don't fit (thin scrollbar,
+   mouse wheel, faded edges); the dice switch and the identity badge stay on
+   the right. Narrow screens: inactive tabs show only their icon. */
 .app-nav {
   display: flex;
-  gap: 2px;
+  align-items: stretch;
   background: var(--nav-bg);
   border-radius: 6px;
-  padding: 0 6px;
   margin-bottom: 22px;
   box-shadow: 0 2px 6px var(--card-shadow);
-  overflow-x: auto; /* phones: scroll the tabs rather than wrap them */
-  scrollbar-width: none;
+  min-width: 0;
 }
+.nav-tabs {
+  display: flex;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+.nav-tabs::-webkit-scrollbar { height: 4px; }
+.nav-tabs::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.22); border-radius: 2px; }
+.nav-tabs.more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+.nav-tabs.more-left { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); }
+.nav-tabs.more-left.more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
 .nav-btn {
   flex: 1 0 auto;
   white-space: nowrap;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 13.5px;
-  letter-spacing: 0.6px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  padding: 14px 10px 11px;
+  padding: 13px 9px 10px;
   color: var(--nav-ink);
   text-decoration: none;
   border-bottom: 3px solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
+.nav-btn.home { flex-grow: 0; padding-left: 10px; padding-right: 10px; }
 .nav-btn .ic { font-size: 14px; line-height: 1; }
 .nav-btn:hover { color: #fff; }
 .nav-btn.active { color: #fff; border-bottom-color: var(--wax); }
+.nav-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.nav-side {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 0 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+@media (max-width: 760px) {
+  .nav-btn:not(.active) .lbl { display: none; } /* icon only; the current page keeps its name */
+  .nav-btn { padding-left: 11px; padding-right: 11px; }
+  .nav-side { padding: 0 6px; gap: 4px; }
+  .dice-toggle .lbl { display: none; }
+}
 
 button { font-family: var(--font-body); cursor: pointer; border: none; }
 .btn {
@@ -99,12 +132,15 @@ button { font-family: var(--font-body); cursor: pointer; border: none; }
 body:not(.is-dm) .dm-only { display: none !important; }
 body.is-dm .player-only { display: none !important; }
 .id-badge {
-  flex: 0 0 auto; align-self: center; margin-left: 6px; white-space: nowrap;
+  flex: 0 0 auto; align-self: center; white-space: nowrap;
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis;
   background: rgba(255, 255, 255, 0.08); color: #fff; border-radius: 14px;
   padding: 5px 12px; font-size: 12.5px; font-weight: 600;
 }
 .id-badge:hover { background: rgba(255, 255, 255, 0.16); }
+.dice-toggle { display: inline-flex; align-items: center; gap: 5px; }
 .dice-toggle.on { background: rgba(212, 174, 76, 0.28); }
+@media (max-width: 420px) { .id-badge { max-width: 96px; padding: 5px 9px; } }
 
 /* "Roll my own dice" dialog (core/diceDialog.js); shares .spell-dlg. */
 .dice-rows { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 4px; max-height: 50vh; overflow-y: auto; }
@@ -168,6 +204,32 @@ body.is-dm .player-only { display: none !important; }
 .monster-text { white-space: normal; line-height: 1.35; }
 .spell-info { font-size: 12.5px; font-weight: 600; color: var(--blue); padding: 4px 0 6px; border-bottom: 1px solid var(--line); }
 .action-row.spell .action-name::before { content: '✦ '; color: var(--blue); }
+/* Sections of the Actions list: Attacks, Actions, Bonus Actions, Reactions,
+   No action needed, Spells (core/attacks.js renderActions). */
+.action-group {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin-top: 14px; padding-bottom: 3px; border-bottom: 2px solid var(--line);
+}
+.action-group:first-child, .mod-toggles + .action-group { margin-top: 6px; }
+.action-group-title {
+  font-family: var(--font-display); font-weight: 700; font-size: 12.5px;
+  letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink);
+}
+.action-group[data-group="attack"] .action-group-title { color: var(--wax); }
+.action-group[data-group="bonus"] .action-group-title { color: var(--good); }
+.action-group[data-group="reaction"] .action-group-title { color: var(--gold); }
+.action-group[data-group="spell"] .action-group-title { color: var(--blue); }
+.action-group-hint { font-size: 11.5px; color: var(--ink-soft); }
+.action-row.feature .action-name::before { content: '◆ '; color: var(--ink-soft); font-size: 11px; }
+/* A spell's casting time, next to its name. */
+.cast-tag {
+  display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 9px;
+  font-size: 10.5px; font-weight: 700; line-height: 16px; vertical-align: 1px;
+  border: 1px solid var(--line); color: var(--ink-soft); white-space: nowrap;
+}
+.cast-tag.action { border-color: var(--ink-soft); color: var(--ink); }
+.cast-tag.bonus { border-color: var(--good); color: var(--good); }
+.cast-tag.reaction { border-color: var(--gold); color: var(--gold); }
 .slot-select {
   padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px;
   background: var(--bg); color: var(--ink); font: inherit; font-size: 12.5px;

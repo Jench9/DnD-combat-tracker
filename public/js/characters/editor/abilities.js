@@ -102,16 +102,36 @@ export function renderSaves(ch) {
   });
 }
 
+// Expertise (double proficiency) shows as a small "E" toggle on proficient skills.
 export function renderSkills(ch) {
   const wrap = $('skillsList');
   wrap.innerHTML = '';
   const prof = profBonusForLevel(ch.level);
+  const expert = ch.skillExpert || {};
   SKILLS.forEach(([name, abilKey]) => {
     const isProf = !!ch.skillProf[name];
-    wrap.appendChild(profRow(name, '(' + abilKey.toUpperCase() + ')', isProf, abilityMod(ch.abilities[abilKey]) + (isProf ? prof : 0), (checked) => {
+    const isExpert = isProf && !!expert[name];
+    const row = profRow(name, '(' + abilKey.toUpperCase() + ')', isProf, abilityMod(ch.abilities[abilKey]) + (isProf ? prof : 0) * (isExpert ? 2 : 1), (checked) => {
       const c = cur();
       if (c) { c.skillProf[name] = checked; touch('skill:' + name); renderSkills(c); }
       patchChar({ skillProf: { [name]: checked } });
-    }));
+    });
+    if (isProf) {
+      const e = document.createElement('button');
+      e.type = 'button';
+      e.className = 'expert-btn' + (isExpert ? ' on' : '');
+      e.textContent = 'E';
+      e.title = isExpert ? 'Expertise (double proficiency) — click to remove' : 'Give Expertise (double proficiency)';
+      e.setAttribute('aria-pressed', String(isExpert));
+      e.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const c = cur();
+        if (c) { c.skillExpert = { ...(c.skillExpert || {}), [name]: !isExpert }; touch('expert:' + name); renderSkills(c); }
+        patchChar({ skillExpert: { [name]: !isExpert } });
+      });
+      row.appendChild(e);
+    }
+    if (isExpert) row.classList.add('expert');
+    wrap.appendChild(row);
   });
 }

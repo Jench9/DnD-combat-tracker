@@ -10,6 +10,7 @@ function freshState() {
     activeIndex: 0,
     // { id, name, init, ac, hp, maxHp, tempHp, type, conditions: [], deathSuccess, deathFail,
     //   characterId ('' unless added from a character sheet),
+    //   ownerId (a familiar's character: its player controls it; '' otherwise),
     //   monsterId ('' unless added from the monster library),
     //   size (token footprint on the map in cells: 1 = Medium or smaller,
     //   2 = Large, 3 = Huge, 4 = Gargantuan),
@@ -44,7 +45,8 @@ function restoreCombatant(c) {
     hp: Math.max(0, Math.min(maxHp, num(c.hp, maxHp))),
     maxHp,
     tempHp: Math.max(0, num(c.tempHp, 0)),
-    type: c.type === 'monster' ? 'monster' : 'pc',
+    type: ['monster', 'familiar'].includes(c.type) ? c.type : 'pc', // 'familiar': an ally controlled by ownerId's player
+    ownerId: str(c.ownerId, 40),
     size: clampTokenSize(c.size),
     conditions: Array.isArray(c.conditions) ? c.conditions.filter((x) => typeof x === 'string').slice(0, 30) : [],
     deathSuccess: Math.max(0, Math.min(3, num(c.deathSuccess, 0))),
@@ -112,10 +114,11 @@ function sortByInitiative() {
 
 // Builds the canonical combatant shape. Callers do their own input
 // validation/defaulting (the combat form and "send character" differ).
-function addCombatant({ name, init, ac, hp, maxHp, tempHp = 0, type, characterId = '', monsterId = '', hidden = false, size = 1 }) {
+function addCombatant({ name, init, ac, hp, maxHp, tempHp = 0, type, characterId = '', monsterId = '', ownerId = '', hidden = false, size = 1 }) {
   state.combatants.push({
     id: uid(),
     characterId,
+    ownerId,
     monsterId,
     name,
     init,
@@ -185,7 +188,7 @@ function playerView() {
   const combatants = visible.map((c) => {
     const base = {
       id: c.id, name: c.name, init: c.init, type: c.type, conditions: c.conditions,
-      characterId: c.characterId, monsterId: c.monsterId, size: c.size,
+      characterId: c.characterId, monsterId: c.monsterId, ownerId: c.ownerId || '', size: c.size,
       concentration: c.concentration, concentrationDc: c.concentrationDc,
       // Who cast it only when that caster is visible too.
       effects: c.effects.map((e) => {

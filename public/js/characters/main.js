@@ -10,6 +10,9 @@ import { identityHeaders, myCharacterId } from '../core/identity.js';
 import { refreshItemOptions } from './editor/inventory.js';
 import { refreshSpellOptions } from './editor/spellbook.js';
 import { initCampaigns, renderCampaignControls, markCampaignsLoaded, campaignForNew } from './campaigns.js';
+import { openCreator } from './builder/wizard.js';
+import { openLevelUp } from './builder/levelup.js';
+import { refreshFamiliarUi } from './editor/familiar.js';
 
 renderNav();
 
@@ -21,6 +24,11 @@ function setConn(live) {
 const socket = connectSocket({
   onStatus: setConn,
   handlers: {
+    // Only to know whether the open character's familiar is in the fight.
+    state: (msg) => {
+      store.combat = msg.state;
+      if (cur()) refreshFamiliarUi(cur());
+    },
     charState: (msg) => {
       const prev = store.activeCharId ? findChar(store.activeCharId) : null;
       store.characters = msg.characters;
@@ -51,13 +59,24 @@ const socket = connectSocket({
 });
 store.send = socket.send;
 
-// characters.html#edit=<id> opens that sheet (used right after a new
-// player creates their character on the "Who are you?" screen).
+// characters.html#edit=<id> opens that sheet; #create=<id> also opens the
+// guided creation for it (a new player from the "Who are you?" screen).
 function openFromHash() {
-  const m = location.hash.match(/^#edit=([A-Za-z0-9]+)$/);
-  if (!m || !findChar(m[1])) return;
+  const m = location.hash.match(/^#(edit|create)=([A-Za-z0-9]+)$/);
+  if (!m || !findChar(m[2])) return;
   history.replaceState(null, '', location.pathname);
-  openEditor(m[1]);
+  openEditor(m[2]);
+  if (m[1] === 'create') openCreator({ id: m[2], onDone: adoptCharacter });
+}
+
+// The builder's REST answer: take the server's character right away (the
+// broadcast follows) and show it.
+function adoptCharacter(ch) {
+  const idx = store.characters.findIndex((c) => c.id === ch.id);
+  if (idx === -1) store.characters.unshift(ch); else store.characters[idx] = ch;
+  clearTouched();
+  renderCharGrid(openEditor);
+  if (store.activeCharId === ch.id) refreshEditorFromServer(); else openEditor(ch.id);
 }
 
 // A player playing a character lands on their own sheet instead of the
@@ -81,7 +100,10 @@ initEditor();
 initCampaigns({ onFilterChange: () => renderCharGrid(openEditor) });
 renderCampaignControls();
 
-$('newCharBtn').addEventListener('click', () => {
+// New character: the guided creation; "Blank sheet" for filling it in by hand.
+$('newCharBtn').addEventListener('click', () => openCreator({ campaignId: campaignForNew(), onDone: adoptCharacter }));
+
+$('blankCharBtn').addEventListener('click', () => {
   const id = uid();
   const campaignId = campaignForNew();
   store.characters.unshift({ ...blankCharacter(id), campaignId }); // optimistic; the server confirms
@@ -90,6 +112,26 @@ $('newCharBtn').addEventListener('click', () => {
 });
 
 $('backToListBtn').addEventListener('click', closeEditor);
+
+// Fill in an empty sheet with the guided creation (a new player's sheet).
+$('guidedBtn').addEventListener('click', () => {
+  const ch = cur();
+  if (ch) openCreator({ id: ch.id, onDone: adoptCharacter });
+});
+
+$('levelUpBtn').addEventListener('click', () => {
+  const ch = cur();
+  if (ch) openLevelUp(ch, { onDone: (next, summary) => { adoptCharacter(next); if (summary) showToast('⬆ ' + summary); } });
+});
+
+function showToast(text) {
+  const t = document.createElement('div');
+  t.className = 'b-toast';
+  t.setAttribute('role', 'status');
+  t.textContent = text;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 
 $('deleteCharBtn').addEventListener('click', () => {
   const ch = cur();

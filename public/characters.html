@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/pages/characters.css">
+<link rel="stylesheet" href="css/pages/builder.css">
 </head>
 <body>
 <div class="wrap">
@@ -27,7 +28,8 @@
       <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
         <span class="conn-status"><span class="conn-dot" id="connDot"></span><span id="connLabel">Connecting…</span></span>
         <button class="btn secondary dm-only" id="importToggleBtn">Import</button>
-        <button class="btn dm-only" id="newCharBtn">+ New character</button>
+        <button class="btn secondary dm-only" id="blankCharBtn" title="An empty sheet to fill in by hand">Blank sheet</button>
+        <button class="btn dm-only" id="newCharBtn" title="Step by step: class, species, background, abilities, skills, spells, gear (2024 rules)">+ New character</button>
       </div>
     </header>
 
@@ -78,6 +80,8 @@
       <button class="btn secondary small" id="backToListBtn">← Back</button>
       <span class="view-only-tag" id="viewOnlyTag" hidden>View only — not your character</span>
       <div class="btn-group">
+        <button class="btn small" id="guidedBtn" hidden title="Build this character step by step (2024 rules)">✨ Guided creation</button>
+        <button class="btn small" id="levelUpBtn" title="Gain a level: hit points, features, choices, spell slots">⬆ Level up</button>
         <button class="btn secondary small" id="ddbSyncBtn" title="Re-import stats from D&amp;D Beyond (e.g. after leveling up)">Sync from D&amp;D Beyond</button>
         <button class="btn secondary small" id="deleteCharBtn">Delete</button>
       </div>
@@ -227,6 +231,10 @@
         </div>
         <div id="actionList"></div>
         <div class="inv-hint">Attacks come from <b>equipped</b> weapons in the Equipment tab; usable items (like potions) from anything with effect dice.</div>
+      </div>
+      <div class="panel" id="familiarPanel">
+        <div class="subhead">Familiar <span class="subhead-note">Find Familiar, Pact of the Chain</span></div>
+        <div id="familiarBody"></div>
       </div>
     </div>
 

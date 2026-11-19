@@ -5,7 +5,14 @@
 //
 //   buildActions(character, itemsById, spellsById) -> [action]   (pure)
 //   renderActions(container, { character, items, spells, canUse,
-//                              onUse(entryId), onSpendSlot(level) })
+//                              onUse(entryId), onSpendSlot(level), onSpendResource(id, n) })
+//
+// The list is shown in sections by what each thing costs in the turn:
+// Attacks (weapons, Unarmed Strike, Breath Weapon; "Attack action: 2
+// attacks" with Extra Attack), Actions, Bonus Actions, Reactions, No action
+// needed (class/species features from core/features.js, and carried items —
+// 2024 potions are a Bonus Action), then Spells, each tagged with its
+// casting time.
 //
 // 5e rules: melee attacks use STR, ranged use DEX, finesse the better of
 // the two. To hit = that modifier + proficiency (if proficient with the
@@ -17,6 +24,7 @@ import { abilityMod, profBonusForLevel, fmtMod } from '../characters/rules.js';
 import { roll, rollDie, rollBatch, RollCancelled, formatDice, addDice, scaleDice } from './dice.js';
 import { slotLabel, spellHeader } from '../spells/format.js';
 import { effectsFor, unarmedOverride, resolveModifiers } from './modifiers.js';
+import { featureActions, attacksPerAction, itemActionType, castingType } from './features.js';
 
 // Spell attack bonus and save DC, or null without a spellcasting ability.
 export function spellcasting(ch) {
@@ -105,7 +113,7 @@ export function buildActions(ch, itemsById, spellsById = new Map()) {
       });
     } else if (it.type === 'gear' && it.effectDice) {
       actions.push({
-        key: entry.id, kind: 'use', name: it.name, qty: entry.qty,
+        key: entry.id, kind: 'use', name: it.name, qty: entry.qty, actionType: itemActionType(it, ch),
         effect: { dice: it.effectDice, mod: 0, type: it.effect || '' },
       });
     }
@@ -360,10 +368,12 @@ function appendNotes(row, notes) {
 
 // `onToggleModifier(id)`: if given, situational modifiers (Rage, Hex…)
 // get quick on/off switches above the actions (the combat tracker).
+// `onSpendResource(resourceId, amount)`: Use on a class feature spends it.
 // `cast` (combat tracker): { blocked: '' | reason Cast is disabled,
 // before(spell) → false cancels the cast, after(spell) once it's cast }.
 export function renderActions(container, {
   character, items, spells = [], canUse, onUse, onSpendSlot = () => {}, onToggleModifier = null, cast = {},
+  onSpendResource = null,
 }) {
   const byId = new Map(items.map((it) => [it.id, it]));
   const actions = buildActions(character, byId, new Map(spells.map((sp) => [sp.id, sp])));
@@ -386,108 +396,232 @@ export function renderActions(container, {
     container.appendChild(bar);
   }
 
-  const sc = spellcasting(character);
-  if (sc && actions.some((a) => a.kind === 'spell')) {
-    const info = document.createElement('div');
-    info.className = 'spell-info';
-    info.textContent = `Spellcasting (${sc.ability.toUpperCase()}): spell attack ${fmtMod(sc.attack)} · save DC ${sc.dc}`;
-    container.appendChild(info);
-  }
+  // Sections by what each costs in the turn; spells stay together (tagged
+  // with their casting time).
+  const feats = featureActions(character);
+  const attacks = actions.filter((a) => a.kind === 'attack');
+  const perAction = attacksPerAction(character);
+  const groups = [
+    { key: 'attack', title: 'Attacks', hint: perAction > 1 ? `Attack action: ${perAction} attacks` : 'Attack action', actions: attacks, feats: feats.filter((f) => f.type === 'attack') },
+    { key: 'action', title: 'Actions', actions: actions.filter((a) => a.kind === 'use' && a.actionType === 'action'), feats: feats.filter((f) => f.type === 'action') },
+    { key: 'bonus', title: 'Bonus Actions', hint: 'one per turn', actions: actions.filter((a) => a.kind === 'use' && a.actionType === 'bonus'), feats: feats.filter((f) => f.type === 'bonus') },
+    { key: 'reaction', title: 'Reactions', hint: 'one per round', actions: [], feats: feats.filter((f) => f.type === 'reaction') },
+    { key: 'free', title: 'No action needed', actions: [], feats: feats.filter((f) => f.type === 'free') },
+    { key: 'spell', title: 'Spells', actions: actions.filter((a) => a.kind === 'spell'), feats: [] },
+  ];
 
-  actions.forEach((a) => {
-    const key = character.id + ':' + a.key;
-    if (a.kind === 'spell') {
-      const row = document.createElement('div');
-      row.className = 'action-row spell';
-      const out = document.createElement('div');
-      out.className = 'action-result';
-      out.dataset.key = key;
-      const show = () => {
-        const r = results.get(key);
-        out.textContent = r ? r.text : '';
-        out.classList.toggle('crit', !!(r && r.crit));
-      };
-      renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show, cast });
-      container.appendChild(row);
-      return;
-    }
-    const row = document.createElement('div');
-    row.className = 'action-row';
-
+  groups.forEach((g) => {
+    if (!g.actions.length && !g.feats.length) return;
     const head = document.createElement('div');
-    head.className = 'action-head';
-    const name = document.createElement('span');
-    name.className = 'action-name';
-    name.textContent = a.name + (a.kind === 'use' ? ` ×${a.qty}` : '');
-    head.appendChild(name);
-    const stat = document.createElement('span');
-    stat.className = 'action-stat';
-    if (a.kind === 'attack') {
-      stat.textContent = `${toHitText(a)} · ${gripText(a.grips[0])}`
-        + (a.grips[1] ? ` (two-handed ${gripText(a.grips[1])})` : '');
-    } else {
-      stat.textContent = `${formatDice(a.effect.dice, a.effect.mod)} ${a.effect.type}`.trim();
+    head.className = 'action-group';
+    head.dataset.group = g.key;
+    const title = document.createElement('span');
+    title.className = 'action-group-title';
+    title.textContent = g.title;
+    head.appendChild(title);
+    if (g.hint) {
+      const hint = document.createElement('span');
+      hint.className = 'action-group-hint';
+      hint.textContent = g.hint;
+      head.appendChild(hint);
     }
-    head.appendChild(stat);
-    row.appendChild(head);
-
-    if (a.detail) {
-      const det = document.createElement('div');
-      det.className = 'action-detail';
-      det.textContent = a.detail;
-      row.appendChild(det);
-    }
-    appendNotes(row, a.notes);
-
-    const out = document.createElement('div');
-    out.className = 'action-result';
-    out.dataset.key = key;
-    const show = () => {
-      const r = results.get(key);
-      out.textContent = r ? r.text : '';
-      out.classList.toggle('crit', !!(r && r.crit));
-    };
-
-    if (canUse) {
-      const btns = document.createElement('div');
-      btns.className = 'action-btns';
-      const button = (label, fn, title) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'btn secondary small';
-        b.textContent = label;
-        if (title) b.title = title;
-        b.addEventListener('click', async () => { if (await fn() !== false) showResult(key); });
-        btns.appendChild(b);
-      };
-      if (a.kind === 'attack') {
-        button('Attack', async () => {
-          const r = await rolled(`${a.name}: attack`, () => rollAttack(a));
-          if (!r) return false;
-          results.set(key, { text: r.text, crit: r.crit, armed: r.crit });
-          return true;
-        }, 'Roll d20 + to hit');
-        a.grips.forEach((g) => button(g.label, async () => {
-          const prev = results.get(key);
-          const crit = !!(prev && prev.armed);
-          const text = await rolled(`${a.name}: ${crit ? 'critical ' : ''}damage`, () => rollGrip(g, crit));
-          if (text === false) return false;
-          results.set(key, { text, crit, armed: false });
-          return true;
-        }, 'Roll damage (doubled dice after a critical hit)'));
-      } else {
-        button('Use', async () => {
-          const r = await rolled(`${a.name}`, () => roll(a.effect.dice, 0, { label: a.effect.type }));
-          if (!r) return false;
-          results.set(key, { text: `${a.name}: ${r.total} ${a.effect.type} (${r.text}) — one used`, crit: false });
-          onUse(a.key);
-          return true;
-        }, 'Roll the effect and use one up');
+    container.appendChild(head);
+    if (g.key === 'spell') {
+      const sc = spellcasting(character);
+      if (sc) {
+        const info = document.createElement('div');
+        info.className = 'spell-info';
+        info.textContent = `Spellcasting (${sc.ability.toUpperCase()}): spell attack ${fmtMod(sc.attack)} · save DC ${sc.dc}`;
+        container.appendChild(info);
       }
-      row.appendChild(btns);
     }
-    row.appendChild(out);
-    show();
-    container.appendChild(row);
+    g.feats.forEach((f) => container.appendChild(featureRow(f, { character, canUse, onSpendResource, onToggleModifier })));
+    g.actions.forEach((a) => container.appendChild(actionRow(a, { character, canUse, onUse, onSpendSlot, cast })));
   });
+}
+
+const CAST_TAG = { action: 'Action', bonus: 'Bonus Action', reaction: 'Reaction' };
+
+function resultSlot(key) {
+  const out = document.createElement('div');
+  out.className = 'action-result';
+  out.dataset.key = key;
+  const show = () => {
+    const r = results.get(key);
+    out.textContent = r ? r.text : '';
+    out.classList.toggle('crit', !!(r && r.crit));
+  };
+  return { out, show };
+}
+
+function actionRow(a, { character, canUse, onUse, onSpendSlot, cast }) {
+  const key = character.id + ':' + a.key;
+  if (a.kind === 'spell') {
+    const row = document.createElement('div');
+    row.className = 'action-row spell';
+    const { out, show } = resultSlot(key);
+    renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show, cast });
+    // Casting time as a tag next to the name.
+    const type = castingType(a.spell.castingTime);
+    const tag = document.createElement('span');
+    tag.className = 'cast-tag ' + type;
+    tag.textContent = CAST_TAG[type] || String(a.spell.castingTime || '').replace(/^1 /, '');
+    tag.title = `Casting time: ${a.spell.castingTime || '?'}`;
+    row.querySelector('.action-name').appendChild(tag);
+    return row;
+  }
+  const row = document.createElement('div');
+  row.className = 'action-row';
+
+  const head = document.createElement('div');
+  head.className = 'action-head';
+  const name = document.createElement('span');
+  name.className = 'action-name';
+  name.textContent = a.name + (a.kind === 'use' ? ` ×${a.qty}` : '');
+  head.appendChild(name);
+  const stat = document.createElement('span');
+  stat.className = 'action-stat';
+  if (a.kind === 'attack') {
+    stat.textContent = `${toHitText(a)} · ${gripText(a.grips[0])}`
+      + (a.grips[1] ? ` (two-handed ${gripText(a.grips[1])})` : '');
+  } else {
+    stat.textContent = `${formatDice(a.effect.dice, a.effect.mod)} ${a.effect.type}`.trim();
+  }
+  head.appendChild(stat);
+  row.appendChild(head);
+
+  if (a.detail) {
+    const det = document.createElement('div');
+    det.className = 'action-detail';
+    det.textContent = a.detail;
+    row.appendChild(det);
+  }
+  appendNotes(row, a.notes);
+
+  const { out, show } = resultSlot(key);
+
+  if (canUse) {
+    const btns = document.createElement('div');
+    btns.className = 'action-btns';
+    const button = (label, fn, title) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn secondary small';
+      b.textContent = label;
+      if (title) b.title = title;
+      b.addEventListener('click', async () => { if (await fn() !== false) showResult(key); });
+      btns.appendChild(b);
+    };
+    if (a.kind === 'attack') {
+      button('Attack', async () => {
+        const r = await rolled(`${a.name}: attack`, () => rollAttack(a));
+        if (!r) return false;
+        results.set(key, { text: r.text, crit: r.crit, armed: r.crit });
+        return true;
+      }, 'Roll d20 + to hit');
+      a.grips.forEach((g) => button(g.label, async () => {
+        const prev = results.get(key);
+        const crit = !!(prev && prev.armed);
+        const text = await rolled(`${a.name}: ${crit ? 'critical ' : ''}damage`, () => rollGrip(g, crit));
+        if (text === false) return false;
+        results.set(key, { text, crit, armed: false });
+        return true;
+      }, 'Roll damage (doubled dice after a critical hit)'));
+    } else {
+      button('Use', async () => {
+        const r = await rolled(`${a.name}`, () => roll(a.effect.dice, 0, { label: a.effect.type }));
+        if (!r) return false;
+        results.set(key, { text: `${a.name}: ${r.total} ${a.effect.type} (${r.text}) — one used`, crit: false });
+        onUse(a.key);
+        return true;
+      }, 'Roll the effect and use one up');
+    }
+    row.appendChild(btns);
+  }
+  row.appendChild(out);
+  show();
+  return row;
+}
+
+// A class / species feature (core/features.js): its uses from the sheet's
+// Resources, and Use (spends them, rolls if it has dice).
+function featureRow(f, { character, canUse, onSpendResource, onToggleModifier }) {
+  const key = character.id + ':feat:' + f.key;
+  const row = document.createElement('div');
+  row.className = 'action-row feature';
+  const head = document.createElement('div');
+  head.className = 'action-head';
+  const name = document.createElement('span');
+  name.className = 'action-name';
+  name.textContent = f.name;
+  const stat = document.createElement('span');
+  stat.className = 'action-stat';
+  const left = f.resource ? Math.max(0, f.resource.max - f.resource.used) : null;
+  const uses = f.resource
+    ? (f.pool ? `${left} left` : `${left}/${f.resource.max} ${f.resource.name === f.name ? 'left' : f.resource.name}`)
+    : '';
+  stat.textContent = [f.stat, uses].filter(Boolean).join(' · ');
+  head.append(name, stat);
+  row.appendChild(head);
+  const det = document.createElement('div');
+  det.className = 'action-detail';
+  det.textContent = f.text;
+  row.appendChild(det);
+  if (f.tracks && !f.resource) appendNotes(row, [`Add a "${f.name}" resource (Actions tab → Resources) to count its uses.`]);
+
+  const { out, show } = resultSlot(key);
+  const spend = (n) => { if (f.resource && onSpendResource) onSpendResource(f.resource.id, n); };
+  if (canUse && !f.noUse && (f.resource || f.roll)) {
+    const btns = document.createElement('div');
+    btns.className = 'action-btns';
+    const button = (label, title, disabled, fn) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn secondary small';
+      b.textContent = label;
+      b.title = title;
+      b.disabled = disabled;
+      b.addEventListener('click', async () => { if (await fn() !== false) showResult(key); });
+      btns.appendChild(b);
+    };
+    if (f.pool) {
+      button('Use…', 'Spend from the pool', !left, () => {
+        const n = parseInt(prompt(`${f.name}: how many? (${left} left)`, String(Math.min(5, left))), 10);
+        if (!(n > 0)) return false;
+        const used = Math.min(n, left);
+        results.set(key, { text: `${f.name}: ${used} spent (${left - used} left).`, crit: false });
+        spend(used);
+        return true;
+      });
+    } else {
+      if (f.optional) {
+        button('Use free', 'The version that costs nothing', false, () => {
+          results.set(key, { text: `${f.name} (free version).`, crit: false });
+          return true;
+        });
+      }
+      const short = f.resource && left < f.cost;
+      button(f.optional ? `Spend ${f.cost}` : 'Use', f.resource ? `Uses ${f.cost} of ${f.resource.name}` : 'Roll', !!short, async () => {
+        let text = `${f.name} used.`;
+        if (f.roll) {
+          const r = await rolled(f.name, () => roll(f.roll.dice, f.roll.mod, { label: f.roll.label }));
+          if (!r) return false;
+          text = `${f.name}: ${r.total} ${f.roll.label} (${r.text})`;
+        }
+        if (f.resource) text += ` — ${Math.max(0, left - f.cost)} left.`;
+        results.set(key, { text, crit: false });
+        spend(f.cost);
+        // Rage: also switch on its damage modifier (combat tracker).
+        if (f.key === 'rage' && onToggleModifier) {
+          const m = (character.modifiers || []).find((x) => x.preset === 'rage' && !x.active);
+          if (m) onToggleModifier(m.id);
+        }
+        return true;
+      });
+    }
+    row.appendChild(btns);
+  }
+  row.appendChild(out);
+  show();
+  return row;
 }

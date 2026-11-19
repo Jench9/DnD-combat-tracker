@@ -60,7 +60,61 @@ function blankCharacter(id) {
     inspiration: false,
     exhaustion: 0,
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    // Builder / level up (characters/builder/): class levels, Expertise
+    // skills, and feats taken (keys or custom names, for repeat checks).
+    classes: [],
+    skillExpert: {},
+    feats: [],
+    // Find Familiar / Pact of the Chain (characters/familiars.js), or null.
+    familiar: null,
   };
+}
+
+// The character's familiar: a stat block copied from the monster library
+// when it's created (POST /api/familiars), then name, creature type and HP
+// change through updateCharacter. { name, form, monsterId, creatureType,
+// pact, ac, hpMax, hp, initBonus, notes }.
+const FAMILIAR_TYPES = ['celestial', 'fey', 'fiend'];
+function sanitizeFamiliar(existing, patch) {
+  if (patch === null) return null;
+  if (!patch || typeof patch !== 'object') return existing || null;
+  const base = existing || {};
+  const hpMax = clampInt(patch.hpMax ?? base.hpMax, 1, 999) || 1;
+  return {
+    name: String(patch.name ?? base.name ?? '').slice(0, 40),
+    form: String(patch.form ?? base.form ?? '').slice(0, 60),
+    monsterId: /^[a-z0-9]{1,20}$/.test(String(patch.monsterId ?? base.monsterId ?? '')) ? String(patch.monsterId ?? base.monsterId) : '',
+    creatureType: pick(patch.creatureType, FAMILIAR_TYPES, '') || pick(base.creatureType, FAMILIAR_TYPES, 'fey'),
+    pact: !!(patch.pact ?? base.pact),
+    ac: clampInt(patch.ac ?? base.ac, 1, 40) || 10,
+    hpMax,
+    hp: Math.min(hpMax, clampInt(patch.hp ?? base.hp ?? hpMax, 0, 999)),
+    initBonus: clampInt(patch.initBonus ?? base.initBonus, -10, 20),
+    notes: String(patch.notes ?? base.notes ?? '').slice(0, 6000),
+  };
+}
+
+const MAX_FEATURES_CHARS = 30000;
+const CLASS_KEY_RE = /^[a-z][a-z0-9-]{0,39}$/;
+const MAX_CLASSES = 12;
+const MAX_FEATS = 40;
+
+// [{ key, name, level, subclass, subclassName }]: one entry per class, levels 1–20.
+function sanitizeClasses(list) {
+  const seen = new Set();
+  const out = [];
+  list.slice(0, MAX_CLASSES).forEach((c) => {
+    if (!c || !CLASS_KEY_RE.test(String(c.key)) || seen.has(c.key)) return;
+    seen.add(c.key);
+    out.push({
+      key: c.key,
+      name: String(c.name || c.key).slice(0, 40),
+      level: Math.max(1, Math.min(20, parseInt(c.level, 10) || 1)),
+      subclass: CLASS_KEY_RE.test(String(c.subclass || '')) ? c.subclass : '',
+      subclassName: String(c.subclassName || '').slice(0, 60),
+    });
+  });
+  return out;
 }
 
 const COINS = ['cp', 'sp', 'ep', 'gp', 'pp'];
@@ -195,7 +249,7 @@ function sanitizeCharacterPatch(existing, patch) {
 
   if (typeof patch.name === 'string') next.name = patch.name.slice(0, 60);
   if (typeof patch.race === 'string') next.race = patch.race.slice(0, 40);
-  if (typeof patch.class === 'string') next.class = patch.class.slice(0, 40);
+  if (typeof patch.class === 'string') next.class = patch.class.slice(0, 80);
   if (patch.level !== undefined) {
     next.level = Math.max(1, Math.min(20, parseInt(patch.level, 10) || 1));
   }
@@ -223,7 +277,12 @@ function sanitizeCharacterPatch(existing, patch) {
   if (patch.hpCurrent !== undefined) next.hpCurrent = Math.max(0, parseInt(patch.hpCurrent, 10) || 0);
   if (patch.hpTemp !== undefined) next.hpTemp = Math.max(0, parseInt(patch.hpTemp, 10) || 0);
   if (typeof patch.equipment === 'string') next.equipment = patch.equipment.slice(0, 4000);
-  if (typeof patch.features === 'string') next.features = patch.features.slice(0, 4000);
+  if (typeof patch.features === 'string') next.features = patch.features.slice(0, MAX_FEATURES_CHARS);
+  if (Array.isArray(patch.classes)) next.classes = sanitizeClasses(patch.classes);
+  if (patch.familiar !== undefined) next.familiar = sanitizeFamiliar(existing.familiar, patch.familiar);
+  if (Array.isArray(patch.feats)) {
+    next.feats = [...new Set(patch.feats.filter((f) => typeof f === 'string' && f.trim()).map((f) => f.trim().slice(0, 60)))].slice(0, MAX_FEATS);
+  }
   if (typeof patch.notes === 'string') next.notes = patch.notes.slice(0, 4000);
   if (Array.isArray(patch.inventory)) next.inventory = sanitizeInventory(patch.inventory);
   if (patch.acAuto !== undefined) next.acAuto = !!patch.acAuto;
@@ -254,6 +313,12 @@ function sanitizeCharacterPatch(existing, patch) {
       if (patch.saveProf[k] !== undefined) next.saveProf[k] = !!patch.saveProf[k];
     });
   }
+  if (patch.skillExpert && typeof patch.skillExpert === 'object') {
+    next.skillExpert = { ...existing.skillExpert };
+    Object.keys(patch.skillExpert).slice(0, 40).forEach((k) => {
+      next.skillExpert[String(k).slice(0, 40)] = !!patch.skillExpert[k];
+    });
+  }
   if (patch.skillProf && typeof patch.skillProf === 'object') {
     next.skillProf = { ...existing.skillProf };
     Object.keys(patch.skillProf).forEach((k) => {
@@ -264,4 +329,4 @@ function sanitizeCharacterPatch(existing, patch) {
   return next;
 }
 
-module.exports = { MAX_PORTRAIT_CHARS, ABILITY_KEYS, COINS, blankCharacter, mod, sanitizeCharacterPatch };
+module.exports = { FAMILIAR_TYPES, MAX_PORTRAIT_CHARS, MAX_FEATURES_CHARS, ABILITY_KEYS, COINS, blankCharacter, mod, sanitizeCharacterPatch };

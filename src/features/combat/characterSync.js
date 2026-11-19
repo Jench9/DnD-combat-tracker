@@ -1,4 +1,5 @@
-// Keeps combatants made from character sheets in step with the sheet:
+// Keeps combatants made from character sheets in step with the sheet
+// (familiars with their owner's sheet familiar):
 // computed AC (equipping a shield, casting Shield, switching on Haste…),
 // current, max and temporary HP (healing on the sheet, a level-up, a D&D
 // Beyond sync). The other direction — HP changed in combat written back to
@@ -11,6 +12,7 @@ const { withDerived } = require('../characters/derived');
 function syncCombatantsFromSheets() {
   let changed = false;
   combat.getState().combatants.forEach((c) => {
+    if (c.type === 'familiar') { if (syncFamiliar(c)) changed = true; return; }
     if (!c.characterId) return;
     const ch = characters.find(c.characterId);
     if (!ch) return;
@@ -31,9 +33,29 @@ function syncCombatantsFromSheets() {
   return changed;
 }
 
+// A familiar combatant follows its owner's sheet familiar (HP, AC, a new form).
+function syncFamiliar(c) {
+  const ch = c.ownerId && characters.find(c.ownerId);
+  const fam = ch && ch.familiar;
+  if (!fam) return false;
+  let changed = false;
+  if (fam.ac !== c.ac) { c.ac = fam.ac; changed = true; }
+  if (fam.hpMax !== c.maxHp) { c.maxHp = fam.hpMax; changed = true; }
+  if (fam.hp !== c.hp) { c.hp = Math.min(c.maxHp, fam.hp); changed = true; }
+  if (fam.monsterId && fam.monsterId !== c.monsterId) { c.monsterId = fam.monsterId; changed = true; }
+  return changed;
+}
+
 // A combatant's HP changed in combat: save current and temporary HP on its
-// character sheet. Returns true if a sheet changed.
+// character sheet (a familiar's HP on its owner's sheet). Returns true if a
+// sheet changed.
 function writeHpToSheet(combatant) {
+  if (combatant && combatant.type === 'familiar') {
+    const owner = combatant.ownerId && characters.find(combatant.ownerId);
+    if (!owner || !owner.familiar || owner.familiar.hp === combatant.hp) return false;
+    characters.update(owner.id, { familiar: { hp: combatant.hp } });
+    return true;
+  }
   if (!combatant || !combatant.characterId) return false;
   const ch = characters.find(combatant.characterId);
   if (!ch || (ch.hpCurrent === combatant.hp && ch.hpTemp === combatant.tempHp)) return false;

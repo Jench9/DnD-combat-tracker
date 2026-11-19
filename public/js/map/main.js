@@ -31,7 +31,7 @@ $('namesToggle').addEventListener('change', (e) => {
 const pics = createPortraitLookup(); // character portraits + monster icons
 const { portraitFor } = pics;
 // The DM moves everything; a player only their own character's token.
-const canMove = (c) => isDm() || (!!c.characterId && ownsCharacter(c.characterId));
+const canMove = (c) => isDm() || (!!(c.characterId || c.ownerId) && ownsCharacter(c.characterId || c.ownerId)); // ownerId: a familiar
 
 // Hover / tap a token for its details (HP, AC, conditions, effects…) and,
 // for your own character, its actions. Sheets and libraries for those:

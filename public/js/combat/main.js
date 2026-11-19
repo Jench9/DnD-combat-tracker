@@ -75,11 +75,12 @@ function render() {
     send, rerender: render, portraitFor, notesFor, actionsFor, isDm: isDm(), conSaveFor, glyphFor: pics.glyphFor, characterFor: pics.characterFor,
     onConcentrate: (c) => openSpellDialog({ state, caster: c, spell: '', concentration: true, send, canTargetHidden: isDm() }),
     onAddEffect: (c) => openSpellDialog({ state, target: c, send, canTargetHidden: isDm() }),
-    canControl: (c) => isDm() || (!!c.characterId && ownsCharacter(c.characterId)),
+    canControl: (c) => isDm() || (!!(c.characterId || c.ownerId) && ownsCharacter(c.characterId || c.ownerId)), // ownerId: a familiar
   });
   // Players may only end their own turn.
   const active = state.combatants[state.activeIndex];
-  const mayAdvance = isDm() || (!!active && !!active.characterId && ownsCharacter(active.characterId));
+  const controller = active && (active.characterId || active.ownerId);
+  const mayAdvance = isDm() || (!!controller && ownsCharacter(controller));
   $('nextTurnBtn').disabled = !mayAdvance;
   $('nextTurnBtn').title = mayAdvance ? '' : 'Only the DM (or the player whose turn it is) can end the turn';
 }

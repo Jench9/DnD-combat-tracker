@@ -1,11 +1,14 @@
 // What players may do in combat (the DM may do everything; see the hub).
-// A player controls only the combatant made from their own character.
+// A player controls only the combatant made from their own character, and
+// that character's familiar (`ownerId`).
 const svc = require('./service');
 const { owns } = require('../../core/identity');
 
+const controller = (c) => (c && (c.characterId || c.ownerId)) || '';
+
 function ownsCombatant(payload, identity) {
   const c = svc.findCombatant(payload.id);
-  return !!c && !!c.characterId && owns(identity, c.characterId);
+  return !!controller(c) && owns(identity, controller(c));
 }
 
 // Effects: whoever controls the target, or the caster (named in the
@@ -23,6 +26,7 @@ function ownsTargetOrEffectCaster(payload, identity) {
 
 module.exports = {
   addCharacterToCombat: (payload, identity) => owns(identity, payload.characterId),
+  addFamiliarToCombat: (payload, identity) => owns(identity, payload.characterId),
   adjustHP: ownsCombatant,
   setTempHp: ownsCombatant,
   addCondition: ownsCombatant,
@@ -40,6 +44,6 @@ module.exports = {
   nextTurn: (payload, identity) => {
     const st = svc.getState();
     const active = st.combatants[st.activeIndex];
-    return !!active && !!active.characterId && owns(identity, active.characterId);
+    return !!controller(active) && owns(identity, controller(active));
   },
 };

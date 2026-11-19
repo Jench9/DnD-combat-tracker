@@ -81,9 +81,11 @@ let asker = null; // async ([{ sides, label }], title) => [values] | null (cance
 export const rollDie = (sides, label = '') => (source ? source(sides, label, 'die') : randomDie(sides));
 const rerollDie = (sides, label = '') => (source ? source(sides, label, 'reroll') : randomDie(sides));
 
+// Hand dice (the player rolls real dice and types them in) is the default;
+// only a browser that switched to app rolls has '0' stored.
 const MANUAL_KEY = 'kit.manualDice';
 export function manualDice() {
-  try { return localStorage.getItem(MANUAL_KEY) === '1'; } catch { return false; }
+  try { return localStorage.getItem(MANUAL_KEY) !== '0'; } catch { return true; }
 }
 export function setManualDice(on) {
   try { localStorage.setItem(MANUAL_KEY, on ? '1' : '0'); } catch { /* storage blocked */ }

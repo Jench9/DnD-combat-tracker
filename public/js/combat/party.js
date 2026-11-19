@@ -121,6 +121,38 @@ function renderRow(ch) {
   return row;
 }
 
+// A character's familiar (from its sheet), under the character: add it
+// with its own initiative roll.
+function renderFamiliarRow(ch) {
+  const fam = ch.familiar;
+  const row = document.createElement('div');
+  row.className = 'party-row party-fam';
+  const who = document.createElement('div');
+  who.className = 'party-who';
+  const name = document.createElement('div');
+  name.className = 'party-sub';
+  name.textContent = `🐾 ${fam.name ? fam.name + ' — ' : ''}${fam.form} (${fam.creatureType} familiar) · AC ${fam.ac} · ${fam.hp}/${fam.hpMax} HP`;
+  who.appendChild(name);
+  row.appendChild(who);
+  const there = view.combatants.find((c) => c.type === 'familiar' && c.ownerId === ch.id);
+  if (there) {
+    const tag = document.createElement('span');
+    tag.className = 'party-in';
+    tag.textContent = 'In combat · init ' + there.init;
+    row.appendChild(tag);
+  } else {
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'btn secondary small';
+    add.textContent = 'Add familiar';
+    add.title = fam.hp > 0 ? 'Rolls its own initiative' : 'At 0 HP: cast Find Familiar again on the sheet';
+    add.disabled = fam.hp <= 0;
+    add.addEventListener('click', () => send('addFamiliarToCombat', { characterId: ch.id }));
+    row.appendChild(add);
+  }
+  return row;
+}
+
 function renderGroup(g) {
   const wrap = document.createElement('div');
   wrap.className = 'party-group';
@@ -145,7 +177,10 @@ function renderGroup(g) {
   all.addEventListener('click', () => waiting.forEach(addToCombat));
   head.appendChild(all);
   wrap.appendChild(head);
-  g.characters.forEach((ch) => wrap.appendChild(renderRow(ch)));
+  g.characters.forEach((ch) => {
+    wrap.appendChild(renderRow(ch));
+    if (ch.familiar) wrap.appendChild(renderFamiliarRow(ch));
+  });
   return wrap;
 }
 

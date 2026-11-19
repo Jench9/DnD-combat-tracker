@@ -57,6 +57,29 @@ module.exports = {
     });
   },
 
+  // A character's familiar (from its sheet, characters/familiars.js) joins
+  // the fight: its own initiative (d20 + the form's bonus), the sheet's HP,
+  // controlled by that character's player. One per character.
+  addFamiliarToCombat(payload) {
+    const ch = characters.find(payload && payload.characterId);
+    const fam = ch && ch.familiar;
+    if (!fam) return;
+    if (svc.getState().combatants.some((c) => c.type === 'familiar' && c.ownerId === ch.id)) return;
+    const name = fam.name && fam.name.toLowerCase() !== fam.form.toLowerCase() ? `${fam.name} (${fam.form})` : (fam.name || fam.form);
+    const init = typeof payload.init === 'number' && Number.isFinite(payload.init) ? payload.init : rollD20() + fam.initBonus;
+    svc.addCombatant({
+      name: name.slice(0, 30) || 'Familiar',
+      init: clampInit(init),
+      ac: fam.ac,
+      hp: fam.hp,
+      maxHp: fam.hpMax,
+      type: 'familiar',
+      ownerId: ch.id,
+      monsterId: fam.monsterId,
+      size: tokenSizeFromNotes(fam.notes),
+    });
+  },
+
   // Add `count` (1–20) copies of a library monster, each with its own
   // initiative roll (d20 + bonus) unless `init` is given. Copies are
   // numbered ("Goblin 1", "Goblin 2"…) when there's more than one of it.

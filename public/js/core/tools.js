@@ -2,12 +2,14 @@
 // both generated from this list — to add a tool, add an entry here and
 // create its page (public/<page>.html + js/<id>/ + css/pages/<id>.css).
 // `dmOnly` tools are hidden from players (the server doesn't send them the data either).
+// `short`: the name in the top bar (defaults to `title`); home cards use `title`.
 export const TOOLS = [
   {
     id: 'combat',
     href: 'combat.html',
     icon: '⚔️',
     title: 'Combat Tracker',
+    short: 'Combat', // top bar
     description: 'Initiative order, HP, AC, and conditions — shared live with everyone connected.',
   },
   {
@@ -15,6 +17,7 @@ export const TOOLS = [
     href: 'characters.html',
     icon: '📜',
     title: 'Character Sheets',
+    short: 'Characters',
     description: 'Build and store full character sheets, with ability scores, saves, and skills.',
   },
   {
@@ -44,6 +47,7 @@ export const TOOLS = [
     href: 'map.html',
     icon: '🗺️',
     title: 'Battle Map',
+    short: 'Map',
     description: 'A grid with a token for everyone in the fight — drag them around to track positions.',
   },
 ];

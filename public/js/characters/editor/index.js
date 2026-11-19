@@ -12,6 +12,7 @@ import { initSpellbook, refreshSpellbookUi } from './spellbook.js';
 import { initModifierList, refreshModifierUi } from './modifierList.js';
 import { initRest, refreshRestUi, resetRestUi } from './rest.js';
 import { initStatus, refreshStatusUi } from './status.js';
+import { refreshFamiliarUi } from './familiar.js';
 
 let equipEd;
 let featEd;
@@ -57,6 +58,7 @@ export function openEditor(id) {
   refreshModifierUi(ch);
   refreshRestUi(ch);
   refreshStatusUi(ch);
+  refreshFamiliarUi(ch);
   applyAccess(ch);
 
   $('char-list-view').style.display = 'none';
@@ -87,6 +89,7 @@ export function refreshEditorFromServer() {
   if (!$('modList').contains(document.activeElement)) refreshModifierUi(ch); // not under the cursor
   refreshRestUi(ch);
   refreshStatusUi(ch);
+  refreshFamiliarUi(ch);
   applyAccess(ch);
   return true;
 }
@@ -100,6 +103,9 @@ function applyAccess(ch) {
   $('viewOnlyTag').hidden = editable;
   $('deleteCharBtn').hidden = !editable;
   $('ddbSyncBtn').hidden = !editable;
+  const empty = !String(ch.class || '').trim();
+  $('guidedBtn').hidden = !editable || !empty;
+  $('levelUpBtn').hidden = !editable || empty || (parseInt(ch.level, 10) || 1) >= 20;
   view.querySelectorAll('input, select, textarea, button').forEach((el) => {
     if (el.id === 'backToListBtn' || el.classList.contains('tab-btn')) return;
     el.disabled = !editable;

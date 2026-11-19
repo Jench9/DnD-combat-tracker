@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node server.js",
     "test": "node --test",
-    "build:srd": "node scripts/build-srd.js"
+    "build:srd": "node scripts/build-srd.js",
+    "build:rules": "node scripts/build-rules.js"
   },
   "dependencies": {
     "express": "^4.19.2",

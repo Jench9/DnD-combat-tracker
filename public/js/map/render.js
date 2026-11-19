@@ -89,7 +89,7 @@ function nameLabel(c) {
 export function tokenNode(c, { active, selected, portrait, glyph, sheet, where, locked, showName, onBoard, card }) {
   const down = c.health ? c.health === 'Down' : c.hp <= 0;
   const t = document.createElement('div');
-  t.className = 'token ' + (c.type === 'pc' ? 'pc' : 'mon')
+  t.className = 'token ' + (c.type === 'monster' ? 'mon' : 'pc') + (c.type === 'familiar' ? ' fam' : '')
     + (active ? ' active' : '') + (selected ? ' selected' : '') + (down ? ' down' : '')
     + (c.hidden ? ' hidden-tok' : '') + (locked ? ' locked' : '');
   t.dataset.id = c.id;
@@ -118,7 +118,7 @@ export function tokenNode(c, { active, selected, portrait, glyph, sheet, where, 
     const ini = document.createElement('span');
     ini.className = 'ini';
     ini.textContent = glyph || ((c.name || '?').trim().charAt(0) || '?').toUpperCase();
-    if (c.type === 'monster' && glyph) ini.classList.add('emoji');
+    if ((c.type === 'monster' || c.type === 'familiar') && glyph) ini.classList.add('emoji');
     t.appendChild(ini);
   }
 

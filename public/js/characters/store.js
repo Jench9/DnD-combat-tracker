@@ -17,6 +17,7 @@ export const store = {
   campaigns: [],
   items: [], // the item library (for inventory and actions)
   spells: [], // the spell library (for the spellbook and actions)
+  combat: null, // combat state (is the familiar in the fight?)
   // Campaign filter on the list view: ALL, NONE, or a campaign id.
   campaignFilter: 'all',
   // Set by main.js once the socket exists.
@@ -44,7 +45,7 @@ function isRecent(key) {
   return t !== undefined && Date.now() - t < TOUCH_TTL;
 }
 
-// Keys: 'f:<prop>', 'a:<ability>', 'save:<ability>', 'skill:<name>'.
+// Keys: 'f:<prop>', 'a:<ability>', 'save:<ability>', 'skill:<name>', 'expert:<name>'.
 export function mergePending(prev, next) {
   for (const [key] of touched) {
     if (!isRecent(key)) { touched.delete(key); continue; }
@@ -54,6 +55,7 @@ export function mergePending(prev, next) {
     else if (kind === 'a') next.abilities[name] = prev.abilities[name];
     else if (kind === 'save') next.saveProf[name] = prev.saveProf[name];
     else if (kind === 'skill') next.skillProf[name] = prev.skillProf[name];
+    else if (kind === 'expert') next.skillExpert = { ...(next.skillExpert || {}), [name]: !!(prev.skillExpert || {})[name] };
   }
 }
 
@@ -82,5 +84,6 @@ export function blankCharacter(id) {
     inspiration: false,
     exhaustion: 0,
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    classes: [], skillExpert: {}, feats: [],
   };
 }

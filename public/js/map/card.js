@@ -42,7 +42,7 @@ function sheetLines(ch) {
   const lines = [];
   const prof = profBonusForLevel(ch.level);
   const wis = abilityMod(ch.abilities?.wis);
-  const passive = 10 + wis + (ch.skillProf?.Perception ? prof : 0);
+  const passive = 10 + wis + (ch.skillProf?.Perception ? prof * (ch.skillExpert?.Perception ? 2 : 1) : 0);
   const speed = effectiveSpeed(ch);
   const bits = [`Speed ${speed} ft${speed !== (ch.speed || 30) ? ` (normally ${ch.speed || 30})` : ''}`, `Passive Perception ${passive}`];
   if (ch.spellAbility) {
@@ -66,7 +66,7 @@ function buildCard(c, { view, lookup, actions }) {
 
   // Header: picture, name, what it is, where it stands.
   const head = el('div', 'tc-head');
-  const pic = el('span', 'tc-pic ' + (c.type === 'pc' ? 'pc' : 'mon'));
+  const pic = el('span', 'tc-pic ' + (c.type === 'monster' ? 'mon' : 'pc') + (c.type === 'familiar' ? ' fam' : ''));
   const portrait = lookup.portraitFor(c);
   if (portrait) {
     const img = el('img');
@@ -78,9 +78,13 @@ function buildCard(c, { view, lookup, actions }) {
   title.appendChild(el('div', 'tc-name', c.name));
   const ch = c.characterId ? lookup.characterFor(c) : null;
   const mon = lookup.monsterFor(c);
+  // A familiar: its form and type, and whose it is (from the owner's sheet).
+  const owner = c.type === 'familiar' && c.ownerId ? lookup.characterFor({ characterId: c.ownerId }) : null;
+  const fam = owner && owner.familiar;
   const kind = ch
     ? [ch.race, ch.class || (ch.level ? 'Level ' + ch.level : '')].filter(Boolean).join(' · ')
-    : (mon && mon.notes ? mon.notes.split('\n')[0] : (c.type === 'pc' ? 'Character' : 'Creature'));
+    : fam ? `${fam.form} · ${fam.creatureType} familiar of ${owner.name || 'a character'}`
+      : (mon && mon.notes ? mon.notes.split('\n')[0] : (c.type === 'pc' ? 'Character' : 'Creature'));
   const where = map.positions[c.id] ? cellLabel(map.positions[c.id].x, map.positions[c.id].y) : 'not on the map';
   const size = tokenSize(c);
   const sizeName = size > 1 && !kind.includes(SIZE_NAMES[size]) ? SIZE_NAMES[size] : ''; // stat blocks already say it

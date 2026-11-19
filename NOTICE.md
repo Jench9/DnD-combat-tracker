@@ -10,6 +10,8 @@ https://creativecommons.org/licenses/by/4.0/legalcode.
 
 This material (spells, items and creatures in `src/srd/`) was converted from the
 [5e-bits/5e-database](https://github.com/5e-bits/5e-database) project (MIT License) by
-`scripts/build-srd.js`. It has been reformatted and condensed for this app.
+`scripts/build-srd.js`. The character-builder rules (classes, subclasses, class features,
+species, backgrounds and feats from SRD 5.2, in `src/srd/rules-2024.json`) were converted
+from the same project by `scripts/build-rules.js`. It has been reformatted and condensed for this app.
 
 This app is unofficial Fan Content and is not approved or endorsed by Wizards of the Coast.

@@ -403,3 +403,33 @@ textarea.big { min-height: 160px; resize: vertical; font-family: var(--font-body
 }
 .coin.gp { color: var(--gold); }
 @media (max-width: 420px) { .coins { grid-template-columns: repeat(3, 1fr); } }
+
+/* Expertise toggle on proficient skills (double proficiency). */
+.expert-btn {
+  margin-left: auto; flex-shrink: 0; width: 20px; height: 20px; padding: 0;
+  border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink-soft);
+  font: 700 10px var(--font-display); cursor: pointer;
+}
+.expert-btn.on { background: var(--gold); border-color: var(--gold); color: #1a1408; }
+
+/* Familiar panel (editor/familiar.js), Actions tab. */
+.fam-head { display: flex; align-items: center; gap: 12px; }
+.fam-icon {
+  width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; border: 3px solid var(--blue);
+  display: flex; align-items: center; justify-content: center; font-size: 24px; background: var(--bg);
+}
+.fam-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fam-name {
+  font-family: var(--font-display); font-weight: 700; font-size: 17px; padding: 3px 6px; width: 100%; max-width: 320px;
+  border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--ink);
+}
+.fam-name:hover, .fam-name:focus { border-color: var(--line); background: var(--bg); }
+.fam-sub { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); flex-wrap: wrap; }
+.fam-type { padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; }
+.fam-stats { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 10px 0 4px; font-size: 14px; }
+.fam-stat { font-weight: 600; }
+.fam-hp { display: inline-flex; align-items: center; gap: 5px; }
+.fam-hp .btn { padding: 1px 8px; }
+.fam-hp-input { width: 54px; padding: 3px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); font: inherit; text-align: center; }
+.fam-gone { color: var(--wax); font-size: 13px; font-weight: 600; margin: 4px 0; }
+.fam-actions { margin-top: 8px; }

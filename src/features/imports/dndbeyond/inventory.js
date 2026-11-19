@@ -163,4 +163,4 @@ function planInventory(data, library, newId) {
   return { inventory, newItems, otherText: other.join('\n') };
 }
 
-module.exports = { planInventory, nameKeys, itemFromDefinition };
+module.exports = { planInventory, nameKeys, itemFromDefinition, indexLibrary, findInLibrary, bundleQty };

@@ -11,6 +11,8 @@ const { createHub } = require('./realtime/hub');
 const { createImportsRouter } = require('./features/imports');
 const { createMapRouter } = require('./features/map/route');
 const { createBackupRouter } = require('./features/backup/route');
+const { createBuilderRouter } = require('./features/characters/builder/route');
+const { createFamiliarRouter } = require('./features/characters/familiarRoute');
 
 const combat = require('./features/combat');
 const characters = require('./features/characters');
@@ -48,6 +50,17 @@ function createApp() {
   app.use('/api', createBackupRouter({
     onRestored: () => ['combat', 'characters', 'campaigns', 'map', 'monsters', 'items', 'spells'].forEach((f) => hub.broadcast(f)),
   }));
+
+  // Sheets changed by a REST call: resend them, and the combatants made
+  // from them (AC, HP, familiars).
+  const onSheetsChanged = () => {
+    hub.broadcast('characters');
+    if (require('./features/combat/characterSync').syncCombatantsFromSheets()) hub.broadcast('combat');
+  };
+  // Guided character creation and level up.
+  app.use('/api/builder', createBuilderRouter({ onCharactersChanged: onSheetsChanged }));
+  // Familiars (Find Familiar, Pact of the Chain).
+  app.use('/api/familiars', createFamiliarRouter({ onCharactersChanged: onSheetsChanged }));
 
   app.use('/api/import', createImportsRouter({
     onCharactersChanged: () => {

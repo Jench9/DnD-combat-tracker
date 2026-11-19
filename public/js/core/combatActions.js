@@ -1,12 +1,12 @@
-// A combatant's Actions (attacks, items, spells) wired to the server, for
+// A combatant's Actions (attacks, features, items, spells) wired to the server, for
 // the Combat Tracker rows and the Battle Map token card.
 //
 //   combatActionsFor(c, { characters, items, spells, state, send, isDm, ownsCharacter, monsterFor })
 //     → fill(container) for a combatant made from a character sheet, or —
 //     for the DM — a library monster with actions in its stat block; else null.
 //
-// Using an item spends it from the inventory; casting a leveled spell
-// spends a slot. Casting is blocked while incapacitated; a new
+// Using an item spends it from the inventory; using a class feature spends
+// its resource; casting a leveled spell spends a slot. Casting is blocked while incapacitated; a new
 // concentration spell ends the old one (after asking); spells that last
 // open the target dialog (core/spellDialog.js).
 import { renderActions } from './attacks.js';
@@ -19,6 +19,13 @@ export function castBlockedReason(c) {
 }
 
 export function combatActionsFor(c, { characters, items, spells, state, send, isDm, ownsCharacter, monsterFor = () => null }) {
+  // A familiar: the stat block on its owner's sheet, for that player and the DM.
+  if (c.type === 'familiar') {
+    const owner = c.ownerId && characters.find((x) => x.id === c.ownerId);
+    const fam = owner && owner.familiar;
+    if (!fam || !(isDm || ownsCharacter(owner.id)) || !parseMonsterActions(fam.notes).length) return null;
+    return (container) => renderMonsterActions(container, { combatant: c, monster: { name: fam.form, notes: fam.notes } });
+  }
   const ch = c.characterId && characters.find((x) => x.id === c.characterId);
   if (!ch) {
     // Monsters: only the DM's browser has their stat blocks.
@@ -49,6 +56,10 @@ export function combatActionsFor(c, { characters, items, spells, state, send, is
         }
       },
     },
+    onSpendResource: (resId, n) => send('updateCharacter', {
+      id: ch.id,
+      patch: { resources: ch.resources.map((r) => (r.id === resId ? { ...r, used: Math.min(r.max, (r.used || 0) + n) } : r)) },
+    }),
     onUse: (entryId) => send('updateCharacter', {
       id: ch.id,
       patch: { inventory: ch.inventory.map((e) => (e.id === entryId ? { ...e, qty: Math.max(0, e.qty - 1) } : e)) },

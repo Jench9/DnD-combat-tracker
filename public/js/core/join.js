@@ -25,13 +25,14 @@ function choose(identity, url) {
 }
 
 // A new player: create a blank character as a guest, then become it and
-// open its sheet.
+// open its sheet with the guided creation (they can close it and fill the
+// sheet by hand instead).
 function createAndJoin() {
   const id = Math.random().toString(36).slice(2, 9);
   const ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/?');
   ws.onopen = () => {
     ws.send(JSON.stringify({ type: 'addCharacter', payload: { id } }));
-    setTimeout(() => { ws.close(); choose({ role: 'player', characterId: id }, 'characters.html#edit=' + id); }, 250);
+    setTimeout(() => { ws.close(); choose({ role: 'player', characterId: id }, 'characters.html#create=' + id); }, 250);
   };
   ws.onerror = () => alert('Could not reach the server.');
 }
@@ -108,9 +109,9 @@ export async function initIdentity(nav) {
   const badge = el('button', 'id-badge');
   badge.type = 'button';
   badge.title = 'Switch who you are';
-  badge.textContent = id ? (id.role === 'dm' ? '🎲 DM' : '…') : 'Choose…';
+  badge.textContent = id ? (id.role === 'dm' ? '👑 DM' : '…') : 'Choose…';
   badge.addEventListener('click', () => showJoin({ dismissible: !!getIdentity() }));
-  if (nav) nav.appendChild(badge);
+  if (nav) nav.appendChild(badge); // the nav's right-hand area
 
   if (!id) { showJoin(); return; }
   if (id.role === 'player') {

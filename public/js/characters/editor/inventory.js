@@ -4,6 +4,7 @@ import { $ } from '../../core/dom.js';
 import { store, cur, patchChar, touch } from '../store.js';
 import { itemSummary } from '../../items/format.js';
 import { renderActions } from '../../core/attacks.js';
+import { refreshRestUi } from './rest.js';
 import { ownsCharacter } from '../../core/identity.js';
 import { refreshSpellbookUi } from './spellbook.js';
 
@@ -113,6 +114,14 @@ function renderActionsTab(ch) {
       if (!c) return;
       const slots = (c.spellSlots || []).map((s, i) => (i === level - 1 ? { ...s, used: Math.min(s.max, s.used + 1) } : { ...s }));
       change('spellSlots', slots);
+    },
+    // Use on a class feature (Second Wind, Rage…): spend its resource.
+    onSpendResource: (resId, n) => {
+      const c = cur();
+      if (!c) return;
+      const resources = (c.resources || []).map((r) => (r.id === resId ? { ...r, used: Math.min(r.max, (r.used || 0) + n) } : { ...r }));
+      change('resources', resources);
+      refreshRestUi(c);
     },
   });
 }

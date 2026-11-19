@@ -84,7 +84,7 @@ function fit() {
 // ---- bar: round, turn and initiative order
 function avatar(c) {
   const a = document.createElement('span');
-  a.className = 'tv-pic ' + (c.type === 'pc' ? 'pc' : 'mon');
+  a.className = 'tv-pic ' + (c.type === 'monster' ? 'mon' : 'pc') + (c.type === 'familiar' ? ' fam' : '');
   const src = pics.portraitFor(c);
   if (src) {
     const img = document.createElement('img');

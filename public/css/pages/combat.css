@@ -194,6 +194,7 @@
 }
 .c-portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .c-portrait.pc { border-color: var(--good); }
+.c-portrait.fam { border-color: var(--blue); } /* a familiar (ally) */
 .c-portrait.mon { border-color: var(--wax); }
 .row.active .c-portrait { border-color: var(--gold); }
 .ac-tag {
@@ -392,3 +393,6 @@ details.ref[open] summary::before { content: "▾ "; }
   .party-init { width: 84px; }
   .footer-actions .btn, .controls-row .btn { flex: 1; }
 }
+
+/* A character's familiar under it in "Add characters" (party.js). */
+.party-row.party-fam { padding-top: 0; padding-left: 46px; border-top: 0; }

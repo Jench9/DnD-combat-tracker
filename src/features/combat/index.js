@@ -17,6 +17,7 @@ module.exports = {
     removeCombatant: ['map', 'monsters'],
     clearAll: ['map', 'monsters'],
     addMonsterToCombat: ['monsters'],
+    addFamiliarToCombat: ['monsters'], // players get the form's icon
     setCombatantDm: ['map', 'monsters'],
     // A PC's HP is saved on its sheet; only then resend the characters
     // slice (it carries every portrait, so not on monster HP clicks).

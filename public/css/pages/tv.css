@@ -50,6 +50,7 @@
 }
 .tv-pic.pc { border-color: #5db36a; }
 .tv-pic.mon { border-color: #e04b4b; }
+.tv-pic.fam { border-color: #5b8fd9; } /* a familiar (ally) */
 .tv-pic img { width: 100%; height: 100%; object-fit: cover; }
 .tv-o-text { display: flex; flex-direction: column; line-height: 1.1; }
 .tv-o-name { font-size: 16px; font-weight: 700; }

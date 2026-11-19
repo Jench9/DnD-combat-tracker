@@ -24,8 +24,16 @@ module.exports = {
   },
 
   updateCharacter(payload) {
-    const { id, patch } = payload || {};
+    const { id } = payload || {};
+    let { patch } = payload || {};
     if (!patch || typeof patch !== 'object') return;
+    // A familiar's stat block comes from the library (POST /api/familiars);
+    // edits only change its name, creature type and HP, or release it (null).
+    if (patch.familiar && typeof patch.familiar === 'object') {
+      const { name, creatureType, hp } = patch.familiar;
+      const ch = characters.find(id);
+      patch = ch && ch.familiar ? { ...patch, familiar: { name, creatureType, hp } } : { ...patch, familiar: undefined };
+    }
     characters.update(id, patch);
     syncCombatantsFromSheets(); // AC (armor, Shield, Haste…) and HP
   },
