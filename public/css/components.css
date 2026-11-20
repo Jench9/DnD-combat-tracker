@@ -263,3 +263,48 @@ body.is-dm .player-only { display: none !important; }
 .spell-dlg-targets label { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 5px 4px; border-radius: 4px; cursor: pointer; }
 .spell-dlg-targets label:hover { background: rgba(212, 174, 76, 0.12); }
 .spell-dlg-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+/* ---- "Add characters" / "Join the fight" list (combat/party.js): the
+   combat page and the battle map. The bestiary list reuses the rows. */
+.party-list { display: flex; flex-direction: column; gap: 14px; }
+.party-group-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding-bottom: 6px; border-bottom: 2px solid var(--line);
+}
+.party-group-name { font-family: var(--font-display); font-weight: 700; font-size: 16px; }
+.party-group-count {
+  margin-left: 8px; font-size: 11.5px; font-weight: 700; color: var(--ink-soft);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 0 7px;
+}
+.party-list .empty { padding: 14px 10px; }
+.party-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 8px 0; border-top: 1px solid var(--line);
+}
+.party-group-head + .party-row { border-top: none; }
+.party-who { min-width: 0; flex: 1 1 200px; }
+.party-name { font-weight: 600; font-size: 15px; }
+.party-sub { color: var(--ink-soft); font-size: 12px; }
+.party-controls { display: flex; align-items: center; gap: 8px; }
+.party-init {
+  width: 104px; height: 40px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--bg); color: var(--ink); font: inherit; font-size: 18px; font-weight: 600; text-align: center;
+}
+.party-init::placeholder { font-size: 14px; font-weight: 400; }
+.party-init:focus { outline: none; border-color: var(--gold); }
+.party-controls .btn { height: 40px; }
+.party-in { color: var(--good); font-size: 12.5px; font-weight: 600; }
+.party-who.with-pic { display: flex; align-items: center; gap: 10px; }
+.mini-pic {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  border: 2px solid var(--line); background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 700; color: var(--ink-soft);
+}
+.mini-pic.mon { border-color: var(--wax); }
+.mini-pic.pc { border-color: var(--good); }
+.mini-pic img { width: 100%; height: 100%; object-fit: cover; }
+.party-hint { color: var(--ink-soft); font-size: 12px; margin-top: 8px; }
+/* A character's familiar under it in "Add characters" (party.js). */
+.party-row.party-fam { padding-top: 0; padding-left: 46px; border-top: 0; }
+@media (max-width: 600px) { .party-init { width: 84px; } }

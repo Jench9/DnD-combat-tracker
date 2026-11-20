@@ -217,3 +217,8 @@
   letter-spacing: 0.5px; text-transform: uppercase; color: var(--good);
 }
 .tc-actions .actions-body { margin-top: 4px; }
+
+/* "Join the battle" (combat/party.js): collapsible, above the tray. */
+.join-panel { padding: 14px 18px; }
+.join-panel > summary { cursor: pointer; list-style: revert; margin-bottom: 0; }
+.join-panel[open] > summary { margin-bottom: 10px; }

@@ -1,9 +1,10 @@
-// "Add characters" panel on the combat page: lists saved character sheets
+// "Add characters" panel on the combat page and the battle map: lists saved character sheets
 // grouped by campaign so the DM can drop them into the fight with their
 // initiative rolls, one by one or a whole campaign at once. An empty roll
 // means the server rolls d20 + DEX.
 import { $ } from '../core/dom.js';
 import { isDm, myCharacterId } from '../core/identity.js';
+import { rollBatch, rollDie, RollCancelled } from '../core/dice.js';
 
 const view = {
   characters: [],
@@ -105,9 +106,16 @@ function renderRow(ch) {
   roll.className = 'btn secondary small';
   roll.textContent = '🎲';
   roll.title = 'Roll d20 ' + signed(mod);
-  roll.addEventListener('click', () => {
-    input.value = 1 + Math.floor(Math.random() * 20) + mod;
-    view.typed[ch.id] = input.value;
+  roll.addEventListener('click', async () => {
+    let d;
+    try {
+      d = await rollBatch(`${ch.name || 'Character'}: initiative`, () => rollDie(20, 'd20 initiative'));
+    } catch (err) {
+      if (err instanceof RollCancelled) return;
+      throw err;
+    }
+    view.typed[ch.id] = String(d + mod);
+    renderParty();
   });
 
   const add = document.createElement('button');

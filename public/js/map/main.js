@@ -8,7 +8,8 @@ import { initZoom } from './zoom.js';
 import { initTokenCard } from './card.js';
 import { combatActionsFor } from '../core/combatActions.js';
 import { createPortraitLookup } from '../core/portraits.js';
-import { isDm, ownsCharacter, identityHeaders } from '../core/identity.js';
+import { isDm, ownsCharacter, identityHeaders, myCharacterId } from '../core/identity.js';
+import { initParty, setPartyData } from '../combat/party.js';
 
 renderNav();
 
@@ -73,15 +74,42 @@ function render() {
 
 const socket = connectSocket({
   handlers: {
-    state: (msg) => { view.combat = msg.state; render(); },
+    state: (msg) => { view.combat = msg.state; render(); setPartyData({ combatants: msg.state.combatants }); updateJoin(); },
     mapState: (msg) => { view.map = msg.map; render(); },
-    charState: (msg) => { characters = msg.characters; pics.setCharacters(msg.characters); render(); },
+    charState: (msg) => {
+      characters = msg.characters;
+      pics.setCharacters(msg.characters);
+      render();
+      setPartyData({ characters: msg.characters });
+      updateJoin();
+    },
+    campaignState: (msg) => setPartyData({ campaigns: msg.campaigns }),
     itemState: (msg) => { items = msg.items; render(); },
     spellState: (msg) => { spells = msg.spells; render(); },
     monsterState: (msg) => { pics.setMonsters(msg.monsters); render(); },
   },
 });
 const send = socket.send;
+
+// "Join the battle" (combat/party.js, as on the combat page): a player's
+// own character (and familiar), or for the DM every sheet by campaign.
+// Open for a player who isn't in the fight yet; otherwise the DM's choice,
+// remembered per browser.
+initParty(send);
+const JOIN_KEY = 'kit-map-join';
+let joinTouched = false;
+try { if (isDm()) $('joinPanel').open = localStorage.getItem(JOIN_KEY) === '1'; } catch { /* storage blocked */ }
+$('joinPanel').querySelector('summary').addEventListener('click', () => { joinTouched = true; }); // the player chose
+$('joinPanel').addEventListener('toggle', () => {
+  if (isDm()) try { localStorage.setItem(JOIN_KEY, $('joinPanel').open ? '1' : '0'); } catch { /* storage blocked */ }
+});
+function updateJoin() {
+  if (isDm()) return;
+  const me = characters.find((ch) => ch.id === myCharacterId());
+  $('joinPanel').hidden = !me; // a player without a sheet has nothing to add
+  const inFight = view.combat.combatants.some((c) => c.characterId === myCharacterId());
+  if (!joinTouched) $('joinPanel').open = !!me && !inFight;
+}
 
 initInteract({
   getView: () => view,

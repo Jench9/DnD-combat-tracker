@@ -60,6 +60,10 @@ The rules come from the SRD 5.2, so each class has one subclass, and there are f
 
 A character's sheet has a **Familiar** panel (Actions tab). **Find a familiar…** lets you pick a form from the 2024 Find Familiar spell — Bat, Cat, Frog, Hawk, Lizard, Octopus, Owl, Rat, Raven, Spider, Weasel or any other CR 0 Beast — or one of the Pact of the Chain forms (Imp, Pseudodragon, Quasit, Skeleton, Sphinx of Wonder, Sprite, Venomous Snake), give it a name and make it a Celestial, Fey or Fiend. The sheet keeps its stat block and HP (with roll buttons for its actions). **Add to combat** (or "Add familiar" in the Combat Tracker) puts it in the fight with its own initiative; its player controls it, moves its token on the map, and its HP stays in step with the sheet.
 
+## Joining from the Battle Map
+
+The Battle Map has a **Join the battle** panel (DM: **Add characters to the battle**), the same list as on the Combat Tracker: type your initiative roll (or 🎲, or leave it empty for d20 + DEX) and **Add**. Your token appears under *Not on the map*; drag it onto the grid. Players see only their own character and familiar; the DM sees everyone, by campaign.
+
 ## Showing the map on a TV
 
 `http://<server>:3000/tv` (or **📺 TV view** on the Battle Map page) is a full-screen, read-only map for a shared screen: the grid and background scaled to fit, a bar with the round, whose turn it is and the initiative order, a **Full screen** button, the cursor hidden when idle, and the screen kept awake. It always shows the **players' view** (no hidden monsters, aliases instead of real names, health words instead of monster HP) — even when the DM opens it.
