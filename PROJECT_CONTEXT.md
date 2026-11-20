@@ -232,6 +232,6 @@ Both importers create the character via `characters/service.addImported` using t
 2. ~~Persistence for characters and libraries~~ Done (`core/jsonStore.js`, `./data` volume). Combat state and map token positions too (`combat.json`, `map.json`).
 3. ~~Show portraits in the combat tracker and import the avatar from D&D Beyond.~~ Done.
 4. ~~Mobile pass.~~ Done for combat; still open: cap or collapse the Items/Spells lists on phones.
-5. Character sheet depth (spell slots, spells, attacks, rests and resources are done): currency, exhaustion, inspiration, death saves on the sheet, two-weapon/off-hand attacks, shared dice rolls.
+5. Character sheet depth (spell slots, spells, attacks, rests, resources, currency, exhaustion, inspiration are done): death saves on the sheet, two-weapon/off-hand attacks. Shared dice rolls: dropped for now (user, 2026-11-20). See `PROPOSALS.md` for the current list.
 6. ~~Combat tracker: temp HP; HP/AC sync with the sheet.~~ Done.
 7. Real access control (shared table password) if exposed beyond a trusted network.
