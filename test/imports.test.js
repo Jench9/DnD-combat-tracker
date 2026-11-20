@@ -192,4 +192,5 @@ test('REST import validation and permission errors', async (t) => {
   r = await fetch(`${base}/api/characters/summary`);
   const summary = await r.json();
   assert.ok(summary.characters.some((c) => c.id === ch.id && c.name === 'Unlinked'));
+  assert.ok(Array.isArray(summary.campaigns), 'campaigns to group the chooser by');
 });

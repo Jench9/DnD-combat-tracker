@@ -183,6 +183,26 @@ body.is-dm .player-only { display: none !important; }
 .join-name { font-weight: 600; font-size: 15px; }
 .join-meta { color: var(--ink-soft); font-size: 12px; }
 .join-cancel { margin-top: 12px; }
+.join-group {
+  display: flex; align-items: center; gap: 8px; margin: 8px 2px 0;
+  font-family: var(--font-display); font-weight: 700; font-size: 12px; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--ink-soft);
+}
+.join-group:first-child { margin-top: 0; }
+.join-group.active { color: var(--gold); }
+.join-new {
+  margin-left: auto; font-size: 11.5px; font-weight: 600; text-transform: none; letter-spacing: 0;
+  font-family: var(--font-body); background: none; border: 1px solid var(--line); border-radius: 10px;
+  padding: 1px 9px; color: var(--blue); cursor: pointer;
+}
+.join-new:hover { border-color: var(--blue); }
+.join-others { margin-top: 4px; }
+.join-others > summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); padding: 6px 2px; }
+.join-others > .join-option, .join-others > .join-group { margin-bottom: 6px; }
+.join-others > .join-group { margin-top: 10px; }
+.join-count { font-size: 11px; font-weight: 700; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; letter-spacing: 0; }
+.join-option.current { border-color: var(--good); }
+.join-you { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--good); }
 
 /* ---- character actions (core/attacks.js): sheet + combat tracker ---- */
 .action-row { padding: 8px 0; border-bottom: 1px solid var(--line); }
@@ -333,3 +353,8 @@ body.is-dm .player-only { display: none !important; }
   background: var(--bg); color: var(--ink); font: inherit;
 }
 
+/* Allies list: characters outside the current campaign, folded (party.js). */
+.party-others { border: 1px dashed var(--line); border-radius: 8px; padding: 0 12px; }
+.party-others > summary { cursor: pointer; padding: 10px 0; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.party-others[open] { padding-bottom: 12px; }
+.party-others > .party-group + .party-group { margin-top: 14px; }

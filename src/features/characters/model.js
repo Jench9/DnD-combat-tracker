@@ -8,7 +8,9 @@
 //   saveProf: { str: bool, ... }, skillProf: { 'Stealth': bool, ... },
 //   equipment, features, notes,
 //   ddbId (D&D Beyond character id, '' if not linked),
-//   campaignId ('' = no campaign),
+//   campaignIds: campaigns it belongs to (any number, [] = none),
+//   campaignId: the first of them ('' = none) — kept for older clients;
+//     a patch with only campaignId sets campaignIds to just that one,
 //   inventory: [{ id, itemId, name, qty, equipped }] — items from the item
 //     library (`name` is a copy, shown if the library item is deleted),
 //   acAuto: true = AC is computed from equipped armor (see derived.js),
@@ -45,6 +47,7 @@ function blankCharacter(id) {
     saveProf: {}, skillProf: {},
     equipment: '', features: '', notes: '',
     ddbId: '',
+    campaignIds: [],
     campaignId: '',
     inventory: [],
     acAuto: true,
@@ -296,7 +299,16 @@ function sanitizeCharacterPatch(existing, patch) {
       if (patch.weaponProf[k] !== undefined) next.weaponProf[k] = !!patch.weaponProf[k];
     });
   }
-  if (typeof patch.campaignId === 'string' && /^[a-z0-9]{0,20}$/.test(patch.campaignId)) next.campaignId = patch.campaignId;
+  // Campaigns: a list (several at once); a plain campaignId (older
+  // clients, imports, saved data from before) means just that one.
+  const CAMPAIGN_RE = /^[a-z0-9]{1,20}$/;
+  if (Array.isArray(patch.campaignIds)) {
+    next.campaignIds = [...new Set(patch.campaignIds.filter((x) => typeof x === 'string' && CAMPAIGN_RE.test(x)))].slice(0, 20);
+  } else if (typeof patch.campaignId === 'string' && /^[a-z0-9]{0,20}$/.test(patch.campaignId)) {
+    next.campaignIds = patch.campaignId ? [patch.campaignId] : [];
+  }
+  if (!Array.isArray(next.campaignIds)) next.campaignIds = existing.campaignId ? [existing.campaignId] : [];
+  next.campaignId = next.campaignIds[0] || '';
   if (typeof patch.ddbId === 'string' && /^\d{0,20}$/.test(patch.ddbId)) next.ddbId = patch.ddbId;
 
   if (patch.abilities && typeof patch.abilities === 'object') {

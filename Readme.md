@@ -60,6 +60,10 @@ The rules come from the SRD 5.2, so each class has one subclass, and there are f
 
 A character's sheet has a **Familiar** panel (Actions tab). **Find a familiar…** lets you pick a form from the 2024 Find Familiar spell — Bat, Cat, Frog, Hawk, Lizard, Octopus, Owl, Rat, Raven, Spider, Weasel or any other CR 0 Beast — or one of the Pact of the Chain forms (Imp, Pseudodragon, Quasit, Skeleton, Sphinx of Wonder, Sprite, Venomous Snake), give it a name and make it a Celestial, Fey or Fiend. The sheet keeps its stat block and HP (with roll buttons for its actions). **Add to combat** (or "Add familiar" in the Combat Tracker) puts it in the fight with its own initiative; its player controls it, moves its token on the map, and its HP stays in step with the sheet.
 
+## Campaigns
+
+On the Characters page the DM opens **⚙ Manage campaigns**: create, rename or delete campaigns, pick one and tick the characters that belong to it — a character can be in several at once (a one-shot and the main campaign, say). **☆ Set as current** marks the campaign being played now: when someone opens the app and picks who they are, that campaign's characters come first (the others are folded under *Other campaigns*), new characters go into it, and in the Allies panel of the Combat Tracker and Battle Map the DM sees only its characters until they open *Characters in other campaigns*. Each campaign in that screen also has **+ New** to create a character directly in it.
+
 ## Adding to the fight (Combat Tracker and Battle Map)
 
 Both pages have two panels you can open and close: **🛡 Allies** — the saved characters (by campaign) and their familiars, each with an initiative box (empty = d20 + DEX), plus a quick add for an NPC ally — and **⚔ Enemies** (DM only) — search the monster library, choose how many, optionally add them hidden for an ambush, or quick add a one-off enemy. Players see only **Join the battle** with their own character. On the map, new tokens appear under *Not on the map*; drag them onto the grid.

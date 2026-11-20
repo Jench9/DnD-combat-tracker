@@ -106,11 +106,11 @@ function refreshImported(id, mappedPatch, { replaceInventory = false, replaceSpe
   // Inspiration and exhaustion are table state, like damage taken: kept.
   // Coins come from D&D Beyond (where the party's purchases are tracked).
   const {
-    notes, hpTemp, campaignId, inventory, acAuto, spellAbility, spellSlots, spells, hitDiceUsed, rulesEdition, inspiration, exhaustion, ...patch
+    notes, hpTemp, campaignId, campaignIds, inventory, acAuto, spellAbility, spellSlots, spells, hitDiceUsed, rulesEdition, inspiration, exhaustion, ...patch
   } = mappedPatch;
   const fresh = {
     ...blankCharacter(id),
-    portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp, campaignId: old.campaignId,
+    portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp, campaignIds: old.campaignIds,
     inventory: replaceInventory && Array.isArray(inventory) ? inventory : old.inventory, acAuto: old.acAuto,
     // Kept unless the patch brings a list (the sync route passes existing +
     // newly detected ones), which is validated like any edit.
@@ -131,11 +131,15 @@ function refreshImported(id, mappedPatch, { replaceInventory = false, replaceSpe
   return ch;
 }
 
-// A campaign was deleted: move its characters to "No campaign".
+// A campaign was deleted: take it off its characters (those in no other
+// campaign end up in "No campaign").
 function clearCampaign(campaignId) {
   let changed = false;
   characters.forEach((c) => {
-    if (c.campaignId === campaignId) { c.campaignId = ''; changed = true; }
+    if (!c.campaignIds.includes(campaignId)) return;
+    c.campaignIds = c.campaignIds.filter((x) => x !== campaignId);
+    c.campaignId = c.campaignIds[0] || '';
+    changed = true;
   });
   if (changed) persist();
 }

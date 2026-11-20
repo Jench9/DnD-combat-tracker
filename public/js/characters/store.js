@@ -69,6 +69,7 @@ export function blankCharacter(id) {
     saveProf: {}, skillProf: {},
     equipment: '', features: '', notes: '',
     ddbId: '',
+    campaignIds: [],
     campaignId: '',
     inventory: [],
     acAuto: true,

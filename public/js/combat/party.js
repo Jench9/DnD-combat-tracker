@@ -5,6 +5,7 @@
 import { $ } from '../core/dom.js';
 import { isDm, myCharacterId } from '../core/identity.js';
 import { rollBatch, rollDie, RollCancelled } from '../core/dice.js';
+import { groupByCampaign } from '../core/campaigns.js';
 
 const view = {
   characters: [],
@@ -16,10 +17,6 @@ let send = () => {};
 
 const dexMod = (ch) => Math.floor((((ch.abilities && ch.abilities.dex) || 10) - 10) / 2);
 function signed(n) { return (n >= 0 ? '+' : '') + n; }
-function campaignName(id) {
-  const c = view.campaigns.find((x) => x.id === id);
-  return c ? c.name : '';
-}
 
 // [{ name, characters }] in campaign order, "No campaign" last; empty
 // groups are skipped. Characters whose campaign was deleted count as none.
@@ -29,13 +26,11 @@ function groups() {
     const me = view.characters.filter((ch) => ch.id === myCharacterId());
     return me.length ? [{ name: 'Your character', characters: me, solo: true }] : [];
   }
-  const out = view.campaigns.map((c) => ({
-    name: c.name,
-    characters: view.characters.filter((ch) => ch.campaignId === c.id),
-  }));
-  // With no campaigns at all, "No campaign" would read oddly.
-  out.push({ name: view.campaigns.length ? 'No campaign' : 'All characters', characters: view.characters.filter((ch) => !campaignName(ch.campaignId)) });
-  return out.filter((g) => g.characters.length);
+  // The active campaign first; a character in two campaigns is in both
+  // (adding it twice does nothing). With no campaigns at all, "No
+  // campaign" would read oddly.
+  return groupByCampaign(view.characters, view.campaigns, { noneLabel: view.campaigns.length ? 'No campaign' : 'All characters' })
+    .map((g) => ({ ...g, name: (g.active ? '★ ' : '') + g.name }));
 }
 
 function inCombat(ch) {
@@ -209,8 +204,31 @@ export function renderParty() {
     list.appendChild(empty);
     return;
   }
-  gs.forEach((g) => list.appendChild(renderGroup(g)));
+  // With a current campaign, the DM sees its characters; everyone else
+  // (other campaigns, no campaign) waits in a folded panel.
+  const current = gs.filter((g) => g.active);
+  if (!isDm() || !current.length) {
+    gs.forEach((g) => list.appendChild(renderGroup(g)));
+    return;
+  }
+  current.forEach((g) => list.appendChild(renderGroup(g)));
+  const shown = new Set(current.flatMap((g) => g.characters.map((ch) => ch.id)));
+  const rest = gs.filter((g) => !g.active)
+    .map((g) => ({ ...g, characters: g.characters.filter((ch) => !shown.has(ch.id)) }))
+    .filter((g) => g.characters.length);
+  if (!rest.length) return;
+  const n = new Set(rest.flatMap((g) => g.characters.map((ch) => ch.id))).size;
+  const others = document.createElement('details');
+  others.className = 'party-others';
+  others.open = othersOpen;
+  others.addEventListener('toggle', () => { othersOpen = others.open; });
+  const sum = document.createElement('summary');
+  sum.textContent = `Characters in other campaigns (${n})`;
+  others.appendChild(sum);
+  rest.forEach((g) => others.appendChild(renderGroup(g)));
+  list.appendChild(others);
 }
+let othersOpen = false; // the folded panel stays as the DM left it across redraws
 
 export function setPartyData(patch) {
   Object.assign(view, patch);

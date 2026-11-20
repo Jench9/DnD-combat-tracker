@@ -34,12 +34,15 @@ function createApp() {
   const hub = createHub(server, [combat, characters, campaigns, map, monsters, items, spells]);
 
   // For the "Who are you?" screen, which can open on any page (even ones
-  // without a live connection): just enough to pick a character.
+  // without a live connection): just enough to pick a character, and the
+  // campaigns (in their order) to group them by.
   app.get('/api/characters/summary', (req, res) => {
     const charService = require('./features/characters/service');
+    const campaignService = require('./features/campaigns/service');
     res.json({
+      campaigns: campaignService.all().map((c) => ({ id: c.id, name: c.name, active: !!c.active })),
       characters: charService.all().map((c) => ({
-        id: c.id, name: c.name, class: c.class, level: c.level, portrait: c.portrait, campaignId: c.campaignId,
+        id: c.id, name: c.name, class: c.class, level: c.level, portrait: c.portrait, campaignId: c.campaignId, campaignIds: c.campaignIds,
       })),
     });
   });

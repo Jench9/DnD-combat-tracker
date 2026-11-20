@@ -9,7 +9,7 @@ import { initImport } from './import.js';
 import { identityHeaders, myCharacterId } from '../core/identity.js';
 import { refreshItemOptions } from './editor/inventory.js';
 import { refreshSpellOptions } from './editor/spellbook.js';
-import { initCampaigns, renderCampaignControls, markCampaignsLoaded, campaignForNew } from './campaigns.js';
+import { initCampaigns, renderCampaignControls, markCampaignsLoaded, campaignForNew, refreshCampaignManager } from './campaigns.js';
 import { openCreator } from './builder/wizard.js';
 import { openLevelUp } from './builder/levelup.js';
 import { refreshFamiliarUi } from './editor/familiar.js';
@@ -35,6 +35,7 @@ const socket = connectSocket({
       const now = store.activeCharId ? findChar(store.activeCharId) : null;
       if (prev && now) mergePending(prev, now);
       renderCharGrid(openEditor);
+      refreshCampaignManager();
       if (store.activeCharId && !refreshEditorFromServer()) closeEditor();
       openFromHash();
       openOwnSheet();
@@ -106,7 +107,7 @@ $('newCharBtn').addEventListener('click', () => openCreator({ campaignId: campai
 $('blankCharBtn').addEventListener('click', () => {
   const id = uid();
   const campaignId = campaignForNew();
-  store.characters.unshift({ ...blankCharacter(id), campaignId }); // optimistic; the server confirms
+  store.characters.unshift({ ...blankCharacter(id), campaignId, campaignIds: campaignId ? [campaignId] : [] }); // optimistic; the server confirms
   store.send('addCharacter', { id, campaignId });
   openEditor(id);
 });

@@ -1,4 +1,6 @@
-// Campaigns: named groups that characters belong to (character.campaignId).
+// Campaigns: named groups that characters belong to (character.campaignIds,
+// any number each). One may be marked `active`: the one being played now
+// (the "Who are you?" screen and the add lists show it first).
 // Saved to data/campaigns.json. No WebSocket knowledge here.
 const { createJsonStore } = require('../../core/jsonStore');
 
@@ -13,7 +15,7 @@ function load() {
   const saved = store.load();
   return (Array.isArray(saved) ? saved : [])
     .filter((c) => c && ID_RE.test(c.id) && cleanName(c.name))
-    .map((c) => ({ id: c.id, name: cleanName(c.name) }));
+    .map((c) => ({ id: c.id, name: cleanName(c.name), ...(c.active === true ? { active: true } : {}) }));
 }
 let campaigns = load();
 
@@ -51,9 +53,16 @@ function rename(id, name) {
   persist();
 }
 
+// The campaign being played now ('' = none); at most one.
+function setActive(id) {
+  if (id && !find(id)) return;
+  campaigns = campaigns.map(({ active, ...c }) => (c.id === id ? { ...c, active: true } : c));
+  persist();
+}
+
 function remove(id) {
   campaigns = campaigns.filter((c) => c.id !== id);
   persist();
 }
 
-module.exports = { reload, ID_RE, all, find, add, rename, remove };
+module.exports = { reload, ID_RE, all, find, add, rename, setActive, remove };

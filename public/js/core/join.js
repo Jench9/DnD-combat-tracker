@@ -2,15 +2,18 @@
 // page when this browser hasn't chosen yet, or its character is gone.
 // Choosing reloads the page so the connection reopens as that identity.
 import { getIdentity, setIdentity, clearIdentity, isDm } from './identity.js';
+import { groupByCampaign } from './campaigns.js';
 
-async function fetchCharacters() {
+async function fetchSummary() {
   try {
     const r = await fetch('/api/characters/summary');
-    return (await r.json()).characters || [];
+    const data = await r.json();
+    return { characters: data.characters || [], campaigns: data.campaigns || [] };
   } catch {
-    return [];
+    return { characters: [], campaigns: [] };
   }
 }
+const fetchCharacters = async () => (await fetchSummary()).characters;
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -26,12 +29,12 @@ function choose(identity, url) {
 
 // A new player: create a blank character as a guest, then become it and
 // open its sheet with the guided creation (they can close it and fill the
-// sheet by hand instead).
-function createAndJoin() {
+// sheet by hand instead). `campaignId`: the campaign it starts in.
+function createAndJoin(campaignId = '') {
   const id = Math.random().toString(36).slice(2, 9);
   const ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/?');
   ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'addCharacter', payload: { id } }));
+    ws.send(JSON.stringify({ type: 'addCharacter', payload: { id, campaignId } }));
     setTimeout(() => { ws.close(); choose({ role: 'player', characterId: id }, 'characters.html#create=' + id); }, 250);
   };
   ws.onerror = () => alert('Could not reach the server.');
@@ -61,7 +64,7 @@ export async function showJoin({ dismissible = false } = {}) {
 
   const dm = el('button', 'join-option dm');
   dm.type = 'button';
-  dm.append(el('span', 'join-pic dm', '🎲'), el('span', 'join-name', "I'm the DM"));
+  dm.append(el('span', 'join-pic dm', '👑'), el('span', 'join-name', "I'm the DM"));
   dm.addEventListener('click', () => choose({ role: 'dm' }));
   box.appendChild(dm);
 
@@ -71,8 +74,10 @@ export async function showJoin({ dismissible = false } = {}) {
 
   const create = el('button', 'join-option new');
   create.type = 'button';
-  create.append(el('span', 'join-pic', '+'), el('span', 'join-name', 'Create a new character'));
-  create.addEventListener('click', createAndJoin);
+  const createLabel = el('span', 'join-name', 'Create a new character');
+  create.append(el('span', 'join-pic', '+'), createLabel);
+  let createIn = ''; // the active campaign, once loaded
+  create.addEventListener('click', () => createAndJoin(createIn));
   box.appendChild(create);
 
   if (dismissible) {
@@ -85,19 +90,86 @@ export async function showJoin({ dismissible = false } = {}) {
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
-  const chars = await fetchCharacters();
+  if (dismissible) {
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    const onKey = (e) => {
+      if (!document.body.contains(overlay)) { document.removeEventListener('keydown', onKey); return; }
+      if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); }
+    };
+    document.addEventListener('keydown', onKey);
+  }
+
+  const { characters: chars, campaigns } = await fetchSummary();
+  const current = getIdentity();
   list.innerHTML = '';
   if (chars.length === 0) list.appendChild(el('div', 'join-loading', 'No characters yet.'));
-  chars.forEach((c) => {
+
+  const active = campaigns.find((c) => c.active);
+  if (active) {
+    createIn = active.id;
+    createLabel.textContent = `Create a new character in ${active.name}`;
+  }
+
+  const option = (c) => {
     const b = el('button', 'join-option');
     b.type = 'button';
     const text = el('span', 'join-text');
     text.append(el('span', 'join-name', c.name || 'Unnamed character'),
       el('span', 'join-meta', ['Lv ' + (c.level || 1), c.class].filter(Boolean).join(' · ')));
     b.append(avatar(c), text);
+    if (current && current.role === 'player' && current.characterId === c.id) {
+      b.classList.add('current');
+      b.appendChild(el('span', 'join-you', 'You'));
+    }
     b.addEventListener('click', () => choose({ role: 'player', characterId: c.id }));
-    list.appendChild(b);
-  });
+    return b;
+  };
+  // Campaign heading: name, count, and "+ New" to create a character in it.
+  const heading = (g) => {
+    const h = el('div', 'join-group' + (g.active ? ' active' : ''));
+    h.appendChild(el('span', 'join-group-name', (g.active ? '★ ' : '') + g.name));
+    h.appendChild(el('span', 'join-count', String(g.characters.length)));
+    if (g.id) {
+      const add = el('button', 'join-new', '+ New');
+      add.type = 'button';
+      add.title = `Create a new character in ${g.name}`;
+      add.addEventListener('click', () => createAndJoin(g.id));
+      h.appendChild(add);
+    }
+    return h;
+  };
+
+  // Campaigns without characters still get a heading (with "+ New") so a
+  // new player can start in one.
+  const filled = groupByCampaign(chars, campaigns); // active first, "No campaign" last
+  const none = filled.filter((g) => !g.id);
+  const groups = [
+    ...[...campaigns.filter((c) => c.active), ...campaigns.filter((c) => !c.active)]
+      .map((c) => filled.find((g) => g.id === c.id) || { id: c.id, name: c.name, active: !!c.active, characters: [] }),
+    ...none,
+  ];
+  const headers = campaigns.length > 0;
+  const draw = (target, g) => {
+    if (headers) target.appendChild(heading(g));
+    g.characters.forEach((c) => target.appendChild(option(c)));
+  };
+  if (active) {
+    // The campaign being played first; the rest folded away.
+    groups.filter((g) => g.active).forEach((g) => draw(list, g));
+    const rest = groups.filter((g) => !g.active);
+    if (rest.length) {
+      const others = el('details', 'join-others');
+      const n = new Set(rest.flatMap((g) => g.characters.map((c) => c.id))).size;
+      others.appendChild(el('summary', '', `Other campaigns (${n} character${n === 1 ? '' : 's'})`));
+      rest.forEach((g) => draw(others, g));
+      // Your own character is in there: show it.
+      if (current && rest.some((g) => g.characters.some((c) => c.id === current.characterId))
+        && !groups.some((g) => g.active && g.characters.some((c) => c.id === current.characterId))) others.open = true;
+      list.appendChild(others);
+    }
+  } else {
+    groups.forEach((g) => draw(list, g));
+  }
 }
 
 // Badge in the nav ("DM" / character name) that reopens the chooser.

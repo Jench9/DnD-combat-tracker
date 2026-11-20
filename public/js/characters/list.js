@@ -1,8 +1,9 @@
 // The character grid (list view).
+import { groupByCampaign } from '../core/campaigns.js';
 import { $ } from '../core/dom.js';
 import { hpClass } from './rules.js';
 import { store, ALL, NONE } from './store.js';
-import { charactersInView, campaignName } from './campaigns.js';
+import { charactersInView } from './campaigns.js';
 
 function avatarNode(ch) {
   const d = document.createElement('div');
@@ -88,10 +89,9 @@ export function renderCharGrid(onOpen) {
 
   // "All characters": one section per campaign, characters without one
   // first. Empty sections are skipped.
-  const groups = [
-    { name: 'No campaign', characters: shown.filter((ch) => !campaignName(ch.campaignId)) },
-    ...store.campaigns.map((c) => ({ name: c.name, characters: shown.filter((ch) => ch.campaignId === c.id) })),
-  ].filter((g) => g.characters.length);
+  // A character in two campaigns shows in both.
+  const groups = groupByCampaign(shown, store.campaigns, { noneFirst: true })
+    .map((g) => ({ ...g, name: (g.active ? '★ ' : '') + g.name + (g.active ? ' (current)' : '') }));
   const showHeaders = store.campaigns.length > 0;
   groups.forEach((g) => {
     if (showHeaders) {
