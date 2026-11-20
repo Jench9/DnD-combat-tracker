@@ -23,6 +23,13 @@ module.exports = {
     characters.addBlank(id, payload && payload.campaignId);
   },
 
+  // DM only: { id, newId } — the client picks newId so it can open the copy.
+  duplicateCharacter(payload) {
+    const { id, newId } = payload || {};
+    if (typeof newId !== 'string' || !/^[\w-]{1,64}$/.test(newId)) return;
+    characters.duplicate(id, newId);
+  },
+
   updateCharacter(payload) {
     const { id } = payload || {};
     let { patch } = payload || {};

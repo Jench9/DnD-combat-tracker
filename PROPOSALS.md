@@ -103,7 +103,7 @@ to `blankCharacter` / `sanitizeCharacterPatch` and fill them from D&D Beyond
 Show a character's tracked resources (Ki, Rage, Channel Divinity, spell slots)
 as small −/+ chips in their combat row, so players don't have to switch to the sheet.
 
-### 4.3 Duplicate character — S
+### 4.3 ~~Duplicate character~~ — done
 Clone a sheet (new id, "Copy of …", no portrait sync link). This is handy for
 NPC allies and pregens.
 

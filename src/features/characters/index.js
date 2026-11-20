@@ -11,6 +11,7 @@ module.exports = {
   actions,
   // Sheet edits and rests can change a combatant's AC/HP.
   alsoBroadcast: { updateCharacter: ['combat'], spendHitDie: ['combat'], shortRest: ['combat'], longRest: ['combat'] },
+  // duplicateCharacter has no entry: DM only (NPC allies, pregens).
   // Anyone can create a character (a new player joining); players edit and
   // delete only their own.
   permissions: {

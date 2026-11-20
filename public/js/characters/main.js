@@ -133,6 +133,17 @@ function showToast(text) {
   setTimeout(() => t.remove(), 4000);
 }
 
+// DM: copy the open sheet and open the copy.
+$('duplicateCharBtn').addEventListener('click', () => {
+  const ch = cur();
+  if (!ch) return;
+  const newId = uid();
+  const copy = { ...structuredClone(ch), id: newId, name: ('Copy of ' + (ch.name || 'character')).slice(0, 40), ddbId: '' };
+  store.characters.splice(store.characters.indexOf(ch), 0, copy); // optimistic; the server confirms
+  store.send('duplicateCharacter', { id: ch.id, newId });
+  openEditor(newId);
+});
+
 $('deleteCharBtn').addEventListener('click', () => {
   const ch = cur();
   if (!ch) return;

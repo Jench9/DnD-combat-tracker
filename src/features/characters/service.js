@@ -43,6 +43,24 @@ function addBlank(id, campaignId) {
   return true;
 }
 
+// A copy of a sheet under a new id, placed just before the original:
+// "Copy of …", not linked to D&D Beyond (a sync would overwrite the
+// original's copy). Returns the copy, or null.
+function duplicate(id, newId) {
+  const src = find(id);
+  if (!src || !newId || find(newId)) return null;
+  const copy = sanitizeCharacterPatch(blankCharacter(newId), {
+    ...JSON.parse(JSON.stringify(src)),
+    id: newId,
+    name: ('Copy of ' + (src.name || 'character')).slice(0, 40),
+    ddbId: '',
+  });
+  copy.acAuto = src.acAuto;
+  characters.splice(characters.indexOf(src), 0, copy);
+  persist();
+  return copy;
+}
+
 function update(id, patch) {
   const idx = characters.findIndex((c) => c.id === id);
   if (idx === -1) return;
@@ -122,4 +140,4 @@ function clearCampaign(campaignId) {
   if (changed) persist();
 }
 
-module.exports = { reload, all, find, addBlank, update, remove, addImported, refreshImported, clearCampaign };
+module.exports = { reload, all, find, addBlank, duplicate, update, remove, addImported, refreshImported, clearCampaign };

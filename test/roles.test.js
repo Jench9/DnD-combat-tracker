@@ -148,3 +148,37 @@ test('a player can end only their own turn', async (t) => {
   const after = await latest(dm, 'state');
   assert.notStrictEqual(activeChar(after), 'lyra');
 });
+
+test('duplicateCharacter: DM only; a full copy under a new id, unlinked from D&D Beyond', async () => {
+  const srv = await startServer();
+  const dm = connect(srv.port);
+  const player = connect(srv.port, 'role=player&character=orig');
+  try {
+    await dm.opened;
+    await player.opened;
+    dm.send('addCharacter', { id: 'orig' });
+    dm.send('updateCharacter', { id: 'orig', patch: { name: 'Bruna', level: 3, ddbId: '123', resources: [{ id: 'r1', name: 'Rage', max: 3, used: 1, recharge: 'long' }] } });
+    await dm.next('charState', (m) => m.characters.find((c) => c.id === 'orig')?.ddbId === '123');
+
+    player.send('duplicateCharacter', { id: 'orig', newId: 'byplayer' }); // refused
+    dm.send('duplicateCharacter', { id: 'orig', newId: 'copy1' });
+    const m = await dm.next('charState', (s) => s.characters.some((c) => c.id === 'copy1'));
+    assert.ok(!m.characters.some((c) => c.id === 'byplayer'));
+    const copy = m.characters.find((c) => c.id === 'copy1');
+    assert.strictEqual(copy.name, 'Copy of Bruna');
+    assert.strictEqual(copy.ddbId, '');
+    assert.strictEqual(copy.level, 3);
+    assert.strictEqual(copy.resources[0].used, 1);
+    assert.strictEqual(m.characters.find((c) => c.id === 'orig').ddbId, '123');
+    assert.ok(m.characters.findIndex((c) => c.id === 'copy1') < m.characters.findIndex((c) => c.id === 'orig'), 'placed next to it');
+
+    dm.send('duplicateCharacter', { id: 'orig', newId: 'copy1' }); // id taken: ignored
+    dm.send('duplicateCharacter', { id: 'orig', newId: 'copy2' });
+    const m2 = await dm.next('charState', (s) => s.characters.some((c) => c.id === 'copy2'));
+    assert.strictEqual(m2.characters.filter((c) => c.id === 'copy1').length, 1);
+  } finally {
+    dm.close();
+    player.close();
+    await srv.close();
+  }
+});
