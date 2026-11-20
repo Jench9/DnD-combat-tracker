@@ -182,3 +182,24 @@ test('duplicateCharacter: DM only; a full copy under a new id, unlinked from D&D
     await srv.close();
   }
 });
+
+test('addCombatant: a quick-added enemy can start hidden; allies never are', async () => {
+  const srv = await startServer();
+  const dm = connect(srv.port);
+  const player = connect(srv.port, 'role=player&character=x');
+  try {
+    await dm.opened;
+    await player.opened;
+    dm.send('addCombatant', { name: 'Ambusher', init: 12, ac: 13, hp: 9, type: 'monster', hidden: true });
+    dm.send('addCombatant', { name: 'Guard', init: 8, ac: 16, hp: 11, type: 'pc', hidden: true });
+    const st = await dm.next('state', (m) => m.state.combatants.length === 2);
+    assert.strictEqual(st.state.combatants.find((c) => c.name === 'Ambusher').hidden, true);
+    assert.strictEqual(st.state.combatants.find((c) => c.name === 'Guard').hidden, false);
+    const seen = await player.next('state', (m) => m.state.combatants.some((c) => c.name === 'Guard'));
+    assert.ok(!seen.state.combatants.some((c) => c.name === 'Ambusher'));
+  } finally {
+    dm.close();
+    player.close();
+    await srv.close();
+  }
+});

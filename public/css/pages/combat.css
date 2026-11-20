@@ -11,32 +11,6 @@
 }
 .round-count .lbl { font-size: 12px; color: var(--ink-soft); }
 
-.add-form {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr auto auto;
-  gap: 10px;
-  align-items: end;
-}
-@media (max-width: 620px) {
-  .add-form { grid-template-columns: 1fr 1fr; }
-}
-.type-toggle {
-  display: flex;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.type-toggle button {
-  flex: 1;
-  padding: 8px 6px;
-  background: var(--bg);
-  color: var(--ink-soft);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-.type-toggle button.active.pc { background: var(--good); color: #fff; }
-.type-toggle button.active.monster { background: var(--wax); color: #fff; }
-
 /* ---- add characters panel ---- */
 .panel-title {
   font-family: var(--font-display); font-weight: 700; font-size: 13px;
@@ -57,7 +31,6 @@
   background: var(--bg); border: 1px solid var(--line); border-radius: 5px; color: var(--ink);
 }
 
-.hidden-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); margin: -2px 0 8px; }
 .row.hidden-row { border-style: dashed; background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(128, 128, 128, 0.06) 10px 20px); }
 .row.mine { border-left-color: var(--good); }
 .hidden-tag {
@@ -331,10 +304,6 @@ details.ref[open] summary::before { content: "▾ "; }
 
 .footer-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
 .controls-row { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
-.bestiary-search {
-  width: 100%; padding: 7px 10px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 5px;
-  background: var(--bg); color: var(--ink); font: inherit;
-}
 
 /* ---- phones ---- */
 @media (max-width: 600px) {

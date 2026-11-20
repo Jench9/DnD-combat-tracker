@@ -31,6 +31,7 @@ module.exports = {
       hp: typeof hp === 'number' ? hp : 1,
       maxHp: typeof hp === 'number' ? hp : 1,
       type: type === 'monster' ? 'monster' : 'pc',
+      hidden: type === 'monster' && payload.hidden === true,
     });
   },
 

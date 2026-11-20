@@ -42,49 +42,7 @@
 
   <div style="height:18px;"></div>
 
-  <div class="panel">
-    <div class="panel-title"><span class="dm-only">Add characters</span><span class="player-only">Join the fight</span></div>
-    <div class="party-list" id="partyList"></div>
-    <div class="party-hint">Type each player's initiative roll, or leave it empty to roll d20 + DEX automatically.</div>
-  </div>
-
-  <div class="panel dm-only">
-    <div class="panel-title">Add monsters <a class="title-link" href="monsters.html">Manage monsters →</a></div>
-    <label class="hidden-check"><input type="checkbox" id="addHidden"> Add hidden from players (reveal them later with 👁)</label>
-    <input id="bestiarySearch" class="bestiary-search" type="search" placeholder="Search monsters to add…" aria-label="Search monsters">
-    <div class="party-list" id="bestiaryList"></div>
-  </div>
-
-  <div class="panel dm-only">
-    <div class="panel-title">Quick add <span class="title-note">(not saved to the monster library)</span></div>
-    <div class="add-form">
-      <div class="field">
-        <label for="inpName">Name</label>
-        <input id="inpName" type="text" placeholder="e.g. Goblin Archer" maxlength="30">
-      </div>
-      <div class="field">
-        <label for="inpInit">Initiative</label>
-        <input id="inpInit" type="number" placeholder="0">
-      </div>
-      <div class="field">
-        <label for="inpAC">AC</label>
-        <input id="inpAC" type="number" placeholder="0">
-      </div>
-      <div class="field">
-        <label for="inpHP">Max HP</label>
-        <input id="inpHP" type="number" placeholder="0">
-      </div>
-      <div class="field">
-        <label>Type</label>
-        <div class="type-toggle" id="typeToggle">
-          <button type="button" class="active pc" data-type="pc">PC</button>
-          <button type="button" class="monster" data-type="monster">Monster</button>
-        </div>
-      </div>
-      <button class="btn" id="addBtn" style="height:38px;">Add</button>
-    </div>
-  </div>
-
+  <div id="addPanels"></div>
 
   <details class="ref">
     <summary>Quick reference — conditions & actions</summary>

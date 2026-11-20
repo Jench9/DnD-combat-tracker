@@ -1,4 +1,4 @@
-// "Add monsters" panel on the combat page: the saved monster library, with
+// "Enemies" panel (combat/addPanels.js, combat page and map): the saved monster library, with
 // how many to add. Each copy gets its own initiative roll on the server
 // (d20 + bonus); fix any of them by editing the initiative in the list.
 import { creatureIcon } from '../core/creatureIcons.js';
@@ -78,7 +78,13 @@ export function renderBestiary() {
   if (monsters.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'empty';
-    empty.innerHTML = 'No saved monsters yet — create them on the <a href="monsters.html">Monsters</a> page, or quick-add one below.';
+    empty.innerHTML = 'The monster library is empty. Load the SRD monsters to search them here, create your own on the <a href="monsters.html">Monsters</a> page, or quick add one below. ';
+    const load = document.createElement('button');
+    load.type = 'button';
+    load.className = 'btn secondary small';
+    load.textContent = '📚 Load the SRD monsters';
+    load.addEventListener('click', () => { load.disabled = true; load.textContent = 'Loading…'; send('addStarterMonsters'); });
+    empty.appendChild(load);
     list.appendChild(empty);
     return;
   }
@@ -94,7 +100,7 @@ export function renderBestiary() {
   } else if (!shown.length) {
     const none = document.createElement('div');
     none.className = 'empty';
-    none.textContent = 'No monster matches.';
+    none.textContent = 'No monster matches “' + $('bestiarySearch').value.trim() + '” — quick add it below.';
     list.appendChild(none);
   }
 }

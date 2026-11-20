@@ -3,8 +3,9 @@ import { renderNav } from '../core/nav.js';
 import { connectSocket } from '../core/socket.js';
 import { CONDITIONS } from './conditions.js';
 import { renderCombat } from './render.js';
-import { initParty, setPartyData } from './party.js';
-import { initBestiary, setBestiary } from './bestiary.js';
+import { setPartyData } from './party.js';
+import { setBestiary } from './bestiary.js';
+import { initAddPanels, syncAddPanels } from './addPanels.js';
 import { createPortraitLookup } from '../core/portraits.js';
 import { isDm, ownsCharacter } from '../core/identity.js';
 import { combatActionsFor } from '../core/combatActions.js';
@@ -30,7 +31,7 @@ let spells = []; // the spell library
 
 const socket = connectSocket({
   handlers: {
-    state: (msg) => { state = msg.state; render(); setPartyData({ combatants: state.combatants }); },
+    state: (msg) => { state = msg.state; render(); setPartyData({ combatants: state.combatants }); syncAddPanels({ characters, combatants: state.combatants }); },
     itemState: (msg) => { items = msg.items; render(); },
     spellState: (msg) => { spells = msg.spells; render(); },
     charState: (msg) => {
@@ -38,11 +39,12 @@ const socket = connectSocket({
       pics.setCharacters(msg.characters);
       render(); // portraits may have changed
       setPartyData({ characters: msg.characters });
+      syncAddPanels({ characters, combatants: state.combatants });
     },
     monsterState: (msg) => {
       pics.setMonsters(msg.monsters);
       render();
-      setBestiary(msg.monsters);
+      if (isDm()) setBestiary(msg.monsters);
     },
     campaignState: (msg) => setPartyData({ campaigns: msg.campaigns }),
   },
@@ -86,32 +88,7 @@ function render() {
 }
 $('list').addEventListener('focusout', () => setTimeout(() => { if (stale) render(); }, 0));
 
-initParty(send);
-initBestiary(send);
-
-// ---- add combatant
-let selectedType = 'pc';
-$('typeToggle').addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-type]');
-  if (!btn) return;
-  selectedType = btn.dataset.type;
-  document.querySelectorAll('#typeToggle button').forEach((b) => b.classList.remove('active'));
-  btn.classList.add('active');
-});
-
-$('addBtn').addEventListener('click', () => {
-  const name = $('inpName').value.trim();
-  const init = parseInt($('inpInit').value, 10);
-  const ac = parseInt($('inpAC').value, 10) || 10;
-  const hp = parseInt($('inpHP').value, 10) || 1;
-  if (!name || isNaN(init)) {
-    $('inpName').focus();
-    return;
-  }
-  send('addCombatant', { name, init, ac, hp, maxHp: hp, type: selectedType });
-  ['inpName', 'inpInit', 'inpAC', 'inpHP'].forEach((id) => { $(id).value = ''; });
-  $('inpName').focus();
-});
+initAddPanels($('addPanels'), { send, page: 'combat' });
 
 // ---- toolbar
 $('sortBtn').addEventListener('click', () => {

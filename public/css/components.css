@@ -308,3 +308,28 @@ body.is-dm .player-only { display: none !important; }
 /* A character's familiar under it in "Add characters" (party.js). */
 .party-row.party-fam { padding-top: 0; padding-left: 46px; border-top: 0; }
 @media (max-width: 600px) { .party-init { width: 84px; } }
+
+/* ---- Allies / Enemies add panels (core/addPanels.js): combat page + map ---- */
+.add-panel { padding: 0; }
+.add-panel > summary {
+  display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none;
+  padding: 14px 18px; margin: 0;
+  font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  letter-spacing: 0.6px; text-transform: uppercase; color: var(--ink);
+}
+.add-panel > summary::-webkit-details-marker { display: none; }
+.add-panel > summary::before { content: '▸'; color: var(--ink-soft); transition: transform 0.15s; }
+.add-panel[open] > summary::before { transform: rotate(90deg); }
+.add-panel > summary .add-note { margin-left: auto; text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-weight: 400; font-size: 12.5px; color: var(--ink-soft); }
+.add-panel.allies > summary { border-left: 4px solid var(--good); border-radius: inherit; }
+.add-panel.enemies > summary { border-left: 4px solid var(--wax); border-radius: inherit; }
+.add-body { padding: 0 18px 16px; }
+.add-sub { font-family: var(--font-display); font-weight: 700; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-soft); margin: 16px 0 8px; }
+.add-form { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
+@media (max-width: 620px) { .add-form { grid-template-columns: 1fr 1fr; } }
+.hidden-check { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); margin: 0 0 8px; }
+.bestiary-search {
+  width: 100%; padding: 8px 10px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--bg); color: var(--ink); font: inherit;
+}
+
