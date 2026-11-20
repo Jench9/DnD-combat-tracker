@@ -256,6 +256,22 @@
 .hp-bar-fill.mid { background: var(--gold); }
 .hp-bar-fill.low { background: var(--wax); }
 
+.res-line { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; margin-top: 7px; }
+.res-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; padding: 1px 2px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+}
+.res-chip b { font-variant-numeric: tabular-nums; }
+.res-chip.empty { opacity: 0.55; }
+.res-chip.empty b { color: var(--wax); }
+.res-chip button {
+  background: none; border: none; color: inherit; font-size: 12px; font-weight: 700;
+  width: 20px; height: 20px; border-radius: 50%; cursor: pointer; padding: 0; line-height: 1;
+}
+.res-chip button:hover:not(:disabled) { background: var(--line); }
+.res-chip button:disabled { opacity: 0.3; cursor: default; }
+.res-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin-left: 4px; }
 .conditions { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
 .chip {
   font-size: 11px;

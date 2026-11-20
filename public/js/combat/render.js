@@ -173,6 +173,62 @@ function renderConditions(c, ctx, canEdit) {
   return condWrap;
 }
 
+// A character's limited-use resources (Rage, Focus Points…) and spell slots
+// as −/+ chips: "Rage 2/3" counts what's left; − spends one, + gets one back.
+// Only for whoever controls the combatant (the sheet is theirs to change).
+const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'];
+function renderResources(ch, send) {
+  const resources = (ch.resources || []).filter((r) => r.max > 0);
+  const slots = (ch.spellSlots || []).map((s, i) => ({ ...s, i })).filter((s) => s.max > 0);
+  if (!resources.length && !slots.length) return null;
+  const line = document.createElement('div');
+  line.className = 'res-line';
+  const pill = (label, left, max, title, set) => {
+    const el = document.createElement('span');
+    el.className = 'res-chip' + (left <= 0 ? ' empty' : '');
+    el.title = title;
+    const btn = (t, aria, used, off) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = t;
+      b.setAttribute('aria-label', aria);
+      b.disabled = off;
+      b.addEventListener('click', () => set(used));
+      return b;
+    };
+    const used = max - left;
+    const name = document.createElement('span');
+    name.className = 'res-name';
+    name.textContent = label;
+    const count = document.createElement('b');
+    count.textContent = left + '/' + max;
+    el.append(btn('−', 'Spend one ' + label, used + 1, left <= 0), name, count, btn('+', 'Get one ' + label + ' back', used - 1, used <= 0));
+    line.appendChild(el);
+  };
+  resources.forEach((r) => {
+    const left = r.max - Math.min(r.max, r.used || 0);
+    const rest = r.recharge === 'short' ? 'short or long rest' : r.recharge === 'long' ? 'long rest' : 'no automatic recharge';
+    pill(r.name, left, r.max, `${r.name}: ${left} of ${r.max} left (${rest})`, (used) => send('updateCharacter', {
+      id: ch.id,
+      patch: { resources: ch.resources.map((x) => (x.id === r.id ? { ...x, used: Math.max(0, Math.min(x.max, used)) } : x)) },
+    }));
+  });
+  slots.forEach((s) => {
+    const left = s.max - Math.min(s.max, s.used || 0);
+    pill(ORD[s.i], left, s.max, `${ORD[s.i]}-level spell slots: ${left} of ${s.max} left`, (used) => send('updateCharacter', {
+      id: ch.id,
+      patch: { spellSlots: ch.spellSlots.map((x, i) => (i === s.i ? { ...x, used: Math.max(0, Math.min(x.max, used)) } : x)) },
+    }));
+  });
+  if (slots.length) {
+    const tag = document.createElement('span');
+    tag.className = 'res-tag';
+    tag.textContent = 'slots';
+    line.insertBefore(tag, line.children[resources.length]);
+  }
+  return line;
+}
+
 // Which combatants have their stat block expanded (survives redraws).
 const openStats = new Set();
 
@@ -414,6 +470,9 @@ function renderRow(c, idx, state, ctx) {
     ds.appendChild(deathSaveDots(c, 'fail', c.deathFail, send, canEdit));
     main.appendChild(ds);
   }
+
+  const res = canEdit && sheet && renderResources(sheet, send);
+  if (res) main.appendChild(res);
 
   main.appendChild(renderConditions(c, ctx, canEdit));
   const notes = notesFor(c);

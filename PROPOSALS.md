@@ -99,7 +99,7 @@ These are on the sheet but missing from the model today: inspiration (toggle), e
 to `blankCharacter` / `sanitizeCharacterPatch` and fill them from D&D Beyond
 (`inspiration`, `currencies`) on import/sync.
 
-### 4.2 Resources in the combat row — S
+### 4.2 ~~Resources in the combat row~~ — done
 Show a character's tracked resources (Ki, Rage, Channel Divinity, spell slots)
 as small −/+ chips in their combat row, so players don't have to switch to the sheet.
 
