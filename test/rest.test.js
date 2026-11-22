@@ -1,11 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert');
+// First: sets DATA_DIR / KIT_AUTH before anything reads src/config.
+const { startServer, connect } = require('./helpers');
 const rest = require('../src/features/characters/rest');
 const { blankCharacter, sanitizeCharacterPatch } = require('../src/features/characters/model');
 const { mapDndBeyondData } = require('../src/features/imports/dndbeyond/mapper');
 const { planResources, mergeResources } = require('../src/features/imports/dndbeyond/resources');
 const { planSpells } = require('../src/features/imports/dndbeyond/spells');
-const { startServer, connect } = require('./helpers');
 
 const char = (patch) => sanitizeCharacterPatch(blankCharacter('c1'), patch);
 

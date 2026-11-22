@@ -15,7 +15,7 @@ test('campaigns: create, assign characters, rename, delete keeps characters', as
   a.send('addCampaign', { id: 'BAD ID!', name: 'x' }); // ignored
   a.send('addCampaign', { id: 'camp2', name: '' }); // ignored
   const created = await b.next('campaignState', (m) => m.campaigns.length === 1);
-  assert.deepStrictEqual(created.campaigns, [{ id: 'camp1', name: 'Curse of Strahd' }]);
+  assert.deepStrictEqual(created.campaigns, [{ id: 'camp1', name: 'Curse of Strahd', dmIds: [] }]);
 
   a.send('addCharacter', { id: 'pc1', campaignId: 'camp1' });
   a.send('addCharacter', { id: 'pc2' });

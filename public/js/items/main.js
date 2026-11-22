@@ -3,6 +3,7 @@
 // can edit anything (the server enforces the same rules).
 import { $, uid, debounce } from '../core/dom.js';
 import { renderNav } from '../core/nav.js';
+import { createCappedGroups } from '../core/cappedGroup.js';
 import { connectSocket } from '../core/socket.js';
 import { isDm, myCharacterId } from '../core/identity.js';
 import { itemSummary } from './format.js';
@@ -97,6 +98,11 @@ function toggleDetails(row, it) {
   row.appendChild(n);
 }
 
+// Long groups show their first 30 rows; an expanded group stays open until
+// a filter changes (server echoes redraw the list too).
+const capped = createCappedGroups({ cap: 30 });
+const refilter = () => { capped.reset(); renderList(); };
+
 function renderList() {
   const list = $('itemList');
   list.innerHTML = '';
@@ -122,19 +128,19 @@ function renderList() {
     list.appendChild(head);
     const box = document.createElement('div');
     box.className = 'item-group';
-    group.forEach((it) => box.appendChild(renderRow(it)));
+    capped.fill(box, String(title), group, renderRow, 'items'); // first 30 + "Show all" (phones)
     list.appendChild(box);
   });
 }
 
-$('search').addEventListener('input', renderList);
-$('editionFilter').addEventListener('change', renderList);
+$('search').addEventListener('input', refilter);
+$('editionFilter').addEventListener('change', refilter);
 $('typeTabs').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-type]');
   if (!b) return;
   typeFilter = b.dataset.type;
   document.querySelectorAll('#typeTabs button').forEach((x) => x.classList.toggle('active', x === b));
-  renderList();
+  refilter();
 });
 
 // ---- editor

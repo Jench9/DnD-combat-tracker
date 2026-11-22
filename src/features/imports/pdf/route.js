@@ -5,6 +5,7 @@ const characters = require('../../characters/service');
 const { mapPdfFormFields } = require('./mapper');
 const { readFormFields, readText } = require('./reader');
 const { identityFromHeaders, isDm } = require('../../../core/identity');
+const { campaignForNewCharacter } = require('../../../core/access');
 
 // POST /api/import/pdf  (multipart field "file", optional field "campaignId")
 function createPdfRouter({ onCharactersChanged }) {
@@ -21,7 +22,7 @@ function createPdfRouter({ onCharactersChanged }) {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded.' });
     }
-    const campaignId = req.body && req.body.campaignId;
+    const campaignId = campaignForNewCharacter(identityFromHeaders(req), req.body && req.body.campaignId);
     try {
       const fields = await readFormFields(req.file.buffer);
 

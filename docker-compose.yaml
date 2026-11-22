@@ -3,6 +3,18 @@ services:
       build: .
       ports:
         - "3000:3000"
+        # Behind an HTTPS proxy or tunnel on this machine, listen only locally:
+        # - "127.0.0.1:3000:3000"
       restart: unless-stopped
       volumes:
         - ./data:/app/data   # saved characters survive restarts and rebuilds
+      environment:
+        # Logins (default): the first start prints a setup code in the log
+        # (docker compose logs combat-tracker) to create the DM account.
+        # KIT_AUTH: open          # no login at all — trusted home network only
+        # Behind an HTTPS proxy / tunnel (Caddy, nginx, Cloudflare Tunnel…):
+        # TRUST_PROXY: "1"        # trust its X-Forwarded-* headers (HTTPS, client IP)
+        # COOKIE_SECURE: "1"      # session cookie only over HTTPS
+        # SESSION_DAYS: "30"      # how long a login lasts
+        # KIT_SETUP_CODE: "..."   # fixed setup code instead of a random one
+        NODE_ENV: production

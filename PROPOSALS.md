@@ -120,35 +120,26 @@ The hub knows each socket's identity. Send the set of character ids with a
 live connection (just ids, nothing secret) so the "Who are you?" screen marks
 "playing on another device" and two players don't pick the same character.
 
-### 4.2 Just watching — S
-A third option on the join screen: a spectator with no character (the
-players' view, can't change anything) for someone at the table who isn't
-playing, or a second screen that isn't the TV.
+### 4.2 Private libraries per DM — M
+Campaigns already have their own DMs, fight and map; the monster, item
+and spell libraries and the map backgrounds are still shared by all DMs.
+Mark custom entries as "mine" (only that DM and its campaigns see them),
+keeping the SRD shared.
 
-### 4.3 Table and DM passwords (optional) — M
-A shared password env var (`KIT_PASSWORD`): the join screen asks for it, and
-REST + WS check a signed cookie. A separate `KIT_DM_PASSWORD` keeps players
-from choosing DM. Only needed if the server is reachable beyond the home network.
+### 4.3 Two-factor login for DM accounts — M
+Optional TOTP (authenticator app) for DM accounts, since they can see and
+change everything: a QR code on the Players page, a 6-digit code after the
+password, and one-time recovery codes.
 
 ---
 
 ## 5. Housekeeping
 
-### 5.1 Shorter library lists on phones — S
-Items/Spells render ~1,000 rows. `public/js/core/cappedGroup.js`
-(`createCappedGroups`: first 30 per group + "Show all") is written but not
-used yet: wire it into the Items and Spells pages.
-
-### 5.2 Browser smoke tests — M
-Most new UI (builder wizard, level up, familiars, add panels, campaign
-manager) is only covered by server tests. A few Playwright tests (dev
-dependency only, not in the Docker image) that open each page as DM and as a
-player and check for console errors and the main flows would catch broken
-wiring before a game night.
-
-### 5.3 Install as an app — S
-A web app manifest and icons so phones can "Add to Home Screen" and open the
-kit full screen without the browser bar (no offline mode: it needs the server).
+### 5.1 More browser tests — S each
+`npm run test:e2e` covers page loads and the main flows. Worth adding as
+features change: phone viewport runs (360 px) of combat and the map, the
+familiar chooser, rests, the D&D Beyond import with a mocked endpoint, map
+drag-and-drop, and the TV view following the turn.
 
 ---
 
@@ -160,4 +151,4 @@ All S, and they fit together as one "smoother combat" session:
 2. **2.2** Death saves with a roll button.
 3. **2.5** Reaction used.
 4. **1.1** Distance ruler.
-5. **5.1** Wire the capped lists into Items/Spells (the helper is already there).
+5. **5.1** A browser test for each of them.

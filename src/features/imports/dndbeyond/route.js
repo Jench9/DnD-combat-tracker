@@ -10,6 +10,7 @@ const items = require('../../items/service');
 const spellLibrary = require('../../spells/service');
 const { uid } = require('../../../core/ids');
 const { identityFromHeaders, isDm, owns } = require('../../../core/identity');
+const { campaignForNewCharacter } = require('../../../core/access');
 
 // Fetches and maps a D&D Beyond character. Resolves to { mapped } or
 // { status, error } ready to send back to the client.
@@ -84,7 +85,7 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsCh
       applySpells(mapped);
       mapped.patch.modifiers = mergeModifiers([], mapped.data, uid);
       mapped.patch.resources = planResources(mapped.data, mapped.patch, uid);
-      const ch = characters.addImported({ ...mapped.patch, campaignId: req.body.campaignId }, mapped.notesPrefix);
+      const ch = characters.addImported({ ...mapped.patch, campaignId: campaignForNewCharacter(identityFromHeaders(req), req.body.campaignId) }, mapped.notesPrefix);
       onCharactersChanged();
       res.json({ character: ch });
     } catch (err) {

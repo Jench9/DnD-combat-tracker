@@ -466,3 +466,7 @@ textarea.big { min-height: 160px; resize: vertical; font-family: var(--font-body
   .cm-wrap { grid-template-columns: 1fr; }
   .cm-side { border-right: none; border-bottom: 1px solid var(--line); padding: 0 0 12px; }
 }
+.cm-dms { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
+.cm-dms-label { font-size: 11.5px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.4px; }
+.cm-dm { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); cursor: pointer; }
+.cm-dm:has(input:checked) { border-color: var(--gold); }

@@ -37,10 +37,17 @@ npm test
 
 Runs the server tests (`node:test`, no extra dependencies): WebSocket flows for both features, input sanitising, and the importers' mapping logic.
 
+```bash
+npx playwright install chromium   # once: downloads a headless Chromium (~110 MB)
+npm run test:e2e
+```
+
+Browser smoke tests (Playwright, a dev dependency — not installed in the Docker image): every page opens without script errors as the DM and as a player, plus the main flows (join screen, Allies/Enemies panels, resource chips, campaign manager, duplicate, guided creation, level up, capped library lists). They start their own server on port 3199 with a temporary data folder, so your `data/` is never touched.
+
 ## Letting friends connect
 
 - **Same wifi**: they open `http://<your-LAN-IP>:3000`. Find your IP with `ipconfig getifaddr en0` (Mac) or `ipconfig` (Windows).
-- **Different networks**: use a tunnel (`ngrok`, `cloudflared`) or deploy to a VPS / container platform behind a reverse proxy with HTTPS.
+- **Different networks**: see [Putting it on the internet](#putting-it-on-the-internet) (HTTPS via a tunnel or a reverse proxy). Everyone logs in — see [Accounts](#accounts-dm-and-players).
 
 ## SRD content
 
@@ -76,15 +83,55 @@ Both pages have two panels you can open and close: **🛡 Allies** — the saved
 - **From a Mac (best):** Control Center → Screen Mirroring → your Apple TV → *Use As Separate Display*. On the Battle Map, click **📺 TV view**, drag the new window onto the TV display, click **Full screen**. You keep using your own screen as the DM.
 - **From an iPad:** open `http://<server>:3000/tv` in Safari, turn the iPad to landscape, Control Center → Screen Mirroring → your Apple TV. (iPhone works too, with more black bars.)
 
+With accounts, the TV's browser has to log in once (the DM's account is fine: the TV view always shows the players' view).
+
 Other screens: an HDMI cable from a laptop (same as the Mac steps), Chromecast "Cast tab" from Chrome, or a TV/stick with a modern browser opening `/tv` directly.
 
-## DM and players
+## Accounts: admin, DMs and players
 
-There are no accounts. The first time someone opens the app they pick **I'm the DM**, their character, or **Create a new character**; the badge in the top bar switches later. The DM sees and controls everything. Players control only their own character (sheet, HP and conditions in combat, map token, ending their own turn) and never receive DM-only information: monster HP/AC/stats (they see *Unhurt / Hurt / Bloodied / Near death / Down*), combatants the DM has hidden, real names behind an alias, DM notes, or the monster library. It's not a login: anyone can choose to be the DM — it just keeps secrets off the players' screens.
+Everyone logs in with a username and password. There are three kinds of account:
+
+- **Admin** — runs the server: manages every account and campaign, is DM of every table, makes backups. The first account is the admin.
+- **DM** — can create new campaigns, and runs the ones they created.
+- **Player** — plays their characters.
+
+**Being DM is per campaign**, so one account can be DM in one campaign and a player in another. Whoever runs a campaign — its creator, or anyone the admin ticks under *Run by* in **Manage campaigns** (a player account too) — sees and controls only that campaign's characters, fight and battle map, and plays their own characters at the other tables. Switch between the two from the badge in the top bar.
+
+**Running and playing at the same table:** the admin (or a DM) can also play a character in a campaign they run — click **+ New character** under that campaign on the "Who are you playing?" screen (a character made from a player view is yours; one made from the DM view is an NPC). The top bar then shows **🧝 Player view** / **👑 DM view** to switch in one click; the player view shows exactly what the players see.
+
+**Each campaign is its own table**: its own fight (Combat Tracker) and battle map, so two groups can play at the same time without seeing each other's monsters. Characters in no campaign share the *No campaign* table (that's where everything happens if you don't use campaigns). The monster, item and spell libraries and the map backgrounds are shared by all DMs.
+
+- **First start:** open the app — it asks to create the **admin account**. You need the **setup code** printed in the server log (`docker compose logs combat-tracker`, line "No DM account yet…"), which proves you run the server. Then you land on the **🔑 Players** page.
+- **Inviting:** on *Players*, **Create invite link** — choose the role (the admin can invite players, DMs and admins), tick the campaigns they join and the characters they'll play — and send the link. It works once, for 7 days; they choose a username and password. A DM can invite players into their own campaigns.
+- **A DM's first campaign:** after joining, a DM clicks **New campaign** on the "Who are you playing?" screen and is its DM at once. The admin can change who runs a campaign in **Manage campaigns** on the Characters page (*Run by*: any account, so a player can co-DM one campaign and keep playing in another).
+- **Picking a table:** the badge in the top bar opens "Who are you playing?": one section per table you're at — **Run this table as the DM** (if you run it), your characters there, **+ New character** (it joins that table). The badge shows where you are ("👑 DM · Curse of Strahd").
+- **Characters:** an account can play several characters; characters a player creates are theirs. On *Players* the admin (or the campaign's DM) adds accounts to campaigns and gives or takes away characters. Players can't move their characters to another campaign.
+- **Forgotten password:** the admin makes a **Password reset link**. Everyone can **Change password** from the badge menu (other devices are logged out). The admin can also change roles, **Disable**, **Log out everywhere** or delete an account (its characters stay).
+- **What players can't do or see:** they control only their own characters and see only the characters at their tables; they never receive DM-only information — monster HP/AC/stats (they see *Unhurt / Hurt / Bloodied / Near death / Down*), hidden combatants, real names behind an alias, DM notes, the monster library — or other people's accounts. The server checks every action against the logged-in account and table, not against what the browser claims.
+- **No login at home:** set `KIT_AUTH=open` (see `docker-compose.yaml`) to go back to the old behaviour — one table, each browser just picks *I'm the DM* or a character. Only on a network you trust.
+
+## Putting it on the internet
+
+The app speaks plain HTTP; put something in front of it that adds **HTTPS** (passwords and the session cookie must not travel unencrypted). Any of these work:
+
+- **A tunnel — no fixed IP, no open ports** (easiest while you don't have an address): [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) (`cloudflared tunnel --url http://localhost:3000`, or a named tunnel on your own domain) or [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) (`tailscale funnel 3000`). HTTPS is handled by the tunnel.
+- **A reverse proxy with your domain** (needs the domain pointing at the server and ports 80/443 open): e.g. [Caddy](https://caddyserver.com/), which gets a Let's Encrypt certificate by itself — a `Caddyfile` with `kit.example.com { reverse_proxy combat-tracker:3000 }` and a `caddy` service in `docker-compose.yaml`. nginx or Traefik work the same way (pass WebSocket upgrades through).
+
+Then, in `docker-compose.yaml`:
+
+```yaml
+    environment:
+      TRUST_PROXY: "1"      # the proxy/tunnel is trusted for X-Forwarded-Proto/For
+      COOKIE_SECURE: "1"    # the login cookie is only sent over HTTPS
+    ports:
+      - "127.0.0.1:3000:3000"   # if the proxy/tunnel runs on the same machine: no direct access from outside
+```
+
+Built in: passwords hashed with scrypt, sessions in an `HttpOnly`, `SameSite=Lax` cookie (only a hash of each session token is stored), login attempts limited (10 per 15 minutes per address and per username), invite and reset links used once and stored as hashes, requests and WebSocket connections from other sites refused, security headers (Content-Security-Policy, no framing, `nosniff`), WebSocket messages capped at 4 MB. Accounts and sessions live in `data/accounts.json`, `invites.json` and `sessions.json`; they are **not** included in *Download backup* (no password hashes in a downloaded file) and a restore never replaces them — copy them along with `data/` when moving the server.
 
 ## Data persistence
 
-Character sheets are saved to `data/characters.json` (half a second after each change, and on shutdown) and loaded again on startup, so they survive restarts. With Docker, `docker-compose.yaml` mounts `./data` into the container, so they also survive rebuilds. Set `DATA_DIR` to store the file somewhere else. Back up that folder to back up your characters.
+Each campaign's fight and map are saved in `combat.json` / `map.json` (one entry per campaign; files from before campaigns had their own table become the *No campaign* table). Character sheets are saved to `data/characters.json` (half a second after each change, and on shutdown) and loaded again on startup, so they survive restarts. With Docker, `docker-compose.yaml` mounts `./data` into the container, so they also survive rebuilds. Set `DATA_DIR` to store the file somewhere else. Back up that folder to back up your characters.
 
 Campaigns, the monster, item and spell libraries and the list of battle map backgrounds are saved the same way (`data/campaigns.json`, `data/monsters.json`, `data/map-backgrounds.json`); background images themselves are files in `data/maps/`.
 

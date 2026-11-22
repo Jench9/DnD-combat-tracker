@@ -33,7 +33,7 @@ test('backup / restore: DM only, full round trip, rebroadcast, safety copy', asy
   const bundle = await resp.json();
   assert.strictEqual(bundle.format, 'adventurers-kit-backup');
   assert.ok(bundle.files['characters.json'].some((c) => c.name === 'Before Backup'));
-  assert.ok(bundle.files['combat.json'].combatants.some((c) => c.name === 'Goblin 1'), 'pending writes flushed first');
+  assert.ok(bundle.files['combat.json'].tables[''].combatants.some((c) => c.name === 'Goblin 1'), 'pending writes flushed first');
   assert.strictEqual(bundle.files['maps/abcdef12.png'], Buffer.from([137, 80, 78, 71, 1, 2, 3]).toString('base64'));
   assert.ok(bundle.files['items.json'].length > 900);
 

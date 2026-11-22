@@ -9,8 +9,12 @@ const backup = require('./service');
 
 function createBackupRouter({ onRestored }) {
   const router = express.Router();
-  const dmOnly = (req, res, next) => (isDm(identityFromHeaders(req))
-    ? next() : res.status(403).json({ error: 'Only the DM can back up or restore the data.' }));
+  // Everyone's data: the admin (open mode: the DM).
+  const dmOnly = (req, res, next) => {
+    const id = identityFromHeaders(req);
+    const ok = id.accountId ? id.accountRole === 'admin' : isDm(id);
+    return ok ? next() : res.status(403).json({ error: 'Only the admin can back up or restore the data.' });
+  };
 
   router.get('/backup', dmOnly, (req, res) => {
     const now = new Date(); // the server's local date

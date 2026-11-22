@@ -1,8 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert');
+// First: sets DATA_DIR / KIT_AUTH before anything reads src/config.
+const { startServer, connect } = require('./helpers');
 const { planInventory } = require('../src/features/imports/dndbeyond/inventory');
 const { SRD_ITEMS } = require('../src/srd');
-const { startServer, connect } = require('./helpers');
 
 const LIBRARY = SRD_ITEMS.map((it, i) => ({ id: `lib${i}`, properties: [], magicBonus: 0, ...it }));
 const libId = (name) => LIBRARY.find((i) => i.name === name).id;

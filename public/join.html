@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Join the table — Adventurer's Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/login.css">
+</head>
+<body>
+<main class="auth-wrap">
+  <div class="auth-box">
+    <div class="auth-brand">⚔️ Adventurer's Kit</div>
+    <div id="inviteLoading" class="auth-hint">Checking your link…</div>
+    <div id="inviteBad" class="auth-form" hidden>
+      <h1>This link doesn't work</h1>
+      <p class="auth-hint" id="inviteBadText"></p>
+      <a class="btn secondary auth-submit" href="/login.html">Go to the login page</a>
+    </div>
+    <form id="inviteForm" class="auth-form" hidden>
+      <h1 id="inviteTitle">Join the table</h1>
+      <p class="auth-hint" id="inviteText"></p>
+      <label class="join-field" id="inviteUserField"><span>Choose a username</span><input id="inviteUser" name="username" autocomplete="username" maxlength="30"></label>
+      <label class="join-field"><span>Password (8+ characters)</span><input id="invitePass" name="password" type="password" autocomplete="new-password" required minlength="8"></label>
+      <label class="join-field"><span>Password again</span><input id="invitePass2" type="password" autocomplete="new-password" required></label>
+      <div class="join-msg" id="inviteMsg" role="alert"></div>
+      <button class="btn auth-submit" type="submit" id="inviteSubmit">Create my account</button>
+    </form>
+  </div>
+</main>
+<script type="module" src="js/login/join.js"></script>
+</body>
+</html>

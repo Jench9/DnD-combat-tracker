@@ -3,6 +3,7 @@
 // create its page (public/<page>.html + js/<id>/ + css/pages/<id>.css).
 // `dmOnly` tools are hidden from players (the server doesn't send them the data either).
 // `short`: the name in the top bar (defaults to `title`); home cards use `title`.
+// `accountsOnly`: only when the server uses accounts (see core/identity.js).
 export const TOOLS = [
   {
     id: 'combat',
@@ -50,4 +51,16 @@ export const TOOLS = [
     short: 'Map',
     description: 'A grid with a token for everyone in the fight — drag them around to track positions.',
   },
+  {
+    id: 'players',
+    href: 'players.html',
+    icon: '🔑',
+    title: 'Players',
+    dmOnly: true,
+    accountsOnly: true,
+    description: 'Invite players, choose which characters each one plays, reset passwords.',
+  },
 ];
+
+// The tools this browser may see.
+export const visibleTools = ({ isDm, accounts }) => TOOLS.filter((t) => (!t.dmOnly || isDm) && (!t.accountsOnly || accounts));

@@ -1,6 +1,8 @@
 // Quick status: Heroic Inspiration, exhaustion (0–6) and coins.
 const test = require('node:test');
 const assert = require('node:assert');
+// First: sets DATA_DIR / KIT_AUTH before anything reads src/config.
+require('./helpers'); // sets DATA_DIR / KIT_AUTH
 const rest = require('../src/features/characters/rest');
 const { blankCharacter, sanitizeCharacterPatch } = require('../src/features/characters/model');
 const { mapDndBeyondData } = require('../src/features/imports/dndbeyond/mapper');

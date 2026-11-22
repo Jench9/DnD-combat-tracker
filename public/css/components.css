@@ -358,3 +358,19 @@ body.is-dm .player-only { display: none !important; }
 .party-others > summary { cursor: pointer; padding: 10px 0; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
 .party-others[open] { padding-bottom: 12px; }
 .party-others > .party-group + .party-group { margin-top: 14px; }
+/* "Show all N …" under a capped group (core/cappedGroup.js: Items, Spells). */
+.show-more { grid-column: 1 / -1; justify-self: center; margin: 4px 0 10px; }
+/* "Who are you playing?" in accounts mode: who's signed in + change password (core/join.js). */
+.join-account { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-soft); }
+.join-account-name { flex: 1 1 100%; }
+.join-link { background: none; border: none; padding: 0; color: var(--blue); font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline; }
+.join-field { display: flex; flex-direction: column; gap: 4px; margin: 0 0 10px; font-size: 13px; color: var(--ink-soft); }
+.join-field input {
+  padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; font-size: 15px;
+}
+.join-field input:focus { outline: none; border-color: var(--gold); }
+.join-msg { min-height: 1.2em; font-size: 13px; color: var(--wax); margin: 2px 0 10px; }
+.join-btns { display: flex; justify-content: flex-end; gap: 8px; }
+/* DM view ⇄ player view at a table you run and play at (core/join.js). */
+.id-badge.view-switch { border-style: dashed; }
+@media (max-width: 760px) { .id-badge.view-switch { max-width: 44px; overflow: hidden; white-space: nowrap; } }

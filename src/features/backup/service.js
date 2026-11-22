@@ -25,7 +25,10 @@ const KEEP_SAFETY_COPIES = 5;
 const JSON_RE = /^[a-z][a-z-]{0,40}\.json$/;
 const MARKER_RE = /^[a-z][a-z-]{0,40}\.srd-version$/;
 const IMAGE_RE = /^maps\/[a-f0-9]{8}\.(?:webp|jpg|png|gif)$/;
-const isDataPath = (p) => JSON_RE.test(p) || MARKER_RE.test(p) || IMAGE_RE.test(p);
+// Logins are never in a backup (no password hashes in a downloaded file)
+// and a restore never replaces them (it can't lock anyone out).
+const AUTH_FILES = new Set(['accounts.json', 'invites.json', 'sessions.json']);
+const isDataPath = (p) => !AUTH_FILES.has(p) && (JSON_RE.test(p) || MARKER_RE.test(p) || IMAGE_RE.test(p));
 
 class BackupError extends Error {}
 
@@ -33,7 +36,7 @@ class BackupError extends Error {}
 function dataFiles() {
   const out = [];
   const list = (dir) => { try { return fs.readdirSync(dir); } catch { return []; } };
-  list(DATA_DIR).forEach((f) => { if (JSON_RE.test(f) || MARKER_RE.test(f)) out.push(f); });
+  list(DATA_DIR).forEach((f) => { if (isDataPath(f)) out.push(f); });
   list(path.join(DATA_DIR, 'maps')).forEach((f) => { if (IMAGE_RE.test('maps/' + f)) out.push('maps/' + f); });
   return out.sort();
 }

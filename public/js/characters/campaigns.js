@@ -7,6 +7,7 @@ import { $, uid } from '../core/dom.js';
 import { store, ALL, NONE } from './store.js';
 import { campaignsOf, inCampaign } from '../core/campaigns.js';
 import { el, makeDialog, button } from './builder/common.js';
+import { isAdmin, authMode } from '../core/identity.js';
 
 const FILTER_KEY = 'kit.campaignFilter';
 let loaded = false; // campaign list received from the server at least once
@@ -126,6 +127,31 @@ function drawManager() {
       }));
     head.appendChild(tools);
     main.appendChild(head);
+
+    // Admin: who runs it (its own fight and map). Any account: someone can
+    // be DM here and a player in another campaign.
+    if (authMode() === 'accounts' && isAdmin()) {
+      const dms = (store.accounts || []).filter((a) => a.role !== 'admin')
+        .sort((a, b) => (a.role === b.role ? a.username.localeCompare(b.username) : a.role === 'dm' ? -1 : 1));
+      const row = el('div', 'cm-dms');
+      row.appendChild(el('span', 'cm-dms-label', 'Run by'));
+      if (!dms.length) row.appendChild(el('span', 'cm-empty', 'you (admin). Invite a DM on the Players page to hand it over.'));
+      dms.forEach((a) => {
+        const l = el('label', 'cm-dm');
+        const cb = el('input');
+        cb.type = 'checkbox';
+        cb.checked = (camp.dmIds || []).includes(a.id);
+        cb.addEventListener('change', () => {
+          const ids = new Set(camp.dmIds || []);
+          if (cb.checked) ids.add(a.id); else ids.delete(a.id);
+          camp.dmIds = [...ids]; // optimistic
+          store.send('setCampaignDms', { id: camp.id, dmIds: camp.dmIds });
+        });
+        l.append(cb, document.createTextNode(a.username + (a.role === 'player' ? ' (player)' : '')));
+        row.appendChild(l);
+      });
+      main.appendChild(row);
+    }
 
     const filter = el('input', 'cm-filter');
     filter.type = 'search';

@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
+// First: sets DATA_DIR / KIT_AUTH before anything reads src/config.
+require('./helpers'); // sets DATA_DIR / KIT_AUTH
 const { fetchAvatar } = require('../src/features/imports/dndbeyond/client');
 const { mapDndBeyondData } = require('../src/features/imports/dndbeyond/mapper');
 const { MAX_PORTRAIT_BYTES } = require('../src/config');

@@ -1,6 +1,6 @@
 // Renders the shared top nav into <nav class="app-nav" data-active="<id>">.
-import { TOOLS } from './tools.js';
-import { isDm } from './identity.js';
+import { visibleTools } from './tools.js';
+import { isDm, authMode } from './identity.js';
 import { initIdentity } from './join.js';
 import { manualDice, setManualDice } from './dice.js';
 import './diceDialog.js'; // asks for the dice when "roll my own dice" is on
@@ -45,7 +45,7 @@ export function renderNav() {
   const nav = document.querySelector('nav.app-nav');
   if (!nav) return;
   const active = nav.dataset.active;
-  const items = [{ id: 'home', href: 'index.html', icon: '🏠', title: 'Home', short: '' }, ...TOOLS.filter((t) => !t.dmOnly || isDm())];
+  const items = [{ id: 'home', href: 'index.html', icon: '🏠', title: 'Home', short: '' }, ...visibleTools({ isDm: isDm(), accounts: authMode() === 'accounts' })];
   nav.innerHTML = '';
   const tabs = document.createElement('div');
   tabs.className = 'nav-tabs';

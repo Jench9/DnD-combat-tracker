@@ -14,4 +14,19 @@ module.exports = {
   MAX_MAP_BYTES: 20 * 1024 * 1024, // 20MB — battle map background uploads
   MAP_MAX_SIDE: 2560, // px — larger backgrounds are shrunk (when sharp is available)
   MAX_BACKUP_BYTES: 500 * 1024 * 1024, // 500MB — a restore upload (map images included)
+  // Who may connect (core/identity.js):
+  //   'accounts' (default) — log in with a username and password; the DM
+  //     account is created on first start with a one-time setup code
+  //     printed in the server log.
+  //   'open' — no login: each browser says whether it's the DM or which
+  //     character it plays (trusted home network only; also the tests).
+  AUTH_MODE: process.env.KIT_AUTH === 'open' ? 'open' : 'accounts',
+  // Behind an HTTPS proxy (Caddy, nginx, a tunnel): how many proxies to
+  // trust for X-Forwarded-Proto/For (Express "trust proxy"). 0 = none.
+  TRUST_PROXY: Number.parseInt(process.env.TRUST_PROXY || '0', 10) || 0,
+  // Session cookie lifetime; also forces the Secure flag when set to 1
+  // (otherwise Secure is used whenever the request came over HTTPS).
+  SESSION_DAYS: Number.parseInt(process.env.SESSION_DAYS || '30', 10) || 30,
+  COOKIE_SECURE: process.env.COOKIE_SECURE === '1',
+  MAX_WS_MESSAGE_BYTES: 4 * 1024 * 1024, // a sheet patch with a portrait fits easily
 };

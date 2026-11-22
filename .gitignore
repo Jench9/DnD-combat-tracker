@@ -22,3 +22,7 @@ Thumbs.db
 # Docker
 *.pid
 
+
+# Playwright (npm run test:e2e)
+test-results/
+playwright-report/

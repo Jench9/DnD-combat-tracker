@@ -1,8 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert');
+// First: sets DATA_DIR / KIT_AUTH before anything reads src/config.
+const { startServer } = require('./helpers');
 const { extractDdbCharacterId, mapDndBeyondData } = require('../src/features/imports/dndbeyond/mapper');
 const { mapPdfFormFields, normalizeFieldName } = require('../src/features/imports/pdf/mapper');
-const { startServer } = require('./helpers');
 
 test('extractDdbCharacterId accepts URL or bare id', () => {
   assert.strictEqual(extractDdbCharacterId('https://www.dndbeyond.com/characters/12345678'), '12345678');

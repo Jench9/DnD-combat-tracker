@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in — Adventurer's Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/login.css">
+</head>
+<body>
+<main class="auth-wrap">
+  <div class="auth-box">
+    <div class="auth-brand">⚔️ Adventurer's Kit</div>
+
+    <!-- Log in -->
+    <form id="loginForm" class="auth-form" hidden>
+      <h1>Log in</h1>
+      <label class="join-field"><span>Username</span><input id="loginUser" name="username" autocomplete="username" required maxlength="30"></label>
+      <label class="join-field"><span>Password</span><input id="loginPass" name="password" type="password" autocomplete="current-password" required></label>
+      <div class="join-msg" id="loginMsg" role="alert"></div>
+      <button class="btn auth-submit" type="submit">Log in</button>
+      <p class="auth-hint">No account? Ask your DM for an invite link. Forgot your password? The DM can send you a reset link.</p>
+    </form>
+
+    <!-- First start: create the DM account -->
+    <form id="setupForm" class="auth-form" hidden>
+      <h1>Create the admin account</h1>
+      <p class="auth-hint">This is the first start. The admin runs the server: every account and campaign, and is DM everywhere. The <b>setup code</b> is printed in the server log (<code>docker compose logs combat-tracker</code>) — it proves you run the server.</p>
+      <label class="join-field"><span>Setup code</span><input id="setupCode" name="code" autocomplete="off" required placeholder="XXXX-XXXX-XXXX"></label>
+      <label class="join-field"><span>Username</span><input id="setupUser" name="username" autocomplete="username" required maxlength="30"></label>
+      <label class="join-field"><span>Password (8+ characters)</span><input id="setupPass" name="password" type="password" autocomplete="new-password" required minlength="8"></label>
+      <label class="join-field"><span>Password again</span><input id="setupPass2" type="password" autocomplete="new-password" required></label>
+      <div class="join-msg" id="setupMsg" role="alert"></div>
+      <button class="btn auth-submit" type="submit">Create admin account</button>
+    </form>
+
+    <div id="openMode" class="auth-form" hidden>
+      <h1>No login needed</h1>
+      <p class="auth-hint">This server runs without accounts (<code>KIT_AUTH=open</code>).</p>
+      <a class="btn auth-submit" href="/">Open the app</a>
+    </div>
+  </div>
+</main>
+<script type="module" src="js/login/main.js"></script>
+</body>
+</html>

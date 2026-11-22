@@ -13,6 +13,8 @@
 const express = require('express');
 const { uid } = require('../../../core/ids');
 const { identityFromHeaders, owns } = require('../../../core/identity');
+const { linkToCreator } = require('../../accounts/links');
+const { campaignForNewCharacter } = require('../../../core/access');
 const characters = require('../service');
 const items = require('../../items/service');
 const spells = require('../../spells/service');
@@ -73,7 +75,8 @@ function createBuilderRouter({ onCharactersChanged }) {
     if (result.error) { res.status(400).json({ error: result.error }); return; }
     if (!id) {
       id = uid();
-      characters.addBlank(id, typeof body.campaignId === 'string' ? body.campaignId : '');
+      characters.addBlank(id, campaignForNewCharacter(req.identity, body.campaignId));
+      linkToCreator(req.identity, id);
     }
     characters.update(id, result.patch);
     onCharactersChanged();

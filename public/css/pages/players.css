@@ -1,0 +1,38 @@
+/* players.css — the DM's accounts page (js/players/main.js). */
+.pl-hint { color: var(--ink-soft); font-size: 13px; margin: 0 0 10px; line-height: 1.45; }
+.pl-invite { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.pl-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.4px; }
+.pl-field select { padding: 7px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); font: inherit; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.pl-invite .pl-field:nth-child(2), .pl-invite .pl-field:nth-child(3) { flex: 1 1 260px; }
+.pl-checks { display: flex; flex-wrap: wrap; gap: 6px; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.pl-check { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink); padding: 4px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); cursor: pointer; }
+.pl-check:has(input:checked) { border-color: var(--good); background: rgba(47, 133, 90, 0.1); }
+.pl-check .pl-owner { color: var(--ink-soft); font-size: 11.5px; }
+.pl-none { color: var(--ink-soft); font-size: 13px; }
+.pl-link { margin-top: 12px; }
+.pl-link-row { display: flex; gap: 8px; }
+.pl-link-row input { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--good); border-radius: 5px; background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; }
+.pl-link .pl-hint { margin: 6px 0 0; }
+.pl-msg { color: var(--wax); font-size: 13px; min-height: 1em; margin-bottom: 6px; }
+.pl-accounts { display: flex; flex-direction: column; gap: 10px; }
+.pl-acc { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--bg); }
+.pl-acc.off { opacity: 0.6; border-style: dashed; }
+.pl-acc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pl-name { font-weight: 700; font-size: 15px; }
+.pl-tag { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--line); color: var(--ink-soft); }
+.pl-tag.dm { border-color: var(--gold); color: var(--gold); }
+.pl-tag.you { border-color: var(--good); color: var(--good); }
+.pl-acc-tools { margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-acc-chars { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.pl-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; padding: 3px 4px 3px 10px; border-radius: 14px; border: 1px solid var(--good); background: rgba(47, 133, 90, 0.08); }
+.pl-chip button { background: none; border: none; color: var(--ink-soft); cursor: pointer; font-size: 14px; padding: 0 4px; }
+.pl-give { padding: 4px 8px; border: 1px dashed var(--line); border-radius: 14px; background: var(--bg-panel); color: var(--ink); font: inherit; font-size: 13px; }
+.pl-invites { display: flex; flex-direction: column; gap: 6px; }
+.pl-inv { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.pl-inv:last-child { border-bottom: none; }
+.pl-inv .btn { margin-left: auto; }
+.pl-acc-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.pl-acc-row .pl-label { font-size: 11.5px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.4px; min-width: 84px; }
+.pl-chip.camp { border-color: var(--blue); background: rgba(60, 120, 200, 0.08); }
+.pl-tag.admin { border-color: var(--wax); color: var(--wax); }
+.pl-role { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg-panel); color: var(--ink); font: inherit; font-size: 13px; }

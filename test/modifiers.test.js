@@ -2,9 +2,10 @@ const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+// First: sets DATA_DIR / KIT_AUTH before anything reads src/config.
+const { startServer, connect } = require('./helpers');
 const { sanitizeCharacterPatch, blankCharacter } = require('../src/features/characters/model');
 const { detectPresets, mergeModifiers, BY_NAME } = require('../src/features/imports/dndbeyond/modifiers');
-const { startServer, connect } = require('./helpers');
 
 test('character modifiers are validated', () => {
   const ch = sanitizeCharacterPatch(blankCharacter('c'), {

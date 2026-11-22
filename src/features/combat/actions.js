@@ -252,6 +252,6 @@ module.exports = {
   },
 
   clearAll() {
-    svc.reset();
+    svc.clearTable(); // this table's fight only
   },
 };

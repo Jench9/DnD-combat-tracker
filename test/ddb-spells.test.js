@@ -1,8 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert');
+// First: sets DATA_DIR / KIT_AUTH before anything reads src/config.
+const { startServer, connect } = require('./helpers');
 const { planSpells, spellFromDefinition } = require('../src/features/imports/dndbeyond/spells');
 const { SRD_SPELLS } = require('../src/srd');
-const { startServer, connect } = require('./helpers');
 
 const LIBRARY = SRD_SPELLS.map((sp, i) => ({ id: `sp${i}`, ...sp }));
 const cls = (name, level, extra = {}) => ({ id: name + level, level, definition: { name }, ...extra });

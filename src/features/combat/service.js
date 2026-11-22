@@ -1,8 +1,10 @@
-// Combat state + the small operations on it. No WebSocket knowledge here.
+// Combat state + the small operations on it, one fight per table
+// (campaign, see core/table.js). No WebSocket knowledge here.
 // Saved to DATA_DIR/combat.json (debounced) so a restart or a container
 // rebuild in the middle of a fight doesn't lose it.
 const { uid } = require('../../core/ids');
 const { createJsonStore } = require('../../core/jsonStore');
+const { currentTable, withTable } = require('../../core/table');
 
 function freshState() {
   return {
@@ -76,46 +78,85 @@ function restore(saved) {
 }
 
 const store = createJsonStore('combat', null);
-let state = restore(store.load());
+
+// One fight per table (core/table.js): { [campaignId]: state }; '' = no
+// campaign. Saved as { tables }. A file from before tables (one fight)
+// becomes the '' table.
+function restoreTables(saved) {
+  const out = {};
+  if (saved && typeof saved === 'object' && saved.tables && typeof saved.tables === 'object') {
+    Object.entries(saved.tables).forEach(([id, t]) => { if (/^[a-z0-9]{0,20}$/.test(id)) out[id] = restore(t); });
+  } else if (saved && Array.isArray(saved.combatants)) {
+    out[''] = restore(saved);
+  }
+  return out;
+}
+let tables = restoreTables(store.load());
+
+// The current table's fight (created when first used). No table (null):
+// a throwaway empty one, never saved.
+function S() {
+  const id = currentTable();
+  if (id === null) return freshState();
+  if (!tables[id]) tables[id] = freshState();
+  return tables[id];
+}
 
 // Read the file again (after a restore).
 function reload() {
-  state = restore(store.load());
+  tables = restoreTables(store.load());
 }
 
 function getState() {
-  return state;
+  return S();
 }
 
 // Call after changing the state (the combat actions do it for you).
 function save() {
-  store.save(state);
+  store.save({ tables });
 }
 
+// Every table: the tests' clean start.
 function reset() {
-  state = freshState();
+  tables = {};
+}
+
+// "Clear all" on one table.
+function clearTable() {
+  const id = currentTable();
+  if (id !== null) tables[id] = freshState();
+}
+
+// A campaign was deleted: its fight goes too.
+function dropTable(id) {
+  if (tables[id]) { delete tables[id]; save(); }
+}
+
+// Run fn(state) inside every table that has a fight (sheet → combat sync).
+function forEachTable(fn) {
+  Object.keys(tables).forEach((id) => withTable(id, () => fn(tables[id], id)));
 }
 
 function findCombatant(id) {
-  return state.combatants.find((c) => c.id === id);
+  return S().combatants.find((c) => c.id === id);
 }
 
 // Keeps the active combatant active even if sorting moves them.
 function sortByInitiative() {
-  const activeId = state.combatants[state.activeIndex]
-    ? state.combatants[state.activeIndex].id
+  const activeId = S().combatants[S().activeIndex]
+    ? S().combatants[S().activeIndex].id
     : null;
-  state.combatants.sort((a, b) => b.init - a.init);
+  S().combatants.sort((a, b) => b.init - a.init);
   if (activeId) {
-    const newIdx = state.combatants.findIndex((c) => c.id === activeId);
-    if (newIdx !== -1) state.activeIndex = newIdx;
+    const newIdx = S().combatants.findIndex((c) => c.id === activeId);
+    if (newIdx !== -1) S().activeIndex = newIdx;
   }
 }
 
 // Builds the canonical combatant shape. Callers do their own input
 // validation/defaulting (the combat form and "send character" differ).
 function addCombatant({ name, init, ac, hp, maxHp, tempHp = 0, type, characterId = '', monsterId = '', ownerId = '', hidden = false, size = 1 }) {
-  state.combatants.push({
+  S().combatants.push({
     id: uid(),
     characterId,
     ownerId,
@@ -150,7 +191,7 @@ function endConcentration(c) {
   if (!c) return;
   c.concentration = '';
   c.concentrationDc = 0;
-  state.combatants.forEach((t) => {
+  S().combatants.forEach((t) => {
     t.effects = t.effects.filter((e) => !(e.concentration && e.casterId === c.id));
   });
 }
@@ -183,8 +224,8 @@ const visibleToPlayers = (c) => !c.hidden;
 // and monsters show an alias (if set) and a health word instead of their
 // HP and AC. `activeIndex` is -1 while a hidden combatant has the turn.
 function playerView() {
-  const visible = state.combatants.filter(visibleToPlayers);
-  const active = state.combatants[state.activeIndex];
+  const visible = S().combatants.filter(visibleToPlayers);
+  const active = S().combatants[S().activeIndex];
   const combatants = visible.map((c) => {
     const base = {
       id: c.id, name: c.name, init: c.init, type: c.type, conditions: c.conditions,
@@ -207,7 +248,7 @@ function playerView() {
     };
   });
   return {
-    round: state.round,
+    round: S().round,
     activeIndex: active && visibleToPlayers(active) ? visible.indexOf(active) : -1,
     combatants,
   };
@@ -215,6 +256,6 @@ function playerView() {
 
 module.exports = {
   reload,
-  MAX_TOKEN_SIZE, clampTokenSize, getState, save, reset, findCombatant,
+  MAX_TOKEN_SIZE, clampTokenSize, getState, save, reset, clearTable, dropTable, forEachTable, findCombatant,
   ENDS_CONCENTRATION, endConcentration, addEffect, concentrationDc, sortByInitiative, addCombatant, healthWord, visibleToPlayers, playerView,
 };

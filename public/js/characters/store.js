@@ -15,6 +15,7 @@ export const store = {
   characters: [],
   activeCharId: null,
   campaigns: [],
+  accounts: [], // the admin's account list (accounts mode: who runs each campaign)
   items: [], // the item library (for inventory and actions)
   spells: [], // the spell library (for the spellbook and actions)
   combat: null, // combat state (is the familiar in the fight?)

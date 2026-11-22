@@ -50,6 +50,8 @@ const socket = connectSocket({
       refreshSpellOptions();
       if (store.activeCharId && !refreshEditorFromServer()) closeEditor();
     },
+    // The admin's account list: who may run each campaign (campaign manager).
+    accountState: (msg) => { store.accounts = msg.accounts.list || []; refreshCampaignManager(); },
     campaignState: (msg) => {
       store.campaigns = msg.campaigns;
       markCampaignsLoaded();

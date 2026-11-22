@@ -2,6 +2,7 @@
 // Same rules as items: players edit only spells they created, the DM all.
 import { $, uid, debounce } from '../core/dom.js';
 import { renderNav } from '../core/nav.js';
+import { createCappedGroups } from '../core/cappedGroup.js';
 import { connectSocket } from '../core/socket.js';
 import { isDm, myCharacterId } from '../core/identity.js';
 import { levelLabel, spellSummary, spellHeader } from './format.js';
@@ -108,6 +109,11 @@ function toggleDetails(row, sp) {
   row.appendChild(n);
 }
 
+// Long groups show their first 30 rows; an expanded group stays open until
+// a filter changes (server echoes redraw the list too).
+const capped = createCappedGroups({ cap: 30 });
+const refilter = () => { capped.reset(); renderList(); };
+
 function renderList() {
   const list = $('spellList');
   list.innerHTML = '';
@@ -132,11 +138,11 @@ function renderList() {
     list.appendChild(head);
     const box = document.createElement('div');
     box.className = 'item-group';
-    group.forEach((sp) => box.appendChild(renderRow(sp)));
+    capped.fill(box, String(l), group, renderRow, 'spells'); // first 30 + "Show all" (phones)
     list.appendChild(box);
   }
 }
-['search', 'levelFilter', 'classFilter', 'editionFilter'].forEach((id) => $(id).addEventListener('input', renderList));
+['search', 'levelFilter', 'classFilter', 'editionFilter'].forEach((id) => $(id).addEventListener('input', refilter));
 
 // ---- editor
 // input id -> [spell prop, kind]  (kind: text | dice | select | number | check)

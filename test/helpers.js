@@ -4,6 +4,9 @@ const path = require('path');
 // Keep tests from touching the real data/ folder. Must be set before
 // anything loads src/config.
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'kit-test-'));
+// Most tests use the trust-based mode (identity in the URL / headers);
+// test/accounts.test.js sets KIT_AUTH=accounts before requiring this.
+process.env.KIT_AUTH = process.env.KIT_AUTH || 'open';
 const WebSocket = require('ws');
 const { createApp } = require('../src/app');
 
@@ -23,8 +26,9 @@ async function startServer() {
 
 // Connects a client; collects messages and lets tests await a message type.
 // Connects as the DM unless `as` says otherwise, e.g. 'role=player&character=abc'.
-function connect(port, as = 'role=dm') {
-  const ws = new WebSocket(`ws://localhost:${port}/?${as}`);
+// `options` go to the ws client (e.g. { headers: { Cookie } } in accounts mode).
+function connect(port, as = 'role=dm', options = {}) {
+  const ws = new WebSocket(`ws://localhost:${port}/?${as}`, options);
   const messages = [];
   const waiters = [];
   ws.on('message', (data) => {

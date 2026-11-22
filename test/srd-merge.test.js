@@ -3,6 +3,8 @@ const assert = require('node:assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+// First: sets DATA_DIR / KIT_AUTH before anything reads src/config.
+require('./helpers'); // sets DATA_DIR / KIT_AUTH
 const { execFileSync } = require('child_process');
 const { SRD_ITEMS, SRD_SPELLS, SRD_VERSION } = require('../src/srd');
 

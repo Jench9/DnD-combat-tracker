@@ -12,23 +12,42 @@
 //   permissions     optional { actionType: 'anyone' | (payload, identity) => bool }
 //                   saying what players may do. The DM may do everything;
 //                   an action with no entry is DM-only.
+//   dmPermissions   optional { actionType: (payload, identity) => bool }: limits
+//                   on a DM for things outside its own table (another
+//                   campaign's character or campaign — core/access.js)
 //   alsoBroadcast   optional { actionType: ['otherFeatureName'] } for
 //                   actions that change more than one slice, or
 //                   { actionType: (result) => [...] } to decide from what
 //                   the action returned
 //
-// Each connection's identity (DM or player + character, see
-// core/identity.js) comes from the WebSocket URL. The hub checks the
+// Each connection's identity (DM or player + characters, see
+// core/identity.js) comes from the session cookie (accounts mode) or the
+// WebSocket URL (open mode); connections without one, or from another
+// site (Origin), are refused before the upgrade. The hub checks the
 // permission, applies the action, then sends the feature's slice (and any
 // extra slices) to every connected client, each filtered for that client.
 // On connect, a client immediately receives every slice.
 const { WebSocketServer } = require('ws');
-const { identityFromUrl, isDm } = require('../core/identity');
+const { identityFromUpgrade, isDm } = require('../core/identity');
+const { sameOrigin } = require('../core/security');
+const { MAX_WS_MESSAGE_BYTES } = require('../config');
+const { withTable } = require('../core/table');
 
 function createHub(server, features) {
   // Compression: the libraries (SRD items, spells, monsters) are a few MB
   // of JSON, sent on every connect; deflate makes that ~5–10× smaller.
-  const wss = new WebSocketServer({ server, perMessageDeflate: { threshold: 1024 } });
+  const wss = new WebSocketServer({
+    server,
+    perMessageDeflate: { threshold: 1024 },
+    maxPayload: MAX_WS_MESSAGE_BYTES,
+    verifyClient: ({ req }, done) => {
+      if (!sameOrigin(req)) return done(false, 403, 'Cross-site connection refused');
+      const identity = identityFromUpgrade(req);
+      if (!identity) return done(false, 401, 'Please log in');
+      req.identity = identity;
+      return done(true);
+    },
+  });
 
   const byName = new Map(features.map((f) => [f.name, f]));
   const actionOwner = new Map();
@@ -41,8 +60,9 @@ function createHub(server, features) {
     });
   });
 
+  // Built inside the viewer's table (campaign): its fight, its map.
   function frame(feature, identity) {
-    const slice = feature.snapshotFor ? feature.snapshotFor(identity) : feature.snapshot();
+    const slice = withTable(identity.tableId, () => (feature.snapshotFor ? feature.snapshotFor(identity) : feature.snapshot()));
     return JSON.stringify({ type: feature.wire.type, [feature.wire.key]: slice });
   }
 
@@ -55,14 +75,18 @@ function createHub(server, features) {
     wss.clients.forEach((client) => {
       if (client.readyState !== client.OPEN) return;
       const id = client.identity;
-      const key = id.role + ':' + id.characterId;
+      const key = id.role + ':' + id.characterId + ':' + (id.accountId || '') + ':' + id.tableId;
       if (!cache.has(key)) cache.set(key, frame(feature, id));
       client.send(cache.get(key));
     });
   }
 
   function allowed(feature, type, payload, identity) {
-    if (isDm(identity)) return true;
+    if (isDm(identity)) {
+      const limit = feature.dmPermissions && feature.dmPermissions[type];
+      if (!limit) return true;
+      try { return !!limit(payload, identity); } catch { return false; }
+    }
     const rule = feature.permissions && feature.permissions[type];
     if (rule === 'anyone') return true;
     if (typeof rule === 'function') {
@@ -72,7 +96,7 @@ function createHub(server, features) {
   }
 
   wss.on('connection', (ws, req) => {
-    ws.identity = identityFromUrl(req.url);
+    ws.identity = req.identity;
     // Any page might be the one that just opened this socket, so send every slice.
     features.forEach((f) => ws.send(frame(f, ws.identity)));
 
@@ -89,16 +113,28 @@ function createHub(server, features) {
       if (!feature) return; // unknown action type — ignore
 
       const payload = msg.payload && typeof msg.payload === 'object' ? msg.payload : {};
-      if (!allowed(feature, msg.type, payload, ws.identity)) return; // not theirs to change
-      const result = feature.actions[msg.type](payload, ws.identity);
+      const result = withTable(ws.identity.tableId, () => {
+        if (!allowed(feature, msg.type, payload, ws.identity)) return { refused: true }; // not theirs to change
+        return { value: feature.actions[msg.type](payload, ws.identity) };
+      });
+      if (result.refused) return;
       broadcast(feature.name);
       let extra = (feature.alsoBroadcast && feature.alsoBroadcast[msg.type]) || [];
-      if (typeof extra === 'function') extra = extra(result) || [];
+      if (typeof extra === 'function') extra = extra(result.value) || [];
       extra.forEach(broadcast);
     });
   });
 
-  return { wss, broadcast };
+  // An account's sessions ended (4401: its pages check they're still
+  // logged in, then reconnect or go to the login page) or its role changed
+  // (4403: its pages reload, to show the DM tools or hide them).
+  function closeAccount(accountId, code = 4401) {
+    wss.clients.forEach((client) => {
+      if (client.identity && client.identity.accountId === accountId) client.close(code, code === 4403 ? 'Role changed' : 'Session changed');
+    });
+  }
+
+  return { wss, broadcast, closeAccount };
 }
 
 module.exports = { createHub };

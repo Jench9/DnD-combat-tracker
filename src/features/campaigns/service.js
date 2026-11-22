@@ -1,11 +1,15 @@
 // Campaigns: named groups that characters belong to (character.campaignIds,
 // any number each). One may be marked `active`: the one being played now
 // (the "Who are you?" screen and the add lists show it first).
+// `dmIds`: the DM accounts that run it (accounts mode, see core/access.js);
+// each campaign is its own table — its own fight and battle map.
 // Saved to data/campaigns.json. No WebSocket knowledge here.
 const { createJsonStore } = require('../../core/jsonStore');
 
 const ID_RE = /^[a-z0-9]{1,20}$/;
 const store = createJsonStore('campaigns', []);
+
+const cleanDmIds = (list) => [...new Set((Array.isArray(list) ? list : []).filter((x) => typeof x === 'string' && /^[a-z0-9]{1,40}$/.test(x)))].slice(0, 10);
 
 function cleanName(name) {
   return String(name || '').trim().slice(0, 60);
@@ -15,7 +19,7 @@ function load() {
   const saved = store.load();
   return (Array.isArray(saved) ? saved : [])
     .filter((c) => c && ID_RE.test(c.id) && cleanName(c.name))
-    .map((c) => ({ id: c.id, name: cleanName(c.name), ...(c.active === true ? { active: true } : {}) }));
+    .map((c) => ({ id: c.id, name: cleanName(c.name), dmIds: cleanDmIds(c.dmIds), ...(c.active === true ? { active: true } : {}) }));
 }
 let campaigns = load();
 
@@ -37,10 +41,10 @@ function find(id) {
 }
 
 // Client picks the id (so it can select the new campaign right away).
-function add(id, name) {
+function add(id, name, dmIds = []) {
   const n = cleanName(name);
   if (!ID_RE.test(String(id)) || !n || find(id)) return false;
-  campaigns.push({ id, name: n });
+  campaigns.push({ id, name: n, dmIds: cleanDmIds(dmIds) });
   persist();
   return true;
 }
@@ -60,9 +64,17 @@ function setActive(id) {
   persist();
 }
 
+// Admin: who runs it.
+function setDms(id, dmIds) {
+  const c = find(id);
+  if (!c) return;
+  c.dmIds = cleanDmIds(dmIds);
+  persist();
+}
+
 function remove(id) {
   campaigns = campaigns.filter((c) => c.id !== id);
   persist();
 }
 
-module.exports = { reload, ID_RE, all, find, add, rename, setActive, remove };
+module.exports = { reload, ID_RE, all, find, add, rename, setActive, setDms, remove };

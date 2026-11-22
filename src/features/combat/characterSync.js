@@ -8,10 +8,10 @@ const combat = require('./service');
 const characters = require('../characters/service');
 const { withDerived } = require('../characters/derived');
 
-// Returns true if any combatant changed.
+// Returns true if any combatant changed, in any table (campaign).
 function syncCombatantsFromSheets() {
   let changed = false;
-  combat.getState().combatants.forEach((c) => {
+  combat.forEachTable((state) => state.combatants.forEach((c) => {
     if (c.type === 'familiar') { if (syncFamiliar(c)) changed = true; return; }
     if (!c.characterId) return;
     const ch = characters.find(c.characterId);
@@ -28,7 +28,7 @@ function syncCombatantsFromSheets() {
       if (hp > 0) { c.deathSuccess = 0; c.deathFail = 0; } // back on their feet
       changed = true;
     }
-  });
+  }));
   if (changed) combat.save();
   return changed;
 }

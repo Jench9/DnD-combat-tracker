@@ -4,6 +4,7 @@
 // even when the DM opens it on their own computer. The map is scaled to
 // fill the screen; a bar shows the round, whose turn it is and the order.
 import { connectSocket } from '../core/socket.js';
+import { tableQuery } from '../core/identity.js';
 import { createPortraitLookup } from '../core/portraits.js';
 import { tokenNode, cellLabel } from '../map/render.js';
 
@@ -15,7 +16,7 @@ const view = {
 const pics = createPortraitLookup();
 
 connectSocket({
-  query: 'role=player', // never the DM view, whoever opens it
+  query: ['role=player', tableQuery()].filter(Boolean).join('&'), // never the DM view, whoever opens it; at this browser's table
   onStatus: (live) => {
     $('status').textContent = live ? '' : 'Reconnecting…';
     $('status').hidden = live;

@@ -7,6 +7,7 @@
 const combat = require('../combat/service');
 const backgrounds = require('./backgrounds');
 const { createJsonStore } = require('../../core/jsonStore');
+const { currentTable } = require('../../core/table');
 
 const MIN_SIZE = 5;
 const MAX_SIZE = 50;
@@ -33,20 +34,44 @@ function restore(saved) {
 }
 
 const store = createJsonStore('map', null);
-let state = restore(store.load());
+
+// One map per table (core/table.js), like combat: { [campaignId]: state },
+// saved as { tables }; a file from before tables becomes the '' table.
+function restoreTables(saved) {
+  const out = {};
+  if (saved && typeof saved === 'object' && saved.tables && typeof saved.tables === 'object') {
+    Object.entries(saved.tables).forEach(([id, t]) => { if (/^[a-z0-9]{0,20}$/.test(id)) out[id] = restore(t); });
+  } else if (saved && typeof saved === 'object' && saved.positions) {
+    out[''] = restore(saved);
+  }
+  return out;
+}
+let tables = restoreTables(store.load());
+
+function S() {
+  const id = currentTable();
+  if (id === null) return freshState();
+  if (!tables[id]) tables[id] = freshState();
+  return tables[id];
+}
 
 // Read the file again (after a restore).
 function reload() {
-  state = restore(store.load());
+  tables = restoreTables(store.load());
 }
 
 // Call after changing the state (the map actions do it for you).
 function save() {
-  store.save(state);
+  store.save({ tables });
 }
 
 function reset() {
-  state = freshState();
+  tables = {};
+}
+
+// A campaign was deleted: its map goes too.
+function dropTable(id) {
+  if (tables[id]) { delete tables[id]; save(); }
 }
 
 const sizeOf = (id) => {
@@ -56,39 +81,39 @@ const sizeOf = (id) => {
 
 // Forget tokens whose combatant was removed (or the fight cleared).
 function prune() {
-  Object.keys(state.positions).forEach((id) => {
-    if (!combat.findCombatant(id)) delete state.positions[id];
+  Object.keys(S().positions).forEach((id) => {
+    if (!combat.findCombatant(id)) delete S().positions[id];
   });
 }
 
 function snapshot() {
   prune();
-  if (state.backgroundId && !backgrounds.find(state.backgroundId)) state.backgroundId = '';
+  if (S().backgroundId && !backgrounds.find(S().backgroundId)) S().backgroundId = '';
   // The DM also gets the list of maps to choose from.
-  return { ...state, backgrounds: backgrounds.all() };
+  return { ...S(), backgrounds: backgrounds.all() };
 }
 
 // Players don't see tokens of hidden combatants.
 function playerView() {
   prune();
   const positions = {};
-  Object.entries(state.positions).forEach(([id, p]) => {
+  Object.entries(S().positions).forEach(([id, p]) => {
     const c = combat.findCombatant(id);
     if (c && combat.visibleToPlayers(c)) positions[id] = p;
   });
-  const backgroundId = backgrounds.find(state.backgroundId) ? state.backgroundId : '';
-  return { cols: state.cols, rows: state.rows, positions, backgroundId };
+  const backgroundId = backgrounds.find(S().backgroundId) ? S().backgroundId : '';
+  return { cols: S().cols, rows: S().rows, positions, backgroundId };
 }
 
 // Does a token of `size` cells fit at x, y (top-left) on the grid?
 function inBounds(x, y, size = 1) {
   return Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0
-    && x + size <= state.cols && y + size <= state.rows;
+    && x + size <= S().cols && y + size <= S().rows;
 }
 
 // Would token `id` at x, y overlap any other token?
 function overlaps(id, x, y, size) {
-  return Object.entries(state.positions).some(([other, p]) => {
+  return Object.entries(S().positions).some(([other, p]) => {
     if (other === id) return false;
     const s = sizeOf(other);
     return x < p.x + s && p.x < x + size && y < p.y + s && p.y < y + size;
@@ -103,7 +128,7 @@ function place(id, x, y) {
   if (!inBounds(x, y, size)) return false;
   prune();
   if (overlaps(id, x, y, size)) return false;
-  state.positions[id] = { x, y };
+  S().positions[id] = { x, y };
   return true;
 }
 
@@ -115,18 +140,18 @@ function setTokenSize(id, size) {
   if (!c || !Number.isInteger(size)) return false;
   c.size = combat.clampTokenSize(size);
   combat.save();
-  const p = state.positions[id];
+  const p = S().positions[id];
   if (!p || (inBounds(p.x, p.y, c.size) && !overlaps(id, p.x, p.y, c.size))) return true;
-  delete state.positions[id];
+  delete S().positions[id];
   const spot = nearestFreeSpot(id, p.x, p.y, c.size);
-  if (spot) state.positions[id] = spot;
+  if (spot) S().positions[id] = spot;
   return true;
 }
 
 function nearestFreeSpot(id, x0, y0, size) {
   let best = null;
-  for (let y = 0; y + size <= state.rows; y++) {
-    for (let x = 0; x + size <= state.cols; x++) {
+  for (let y = 0; y + size <= S().rows; y++) {
+    for (let x = 0; x + size <= S().cols; x++) {
       if (overlaps(id, x, y, size)) continue;
       const d = Math.max(Math.abs(x - x0), Math.abs(y - y0));
       if (!best || d < best.d) best = { x, y, d };
@@ -136,32 +161,34 @@ function nearestFreeSpot(id, x0, y0, size) {
 }
 
 function remove(id) {
-  delete state.positions[id];
+  delete S().positions[id];
 }
 
 // Tokens that no longer fit go back to the tray.
 function resize(cols, rows) {
-  state.cols = clampSize(cols, state.cols);
-  state.rows = clampSize(rows, state.rows);
-  Object.keys(state.positions).forEach((id) => {
-    const p = state.positions[id];
-    if (!inBounds(p.x, p.y, sizeOf(id))) delete state.positions[id];
+  S().cols = clampSize(cols, S().cols);
+  S().rows = clampSize(rows, S().rows);
+  Object.keys(S().positions).forEach((id) => {
+    const p = S().positions[id];
+    if (!inBounds(p.x, p.y, sizeOf(id))) delete S().positions[id];
   });
 }
 
 function clear() {
-  state.positions = {};
+  S().positions = {};
 }
 
 function setBackground(id) {
-  if (id === '' || backgrounds.find(id)) state.backgroundId = id;
+  if (id === '' || backgrounds.find(id)) S().backgroundId = id;
 }
 
+// Backgrounds are shared by every table: clear it wherever it's shown.
 function deleteBackground(id) {
-  if (backgrounds.remove(id) && state.backgroundId === id) state.backgroundId = '';
+  if (!backgrounds.remove(id)) return;
+  Object.values(tables).forEach((t) => { if (t.backgroundId === id) t.backgroundId = ''; });
 }
 
 module.exports = {
   reload,
-  MIN_SIZE, MAX_SIZE, save, reset, snapshot, playerView, setBackground, deleteBackground, place, remove, resize, clear, setTokenSize,
+  MIN_SIZE, MAX_SIZE, save, reset, dropTable, snapshot, playerView, setBackground, deleteBackground, place, remove, resize, clear, setTokenSize,
 };

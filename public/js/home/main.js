@@ -1,11 +1,11 @@
 import { renderNav } from '../core/nav.js';
-import { TOOLS } from '../core/tools.js';
-import { isDm, identityHeaders } from '../core/identity.js';
+import { visibleTools } from '../core/tools.js';
+import { isDm, isAdmin, identityHeaders, authMode } from '../core/identity.js';
 
 renderNav();
 
 const grid = document.getElementById('toolGrid');
-TOOLS.filter((t) => !t.dmOnly || isDm()).forEach((t) => {
+visibleTools({ isDm: isDm(), accounts: authMode() === 'accounts' }).forEach((t) => {
   const a = document.createElement('a');
   a.className = 'tool-card';
   a.href = t.href;
@@ -26,6 +26,9 @@ function say(text, isError) {
   $('backupMsg').textContent = text;
   $('backupMsg').classList.toggle('error', !!isError);
 }
+
+// Everyone's data: with accounts, only the admin backs it up or restores it.
+if (authMode() === 'accounts' && !isAdmin()) document.querySelector('.backup-panel').style.display = 'none';
 
 $('backupBtn').addEventListener('click', async () => {
   say('Preparing the backup…');

@@ -9,7 +9,8 @@
     "start": "node server.js",
     "test": "node --test",
     "build:srd": "node scripts/build-srd.js",
-    "build:rules": "node scripts/build-rules.js"
+    "build:rules": "node scripts/build-rules.js",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "express": "^4.19.2",
@@ -18,5 +19,8 @@
     "pdf-parse": "^1.1.1",
     "sharp": "^0.35.5",
     "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
   }
 }
