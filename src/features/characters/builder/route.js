@@ -18,7 +18,7 @@ const { campaignForNewCharacter } = require('../../../core/access');
 const characters = require('../service');
 const items = require('../../items/service');
 const spells = require('../../spells/service');
-const { getRules, rulesFile } = require('./rules');
+const { getRules, rulesJson } = require('./rules');
 const { buildCharacter } = require('./create');
 const { levelUpPlan, applyLevelUp } = require('./levelup');
 const P = require('./progression');
@@ -40,7 +40,8 @@ function classOptions(ch) {
 function createBuilderRouter({ onCharactersChanged }) {
   const router = express.Router();
 
-  router.get('/rules', (req, res) => res.sendFile(rulesFile()));
+  // SRD + the DMs' custom content (it changes: not cached by the browser).
+  router.get('/rules', (req, res) => { res.set('Cache-Control', 'no-store'); res.type('application/json').send(rulesJson()); });
 
   const ownCharacter = (req, res, id) => {
     const ch = ID_RE.test(String(id || '')) ? characters.find(id) : null;

@@ -175,6 +175,20 @@ test('two DMs, two campaigns: separate fights, characters and powers', async () 
     await admDm.next('charState', (m) => m.characters.some((c) => c.id === 'npc1'));
     assert.ok(!(await admin.call('GET', '/api/auth/status')).data.account.characterIds.includes('npc1'));
 
+    // Custom content: DM accounts and the admin add it; only its author or
+    // the admin changes it; players only read it.
+    const added = await ana.call('POST', '/api/content', { kind: 'feat', name: 'Ana Feat', source: 'Homebrew', type: 'general' });
+    assert.strictEqual(added.status, 200, JSON.stringify(added.data));
+    const cid = added.data.entry.id;
+    // (Pia runs Ben's campaign by now, so she counts as a DM; Quinn is only a player.)
+    assert.strictEqual((await quinn.call('POST', '/api/content', { kind: 'feat', name: 'Nope', source: 'Homebrew' })).status, 403);
+    assert.strictEqual((await ben.call('PUT', `/api/content/${cid}`, { name: 'Ben Feat' })).status, 403);
+    assert.strictEqual((await ben.call('DELETE', `/api/content/${cid}`)).status, 403);
+    const forQuinn = (await quinn.call('GET', '/api/content')).data;
+    assert.ok(forQuinn.entries.some((e) => e.id === cid && !e.mine) && !forQuinn.canAdd, 'players read it');
+    assert.ok((await ben.call('POST', '/api/content', { kind: 'feat', name: 'Ben Feat', source: 'Homebrew' })).status === 200, 'any DM account may add');
+    assert.strictEqual((await admin.call('PUT', `/api/content/${cid}`, { source: "Player's Handbook (2024)" })).status, 200, 'the admin may change it');
+
     // Ana deletes her campaign: Pia's connection is at no table any more.
     a.send('deleteCampaign', { id: 'ca' });
     await a.next('campaignState', (m) => !m.campaigns.some((c) => c.id === 'ca'));

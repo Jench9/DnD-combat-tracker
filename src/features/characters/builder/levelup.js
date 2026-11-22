@@ -47,12 +47,12 @@ function featOptions(ch, slot, level, classes, rules) {
   const types = slot === 'boon' ? ['epic-boon', 'general', 'origin', 'fighting-style'] : ['general', 'origin', 'fighting-style'];
   return rules.feats.filter((f) => types.includes(f.type)).map((f) => {
     const allowed = P.featAllowed(f, ch, { level, hasFightingStyle: fs });
-    return { key: f.key, name: f.name, type: f.type, desc: f.desc, asi: f.asi, ok: allowed.ok, why: allowed.why };
+    return { key: f.key, name: f.name, type: f.type, desc: f.desc, asi: f.asi, source: f.source, ok: allowed.ok, why: allowed.why };
   }).sort((a, b) => (slot === 'boon' ? (a.type === 'epic-boon' ? 0 : 1) - (b.type === 'epic-boon' ? 0 : 1) : 0));
 }
 
 const fightingStyleOptions = (ch, rules) => rules.feats.filter((f) => f.type === 'fighting-style')
-  .map((f) => ({ key: f.key, name: f.name, desc: f.desc, ok: !(ch.feats || []).includes(f.key) }));
+  .map((f) => ({ key: f.key, name: f.name, desc: f.desc, source: f.source, ok: !(ch.feats || []).includes(f.key) }));
 
 // Multiclassing (2024): 13+ in the new class's primary ability and in each
 // current class's. Returns '' or why not.
@@ -129,7 +129,7 @@ function planFor(ch, def, classes, existing, ctx) {
   const sub = existing && existing.subclass ? def.subclasses.find((s) => s.key === existing.subclass) : null;
   if (newClassLevel === def.subclassLevel && !(existing && (existing.subclass || existing.subclassName))) {
     subclasses = def.subclasses.map((s) => ({
-      key: s.key, name: s.name, summary: s.summary, desc: s.desc,
+      key: s.key, name: s.name, summary: s.summary, desc: s.desc, source: s.source,
       features: s.features.filter((f) => f.level === newClassLevel),
       choices: s.features.filter((f) => f.level === newClassLevel).map((f) => subclassFeatureChoice(f.name)).filter(Boolean),
     }));

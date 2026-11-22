@@ -8,7 +8,7 @@
 import { SKILLS } from '../rules.js';
 import { rollBatch, rollDie, RollCancelled } from '../../core/dice.js';
 import {
-  api, el, details, section, checkList, cards, select, spellPicker, featExtras, increasePicker, makeDialog, button,
+  api, el, details, section, checkList, cards, select, spellPicker, featExtras, increasePicker, makeDialog, button, withSource,
 } from './common.js';
 
 const ALL_SKILLS = SKILLS.map(([n]) => n);
@@ -149,8 +149,8 @@ export async function openLevelUp(ch, { onDone } = {}) {
   }
 
   function subclassSection() {
-    const s = section(`${plan.className} subclass`, 'The SRD has one subclass per class. For one from a book, choose "Other" and add its features to the sheet yourself.');
-    const opts = (plan.subclasses || []).map((x) => ({ key: x.key, title: x.name, sub: x.summary }));
+    const s = section(`${plan.className} subclass`, 'The SRD has one subclass per class; the ones your DMs added (Content page) are listed too. For any other, choose "Other" and add its features to the sheet yourself.');
+    const opts = (plan.subclasses || []).map((x) => ({ key: x.key, title: x.name, sub: x.summary, tag: x.source }));
     opts.push({ key: 'custom', title: 'Other (from a book)', sub: 'Name only' });
     s.appendChild(cards(opts, a.subclass, (k) => { a.subclass = k; a.skills = []; a.fightingStyle = ''; draw(); }, { name: 'lu-sub' }));
     const chosen = (plan.subclasses || []).find((x) => x.key === a.subclass);
@@ -172,8 +172,8 @@ export async function openLevelUp(ch, { onDone } = {}) {
   function featSection(c) {
     const s = section(c.slot === 'boon' ? 'Epic Boon' : 'Ability Score Improvement or a feat',
       c.slot === 'boon' ? 'An Epic Boon feat (or another feat you qualify for).' : 'Take +2 / +1+1 to abilities (max 20), or a feat you qualify for.');
-    const opts = c.options.map((o) => ({ value: o.key, label: o.ok ? o.name : `${o.name} — ${o.why}`, disabled: !o.ok }));
-    opts.push({ value: 'custom', label: 'Other feat (not in the SRD)…' });
+    const opts = c.options.map((o) => ({ value: o.key, label: o.ok ? withSource(o.name, o.source) : `${o.name} — ${o.why}`, disabled: !o.ok }));
+    opts.push({ value: 'custom', label: 'Other feat (not listed)…' });
     s.appendChild(select(opts, a.feat.key, (v) => { a.feat = { key: v }; draw(); }));
     const feat = c.options.find((o) => o.key === a.feat.key);
     if (feat) {
@@ -195,7 +195,7 @@ export async function openLevelUp(ch, { onDone } = {}) {
 
   function fightingStyleSection(c) {
     const s = section('Fighting Style');
-    const opts = c.options.map((o) => ({ value: o.key, label: o.ok ? o.name : `${o.name} — already taken`, disabled: !o.ok }));
+    const opts = c.options.map((o) => ({ value: o.key, label: o.ok ? withSource(o.name, o.source) : `${o.name} — already taken`, disabled: !o.ok }));
     if (c.alternative) opts.push({ value: 'custom', label: `${c.alternative} (instead of a feat)` });
     s.appendChild(select(opts, a.fightingStyle, (v) => { a.fightingStyle = v; draw(); }));
     const f = c.options.find((o) => o.key === a.fightingStyle);

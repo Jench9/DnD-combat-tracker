@@ -94,6 +94,8 @@ function createApp() {
     hub.broadcast('accounts'); // a player's new character joins their account
     if (require('./features/combat/characterSync').syncCombatantsFromSheets()) hub.broadcast('combat');
   };
+  // Custom content (subclasses, species, backgrounds, feats from the DMs' books).
+  app.use('/api/content', require('./features/content/route').createContentRouter());
   // Guided character creation and level up.
   app.use('/api/builder', createBuilderRouter({ onCharactersChanged: onSheetsChanged }));
   // Familiars (Find Familiar, Pact of the Chain).

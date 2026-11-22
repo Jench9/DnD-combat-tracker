@@ -52,6 +52,14 @@ export const TOOLS = [
     description: 'A grid with a token for everyone in the fight — drag them around to track positions.',
   },
   {
+    id: 'content',
+    href: 'content.html',
+    icon: '📚',
+    title: 'Content',
+    dmOnly: true,
+    description: 'Add subclasses, species, backgrounds and feats from your books, with a source tag, for the guided creation.',
+  },
+  {
     id: 'players',
     href: 'players.html',
     icon: '🔑',

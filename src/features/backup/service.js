@@ -111,6 +111,7 @@ function reloadAll() {
   require('../map/backgrounds').reload();
   require('../combat/service').reload();
   require('../map/service').reload();
+  require('../content/service').reload();
 }
 
 function restoreBackup(bundle) {

@@ -91,6 +91,11 @@ export function checkList(options, selected, count, onChange, { disabled = () =>
 }
 
 // Radio cards: [{ key, title, sub, body }] → onPick(key).
+// Where an option comes from: "SRD 5.2" or a DM's tag (custom content).
+export const SRD = 'SRD 5.2';
+// For drop-down labels: the source, unless it's the SRD.
+export const withSource = (name, source) => (source && source !== SRD ? `${name} — ${source}` : name);
+
 export function cards(options, current, onPick, { name = 'card' + Math.random().toString(36).slice(2) } = {}) {
   const grid = el('div', 'b-cards');
   options.forEach((o) => {
@@ -104,6 +109,7 @@ export function cards(options, current, onPick, { name = 'card' + Math.random().
     r.addEventListener('change', () => onPick(o.key));
     label.appendChild(r);
     label.appendChild(el('span', 'b-card-title', o.title));
+    if (o.tag) label.appendChild(el('span', 'b-card-tag' + (o.tag === SRD ? ' srd' : ''), o.tag));
     if (o.sub) label.appendChild(el('span', 'b-card-sub', o.sub));
     if (o.disabled && typeof o.disabled === 'string') label.appendChild(el('span', 'b-card-why', o.disabled));
     grid.appendChild(label);

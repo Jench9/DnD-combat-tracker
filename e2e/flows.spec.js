@@ -210,3 +210,44 @@ test('items and spells: long groups are capped with "Show all"', async ({ page }
   }
   await noErrors(errors);
 });
+
+test('content: a DM adds a species with a source tag; the guided creation shows it tagged', async ({ page }) => {
+  const errors = watchErrors(page);
+  await as(page, 'dm');
+  await page.goto('/content.html');
+  await page.click('#addBtn');
+  const dlg = page.locator('#editDlg');
+  await expect(dlg).toBeVisible();
+  await dlg.locator('select').first().selectOption('species');
+  await dlg.getByPlaceholder('e.g. Aasimar').fill('Aasimar');
+  await dlg.locator('input[list="sourceList"]').fill("Player's Handbook (2024)");
+  await dlg.getByRole('button', { name: '+ Add trait' }).click();
+  await dlg.getByPlaceholder('Trait name').fill('Celestial Resistance');
+  await dlg.getByPlaceholder('What it does').fill('Resistance to Necrotic and Radiant damage.');
+  await dlg.locator('#saveBtn').click();
+  await expect(dlg).toBeHidden();
+  await expect(page.locator('#kindTabs button.on')).toHaveText(/Species \(1\)/);
+  const item = page.locator('.ct-item', { hasText: 'Aasimar' });
+  await expect(item.locator('.ct-tag')).toHaveText("Player's Handbook (2024)");
+  await expect(item).toContainText('Medium · speed 30 ft · 1 trait');
+
+  // A missing name is refused with a message.
+  await page.click('#addBtn');
+  await dlg.locator('select').first().selectOption('feat');
+  await dlg.locator('#saveBtn').click();
+  await expect(page.locator('#editMsg')).toHaveText('Give it a name.');
+  await dlg.locator('#cancelBtn').click();
+
+  // In New character → Species: the card with its tag; SRD ones say SRD 5.2.
+  await page.goto('/characters.html');
+  await page.locator('#newCharBtn').click();
+  const wiz = page.locator('#creatorDlg');
+  await wiz.locator('.b-card', { hasText: /^Fighter/ }).click();
+  await wiz.getByRole('button', { name: 'Next →' }).click();
+  const card = wiz.locator('.b-card', { hasText: 'Aasimar' });
+  await expect(card.locator('.b-card-tag')).toHaveText("Player's Handbook (2024)");
+  await expect(wiz.locator('.b-card', { hasText: 'Dwarf' }).locator('.b-card-tag')).toHaveText('SRD 5.2');
+  await card.click();
+  await expect(wiz).toContainText('Celestial Resistance');
+  await noErrors(errors);
+});

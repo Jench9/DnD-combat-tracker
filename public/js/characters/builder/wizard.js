@@ -8,7 +8,7 @@ import { SKILLS, abilityMod, fmtMod } from '../rules.js';
 import { rollBatch, rollDie, RollCancelled } from '../../core/dice.js';
 import {
   ABILITY_NAMES, ABILITY_KEYS, loadRules, api, el, details, section, checkList, cards, select,
-  spellPicker, featExtras, makeDialog, button,
+  spellPicker, featExtras, makeDialog, button, withSource,
 } from './common.js';
 
 const STANDARD = [15, 14, 13, 12, 10, 8];
@@ -167,7 +167,7 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
   // ---- 2. species
   function stepSpecies(body) {
     const s = section('Choose a species');
-    s.appendChild(cards(rules.species.map((x) => ({ key: x.key, title: x.name, sub: `${x.size} · speed ${x.speed} ft` })), st.speciesKey, (k) => {
+    s.appendChild(cards(rules.species.map((x) => ({ key: x.key, title: x.name, sub: `${x.size} · speed ${x.speed} ft`, tag: x.source })), st.speciesKey, (k) => {
       if (k !== st.speciesKey) { st.speciesKey = k; st.subspeciesKey = ''; st.speciesSkill = ''; st.originFeat = { key: '' }; }
       redraw();
     }));
@@ -186,7 +186,7 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
     if (x.key === 'human') {
       const f = section('Versatile: an Origin feat');
       const origins = rules.feats.filter((o) => o.type === 'origin');
-      f.appendChild(select(origins.map((o) => ({ value: o.key, label: o.name })), st.originFeat.key, (v) => { st.originFeat = { key: v }; redraw(); }));
+      f.appendChild(select(origins.map((o) => ({ value: o.key, label: withSource(o.name, o.source) })), st.originFeat.key, (v) => { st.originFeat = { key: v }; redraw(); }));
       const feat = humanFeat();
       if (feat) {
         f.appendChild(details(`${feat.name} — rules`, feat.desc));
@@ -206,7 +206,7 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
   // ---- 3. background
   function stepBackground(body) {
     const s = section('Choose a background', 'Your background raises three ability scores, gives an Origin feat, two skills, a tool and starting gear.');
-    s.appendChild(cards(rules.backgrounds.map((b) => ({ key: b.key, title: b.name, sub: `${b.abilities.map((k) => k.toUpperCase()).join(' / ')} · ${b.feat.name}${b.feat.note ? ` (${b.feat.note})` : ''}` })), st.backgroundKey, (k) => {
+    s.appendChild(cards(rules.backgrounds.map((b) => ({ key: b.key, title: b.name, sub: `${b.abilities.map((k) => k.toUpperCase()).join(' / ')} · ${b.feat.name}${b.feat.note ? ` (${b.feat.note})` : ''}`, tag: b.source })), st.backgroundKey, (k) => {
       if (k !== st.backgroundKey) { st.backgroundKey = k; st.bonus = {}; st.backgroundFeat = {}; st.equipment.background = 0; }
       redraw();
     }));
@@ -383,7 +383,7 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
     if (c.levels[0].features.includes('fighter-fighting-style')) {
       const fs = section('Fighting Style', 'A Fighting Style feat. Defense is recommended.');
       const opts = rules.feats.filter((f) => f.type === 'fighting-style');
-      fs.appendChild(select(opts.map((f) => ({ value: f.key, label: f.name })), st.level1.fightingStyle, (v) => { st.level1.fightingStyle = v; redraw(); }));
+      fs.appendChild(select(opts.map((f) => ({ value: f.key, label: withSource(f.name, f.source) })), st.level1.fightingStyle, (v) => { st.level1.fightingStyle = v; redraw(); }));
       const f = featOf(st.level1.fightingStyle);
       if (f) fs.appendChild(details(`${f.name} — rules`, f.desc));
       body.appendChild(fs);
