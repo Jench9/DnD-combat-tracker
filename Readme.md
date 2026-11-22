@@ -117,6 +117,8 @@ The app speaks plain HTTP; put something in front of it that adds **HTTPS** (pas
 - **A tunnel — no fixed IP, no open ports** (easiest while you don't have an address): [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) (`cloudflared tunnel --url http://localhost:3000`, or a named tunnel on your own domain) or [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) (`tailscale funnel 3000`). HTTPS is handled by the tunnel.
 - **A reverse proxy with your domain** (needs the domain pointing at the server and ports 80/443 open): e.g. [Caddy](https://caddyserver.com/), which gets a Let's Encrypt certificate by itself — a `Caddyfile` with `kit.example.com { reverse_proxy combat-tracker:3000 }` and a `caddy` service in `docker-compose.yaml`. nginx or Traefik work the same way (pass WebSocket upgrades through).
 
+**With Tailscale Funnel** (on the machine that runs Docker): install Tailscale and `sudo tailscale up`; in the Tailscale admin console turn on MagicDNS and HTTPS certificates (DNS page) and allow Funnel for this machine (the first `tailscale funnel` run prints the link); then `sudo tailscale funnel --bg 3000`. `tailscale funnel status` shows the address (`https://<machine>.<tailnet>.ts.net`); `sudo tailscale funnel --https=443 off` stops it. Create invite links while you're on that address — they use the address in your browser.
+
 Then, in `docker-compose.yaml`:
 
 ```yaml
@@ -127,7 +129,7 @@ Then, in `docker-compose.yaml`:
       - "127.0.0.1:3000:3000"   # if the proxy/tunnel runs on the same machine: no direct access from outside
 ```
 
-Built in: passwords hashed with scrypt, sessions in an `HttpOnly`, `SameSite=Lax` cookie (only a hash of each session token is stored), login attempts limited (10 per 15 minutes per address and per username), invite and reset links used once and stored as hashes, requests and WebSocket connections from other sites refused, security headers (Content-Security-Policy, no framing, `nosniff`), WebSocket messages capped at 4 MB. Accounts and sessions live in `data/accounts.json`, `invites.json` and `sessions.json`; they are **not** included in *Download backup* (no password hashes in a downloaded file) and a restore never replaces them — copy them along with `data/` when moving the server.
+Built in: passwords hashed with scrypt, sessions in an `HttpOnly`, `SameSite=Lax` cookie (only a hash of each session token is stored), failed logins limited (10 per 15 minutes per username, 30 per address; successful logins don't count), invite and reset links used once and stored as hashes, requests and WebSocket connections from other sites refused, security headers (Content-Security-Policy, no framing, `nosniff`), WebSocket messages capped at 4 MB. Accounts and sessions live in `data/accounts.json`, `invites.json` and `sessions.json`; they are **not** included in *Download backup* (no password hashes in a downloaded file) and a restore never replaces them — copy them along with `data/` when moving the server.
 
 ## Data persistence
 

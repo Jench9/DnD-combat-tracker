@@ -51,10 +51,15 @@ function requireSameOrigin(req, res, next) {
   res.status(403).json({ error: 'Cross-site request refused.' });
 }
 
-// At most `max` hits per key in `windowMs`. hit(key) -> ms to wait (0 = ok).
+// At most `max` hits per key in `windowMs`. hit(key) -> ms to wait (0 = ok);
+// wait(key) -> the same without counting (to count only failures).
 function createRateLimiter({ max, windowMs }) {
   const hits = new Map();
   return {
+    wait(key) {
+      const h = hits.get(key);
+      return h && h.resetAt > Date.now() && h.count >= max ? h.resetAt - Date.now() : 0;
+    },
     hit(key) {
       const t = Date.now();
       let h = hits.get(key);

@@ -28,8 +28,11 @@ const access = require('../../core/access');
 const characters = require('../characters/service');
 const { createRateLimiter } = require('../../core/security');
 
-// 10 tries per 15 minutes per address, and per username.
+// Failed logins: 10 per 15 minutes per username, 30 per address (behind a
+// tunnel or proxy that hides the visitor's address everyone shares one;
+// successful logins never count, so a table logging in at once is fine).
 const loginLimit = createRateLimiter({ max: 10, windowMs: 15 * 60 * 1000 });
+const loginIpLimit = createRateLimiter({ max: 30, windowMs: 15 * 60 * 1000 });
 // Invite / setup codes: 30 lookups per 15 minutes per address.
 const codeLimit = createRateLimiter({ max: 30, windowMs: 15 * 60 * 1000 });
 
@@ -74,11 +77,16 @@ function createAccountsRouter({ onChanged = () => {}, onRoleChanged = () => {} }
 
   router.post('/auth/login', async (req, res) => {
     const { username, password } = body(req);
-    const wait = loginLimit.hit('ip:' + req.ip) || loginLimit.hit('user:' + String(username || '').trim().toLowerCase());
+    const userKey = 'user:' + String(username || '').trim().toLowerCase();
+    const wait = loginIpLimit.wait('ip:' + req.ip) || loginLimit.wait(userKey);
     if (wait) return tooMany(res, wait);
     const account = await accounts.checkLogin(username, password);
-    if (!account) return res.status(401).json({ error: 'Wrong username or password.' });
-    loginLimit.reset('user:' + account.username.toLowerCase());
+    if (!account) {
+      loginIpLimit.hit('ip:' + req.ip);
+      loginLimit.hit(userKey);
+      return res.status(401).json({ error: 'Wrong username or password.' });
+    }
+    loginLimit.reset(userKey);
     setSessionCookie(req, res, accounts.startSession(account.id));
     res.json({ account: accounts.publicView(account) });
   });
