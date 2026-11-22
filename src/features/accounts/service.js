@@ -9,7 +9,8 @@
 //     player plays its characters
 //     campaignIds: campaigns it plays in (as a player) even without a
 //     character there yet (from an invite); see core/access.js
-//   invites.json   [{ hash, role, characterIds, campaignIds, accountId, createdBy, expiresAt, createdAt }]
+//   invites.json   [{ hash, role, characterIds, campaignIds, dmCampaignIds, accountId, createdBy, expiresAt, createdAt }]
+//     campaignIds: campaigns it will play in; dmCampaignIds: campaigns it will run
 //                  accountId set = a password reset link for that account
 //   sessions.json  [{ hash, accountId, createdAt, expiresAt }]
 //
@@ -235,13 +236,14 @@ function unlinkCharacter(characterId) {
 
 // ---- invites: { role, characterIds } for a new account, or { accountId }
 // for a password reset. Returns the code (shown once; only its hash is kept).
-function createInvite({ role = 'player', characterIds = [], campaignIds = [], accountId = '', createdBy = '' } = {}) {
+function createInvite({ role = 'player', characterIds = [], campaignIds = [], dmCampaignIds = [], accountId = '', createdBy = '' } = {}) {
   const code = token();
   invites.push({
     hash: sha256(code),
     role: ROLES.includes(role) ? role : 'player',
     characterIds: cleanIds(characterIds),
     campaignIds: cleanCampaigns(campaignIds),
+    dmCampaignIds: cleanCampaigns(dmCampaignIds),
     createdBy: String(createdBy || ''),
     accountId: accountId && find(accountId) ? accountId : '',
     createdAt: new Date().toISOString(),
@@ -261,7 +263,7 @@ function useInvite(code) {
 }
 // Open invites for the DM's list (no codes: those were shown once).
 const pendingInvites = () => invites.filter((i) => i.expiresAt > now()).map((i) => ({
-  id: i.hash.slice(0, 12), role: i.role, characterIds: i.characterIds, campaignIds: i.campaignIds || [], accountId: i.accountId,
+  id: i.hash.slice(0, 12), role: i.role, characterIds: i.characterIds, campaignIds: i.campaignIds || [], dmCampaignIds: i.dmCampaignIds || [], accountId: i.accountId,
   createdBy: i.createdBy || '', createdAt: i.createdAt, expiresAt: i.expiresAt,
 }));
 function revokeInvite(id) {

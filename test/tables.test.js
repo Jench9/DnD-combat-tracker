@@ -59,6 +59,15 @@ test('two DMs, two campaigns: separate fights, characters and powers', async () 
     await pl.call('POST', `/api/auth/invite/${inv.data.code}`, { username: 'Pia', password: 'password-123' });
     assert.deepStrictEqual((await pl.call('GET', '/api/auth/status')).data.account.tables.map((t) => t.id), ['ca']);
 
+    // "Runs" in an invite: the admin invites Quinn to play in Ana's campaign
+    // and run Ben's; a DM can't hand out DM-ship.
+    assert.strictEqual((await ana.call('POST', '/api/accounts/invites', { role: 'player', campaignIds: ['ca'], dmCampaignIds: ['ca'] })).status, 403);
+    const qInv = await admin.call('POST', '/api/accounts/invites', { role: 'player', campaignIds: ['ca'], dmCampaignIds: ['cb', 'gone'] });
+    const quinn = client(base);
+    assert.strictEqual((await quinn.call('POST', `/api/auth/invite/${qInv.data.code}`, { username: 'Quinn', password: 'password-123' })).status, 200);
+    const qTables = (await quinn.call('GET', '/api/auth/status')).data.account.tables;
+    assert.deepStrictEqual(qTables.map((t) => [t.id, t.dm]).sort(), [['ca', false], ['cb', true]]);
+
     // Pia creates a character: it joins Ana's campaign (her table).
     const p = ws(pl, 'role=player');
     await p.opened;
@@ -100,13 +109,13 @@ test('two DMs, two campaigns: separate fights, characters and powers', async () 
     a.send('setCampaignDms', { id: 'cb', dmIds: [] });
     b.send('renameCampaign', { id: 'cb', name: 'Ben Renamed' });
     const renamed = await b.next('campaignState', (m) => m.campaigns.find((c) => c.id === 'cb')?.name === 'Ben Renamed');
-    assert.deepStrictEqual(renamed.campaigns.find((c) => c.id === 'cb').dmIds.length, 1, 'Ana could not change Ben\'s DMs');
+    assert.deepStrictEqual(renamed.campaigns.find((c) => c.id === 'cb').dmIds.length, 2, 'Ana could not change Ben\'s DMs (Ben + Quinn)');
     assert.strictEqual((await ana.call('GET', '/api/backup')).status, 403, 'backups: admin only');
     assert.strictEqual((await ana.call('POST', `/api/accounts/x/reset`)).status, 403);
 
-    // Ana's Players list: Pia (and herself), not Ben.
+    // Ana's Players list: Pia and Quinn (they play in her campaign) and herself, not Ben.
     const list = (await a.next('accountState', (m) => m.accounts.list)).accounts.list.map((x) => x.username).sort();
-    assert.deepStrictEqual(list, ['Ana', 'Pia']);
+    assert.deepStrictEqual(list, ['Ana', 'Pia', 'Quinn']);
 
     // One account, two roles: the admin makes Pia (a player account) DM of
     // Ben's campaign. She runs that table and still plays at Ana's.

@@ -10,7 +10,8 @@
 // Logged in:
 //   POST /api/auth/password { current, password }     change your own password (logs out other devices)
 // Admin, or a DM within its own campaigns (core/access.js):
-//   POST   /api/accounts/invites  { role, characterIds, campaignIds }  -> { code, path } (shown once)
+//   POST   /api/accounts/invites  { role, characterIds, campaignIds, dmCampaignIds }  -> { code, path } (shown once)
+//          campaignIds: it plays in them; dmCampaignIds (admin only): it runs them
 //          a DM: role player, into its campaigns, with characters it runs
 //   DELETE /api/accounts/invites/:id                      a DM: its own invites
 //   PATCH  /api/accounts/:id      { role?, characterIds?, campaignIds?, disabled? }
@@ -26,6 +27,7 @@ const { AUTH_MODE, COOKIE_SECURE } = require('../../config');
 const { SESSION_COOKIE, cookieValue, identityFromRequest } = require('../../core/identity');
 const access = require('../../core/access');
 const characters = require('../characters/service');
+const campaigns = require('../campaigns/service');
 const { createRateLimiter } = require('../../core/security');
 
 // Failed logins: 10 per 15 minutes per username, 30 per address (behind a
@@ -117,6 +119,13 @@ function createAccountsRouter({ onChanged = () => {}, onRoleChanged = () => {} }
     if (inv.accountId) result = await accounts.setPassword(inv.accountId, password);
     else result = await accounts.create({ username, password, role: inv.role, characterIds: inv.characterIds, campaignIds: inv.campaignIds || [] });
     if (result.error) return res.status(400).json({ error: result.error });
+    // "Runs": the new account becomes DM of those campaigns (that still exist).
+    if (!inv.accountId) {
+      (inv.dmCampaignIds || []).forEach((id) => {
+        const c = campaigns.find(id);
+        if (c && !c.dmIds.includes(result.account.id)) campaigns.setDms(id, [...c.dmIds, result.account.id]);
+      });
+    }
     accounts.useInvite(req.params.code);
     setSessionCookie(req, res, accounts.startSession(result.account.id));
     onChanged();
@@ -157,7 +166,10 @@ function createAccountsRouter({ onChanged = () => {}, onRoleChanged = () => {} }
 
   router.post('/accounts/invites', (req, res) => {
     const me = meOf(req);
-    const { role = 'player', characterIds = [], campaignIds = [] } = body(req);
+    const { role = 'player', characterIds = [], campaignIds = [], dmCampaignIds = [] } = body(req);
+    if (!access.isAdmin(me) && Array.isArray(dmCampaignIds) && dmCampaignIds.length) {
+      return res.status(403).json({ error: 'Only the admin can make someone a campaign\'s DM.' });
+    }
     if (!access.isAdmin(me)) {
       // A DM invites players into the campaigns it runs, with characters it runs.
       if (role !== 'player') return res.status(403).json({ error: 'Only the admin can invite DMs.' });
@@ -169,7 +181,7 @@ function createAccountsRouter({ onChanged = () => {}, onRoleChanged = () => {} }
         return res.status(403).json({ error: 'You can only give characters from your own campaigns.' });
       }
     }
-    const made = accounts.createInvite({ role, characterIds, campaignIds, createdBy: me.id });
+    const made = accounts.createInvite({ role, characterIds, campaignIds, dmCampaignIds, createdBy: me.id });
     onChanged();
     res.json(inviteBody(made));
   });

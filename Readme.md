@@ -12,13 +12,17 @@ A small Node server holds the state (saved to JSON files on disk, including the 
 docker compose up -d --build
 ```
 
-Open **http://localhost:3000**. Stop with `docker compose down`, follow logs with `docker compose logs -f combat-tracker`.
+Open **http://localhost:3000**. Stop with `docker compose down`, follow logs with `docker compose logs -f combat-tracker`. Data lives in `./data`.
 
-The image bakes the code in, so **any change needs a rebuild** (`docker compose up -d --build`). For live reload while developing:
+`docker-compose.yaml` is set up to be put online with Tailscale Funnel or another HTTPS tunnel/proxy on the same machine (see [Putting it on the internet](#putting-it-on-the-internet)): it listens only on this machine (`127.0.0.1:3000`), trusts the proxy and sends the login cookie over HTTPS only. To use it on your home wifi without a tunnel instead, change the port line to `"3000:3000"` and remove `COOKIE_SECURE` (both are marked "home wifi" in the file). It also has a health check (`docker compose ps` shows *healthy*) and rotates its logs.
+
+The image bakes the code in, so **any change needs a rebuild** (`docker compose up -d --build`). For testing changes, the dev file mounts your folder and restarts on every change:
 
 ```bash
-docker compose -f docker-compose.dev.yml up --build
+docker compose -f docker-compose.dev.yml up --build     # http://localhost:3001
 ```
+
+It runs **next to** the real one without touching it: its own project (`dnd-kit-dev`), port **3001** and data folder **`./data-dev`** (git-ignored). On a fresh `data-dev` the admin setup code is `DEV-SETUP`; uncomment `KIT_AUTH: open` in it to skip logins for quick UI checks.
 
 ### Without Docker
 
@@ -102,7 +106,7 @@ Everyone logs in with a username and password. There are three kinds of account:
 **Each campaign is its own table**: its own fight (Combat Tracker) and battle map, so two groups can play at the same time without seeing each other's monsters. Characters in no campaign share the *No campaign* table (that's where everything happens if you don't use campaigns). The monster, item and spell libraries and the map backgrounds are shared by all DMs.
 
 - **First start:** open the app — it asks to create the **admin account**. You need the **setup code** printed in the server log (`docker compose logs combat-tracker`, line "No DM account yet…"), which proves you run the server. Then you land on the **🔑 Players** page.
-- **Inviting:** on *Players*, **Create invite link** — choose the role (the admin can invite players, DMs and admins), tick the campaigns they join and the characters they'll play — and send the link. It works once, for 7 days; they choose a username and password. A DM can invite players into their own campaigns.
+- **Inviting:** on *Players*, **Create invite link** — choose the role (the admin can invite players, DMs and admins), tick the campaigns they'll **play in**, the characters they'll play and (admin) the campaigns they'll **run** — and send the link. Example: DM of *Curse of Strahd* and a player in *Lost Mine* → role Player, *Plays in* Lost Mine, their character, *Runs* Curse of Strahd. It works once, for 7 days; they choose a username and password. A DM can invite players into their own campaigns.
 - **A DM's first campaign:** after joining, a DM clicks **New campaign** on the "Who are you playing?" screen and is its DM at once. The admin can change who runs a campaign in **Manage campaigns** on the Characters page (*Run by*: any account, so a player can co-DM one campaign and keep playing in another).
 - **Picking a table:** the badge in the top bar opens "Who are you playing?": one section per table you're at — **Run this table as the DM** (if you run it), your characters there, **+ New character** (it joins that table). The badge shows where you are ("👑 DM · Curse of Strahd").
 - **Characters:** an account can play several characters; characters a player creates are theirs. On *Players* the admin (or the campaign's DM) adds accounts to campaigns and gives or takes away characters. Players can't move their characters to another campaign.

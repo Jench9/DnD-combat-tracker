@@ -282,3 +282,40 @@ test('the admin gives itself an existing character on the Players page', async (
   await noErrors(errors);
   await ctx.close();
 });
+
+test('an invite with "Runs": the new account runs one campaign and plays in another', async ({ browser }) => {
+  const ctx = await browser.newContext({ storageState: dmState });
+  const admin = await ctx.newPage();
+  const errors = watchErrors(admin);
+  await admin.addInitScript(() => localStorage.setItem('kit.identity', JSON.stringify({ role: 'dm', characterId: '', tableId: '' })));
+  // A second campaign to play in (the admin runs every table, so it creates one).
+  await admin.goto(BASE + '/characters.html');
+  admin.once('dialog', (d) => d.accept('Side Quest'));
+  await admin.locator('#campaignManageBtn').click();
+  await admin.locator('#campaignDlg').getByRole('button', { name: '+ New campaign' }).click();
+  await expect(admin.locator('#campaignDlg .cm-title')).toHaveText('Side Quest');
+
+  await admin.goto(BASE + '/players.html');
+  await admin.locator('#invCamps .pl-check', { hasText: 'Side Quest' }).locator('input').check();
+  await admin.locator('#invRuns .pl-check', { hasText: 'Ana Campaign' }).locator('input').check();
+  await admin.click('#invBtn');
+  await expect(admin.locator('#invNote')).toContainText('playing in Side Quest, running Ana Campaign');
+  await expect(admin.locator('#invList')).toContainText('running Ana Campaign');
+  const url = await admin.inputValue('#invUrl');
+
+  const newCtx = await browser.newContext();
+  const rowan = await newCtx.newPage();
+  const rErrors = watchErrors(rowan);
+  await rowan.goto(url);
+  await rowan.fill('#inviteUser', 'Rowan');
+  await rowan.fill('#invitePass', 'rowan-password');
+  await rowan.fill('#invitePass2', 'rowan-password');
+  await rowan.click('#inviteSubmit');
+  const box = rowan.locator('.join-box');
+  await expect(box.locator('.join-group', { hasText: 'Ana Campaign' })).toContainText('You DM');
+  await expect(box.locator('.join-group', { hasText: 'Side Quest' })).not.toContainText('You DM');
+  await noErrors(errors);
+  await noErrors(rErrors);
+  await newCtx.close();
+  await ctx.close();
+});

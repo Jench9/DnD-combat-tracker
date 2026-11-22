@@ -47,7 +47,7 @@ function createApp() {
   app.use('/api', requireSameOrigin);
   // Login, setup, invites and (DM) account management.
   app.use('/api', createAccountsRouter({
-    onChanged: () => hub.broadcast('accounts'),
+    onChanged: () => { hub.broadcast('accounts'); hub.broadcast('campaigns'); }, // an accepted invite may add a campaign DM
     onRoleChanged: (accountId) => hub.closeAccount(accountId, 4403),
   }));
   accountService.onSessionsEnded((accountId) => hub.closeAccount(accountId));

@@ -29,7 +29,7 @@
   <div id="dmView" hidden>
     <section class="panel">
       <div class="panel-title">Invite someone</div>
-      <p class="pl-hint">Creates a link to send to one person (by chat, email…). They choose a username and password, join the campaigns you tick and get the characters you tick. The link works once, for 7 days.</p>
+      <p class="pl-hint">Creates a link to send to one person (by chat, email…). They choose a username and password, then play in the campaigns and characters you tick — and run (DM) the campaigns ticked under <b>Runs</b>, if any. The link works once, for 7 days.</p>
       <div class="pl-invite">
         <label class="pl-field" id="invRoleField">Role
           <select id="invRole">
@@ -38,8 +38,11 @@
             <option value="admin">Admin (runs the server: every account and campaign)</option>
           </select>
         </label>
-        <div class="pl-field">Campaigns
+        <div class="pl-field">Plays in
           <div class="pl-checks" id="invCamps"></div>
+        </div>
+        <div class="pl-field" id="invRunsField">Runs (DM of)
+          <div class="pl-checks" id="invRuns"></div>
         </div>
         <div class="pl-field">Characters
           <div class="pl-checks" id="invChars"></div>

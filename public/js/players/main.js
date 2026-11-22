@@ -21,7 +21,7 @@ const admin = isAdmin();
 if (authMode() !== 'accounts') $('openMode').hidden = false;
 else if (!isDm()) $('notDm').hidden = false; // the admin, or the DM of this table
 else $('dmView').hidden = false;
-if (!admin) $('invRoleField').hidden = true; // DMs invite players
+if (!admin) { $('invRoleField').hidden = true; $('invRunsField').hidden = true; } // DMs invite players into their campaigns
 
 const el = (tag, cls, text) => {
   const e = document.createElement(tag);
@@ -87,6 +87,7 @@ function checks(box, items, label, extra) {
 }
 function drawInviteForm() {
   checks($('invCamps'), myCampaigns(), (c) => c.name, admin ? 'No campaigns yet.' : 'Create a campaign first (the badge in the top bar → New campaign).');
+  if (admin) checks($('invRuns'), campaigns, (c) => c.name, 'No campaigns yet.');
   const chars = characters.filter(runsCharacter).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
     .map((c) => ({ ...c, note: ownerOf(c.id) ? `(${ownerOf(c.id).username})` : '' }));
   checks($('invChars'), chars, (c) => c.name || 'Unnamed character', 'No characters — they can create their own after joining.');
@@ -96,12 +97,17 @@ $('invBtn').addEventListener('click', async () => {
   const ticked = (box) => [...$(box).querySelectorAll('input:checked')].map((i) => i.value);
   const characterIds = ticked('invChars');
   const campaignIds = ticked('invCamps');
+  const dmCampaignIds = admin ? ticked('invRuns') : [];
   const role = admin ? $('invRole').value : 'player';
-  const data = await api('POST', '/api/accounts/invites', { role, characterIds, campaignIds });
+  const data = await api('POST', '/api/accounts/invites', { role, characterIds, campaignIds, dmCampaignIds });
   if (!data) return;
-  const what = [campaignIds.length ? 'in ' + campaignIds.map(campName).join(', ') : '', characterIds.length ? 'with ' + characterIds.map(charName).join(', ') : ''].filter(Boolean).join(', ');
+  const what = [
+    campaignIds.length ? 'playing in ' + campaignIds.map(campName).join(', ') : '',
+    characterIds.length ? 'with ' + characterIds.map(charName).join(', ') : '',
+    dmCampaignIds.length ? 'running ' + dmCampaignIds.map(campName).join(', ') : '',
+  ].filter(Boolean).join(', ');
   showLink(data, `Invite for a new ${role === 'admin' ? 'admin' : role === 'dm' ? 'DM' : 'player'}${what ? ' ' + what : ''}.`);
-  document.querySelectorAll('#invCamps input, #invChars input').forEach((i) => { i.checked = false; });
+  document.querySelectorAll('#invCamps input, #invChars input, #invRuns input').forEach((i) => { i.checked = false; });
 });
 $('invCopy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('invUrl').value); $('invCopy').textContent = 'Copied'; } catch { $('invUrl').select(); }
@@ -207,8 +213,9 @@ function drawInvites() {
     const row = el('div', 'pl-inv');
     const target = i.accountId && accounts.find((a) => a.id === i.accountId);
     const what = [
-      (i.campaignIds || []).length ? 'in ' + i.campaignIds.map(campName).join(', ') : '',
+      (i.campaignIds || []).length ? 'playing in ' + i.campaignIds.map(campName).join(', ') : '',
       i.characterIds.length ? 'with ' + i.characterIds.map(charName).join(', ') : '',
+      (i.dmCampaignIds || []).length ? 'running ' + i.dmCampaignIds.map(campName).join(', ') : '',
     ].filter(Boolean).join(', ');
     row.appendChild(el('span', '', target
       ? `Password reset for ${target.username}`
