@@ -108,7 +108,7 @@ test('custom subclass: spellcasting (one-third caster), resources and features u
       headers: { 'Content-Type': 'application/json', 'X-Kit-Role': 'dm' },
       body: JSON.stringify({
         kind: 'subclass', name: 'Spell Knight', source: 'Homebrew', classKey: 'fighter',
-        resources: [{ name: 'Superiority Dice', recharge: 'short', usesText: '3:4, 7:5, 15:6' }, { name: 'Bad', usesText: 'nonsense' }],
+        resources: [{ name: 'Superiority Dice', recharge: 'short', usesText: '3:4, 7:5, 15:6' }, { name: 'Brawn', recharge: 'long', usesText: 'Strength modifier' }, { name: 'Charm', usesText: 'CHA' }, { name: 'Bad', usesText: 'nonsense' }],
         features: [
           { level: 3, name: 'Parry Strike', desc: '**Bonus Action.** Spend a die.', action: 'bonus', resource: 'Superiority Dice', cost: 1 },
           { level: 3, name: 'Spellcasting', desc: 'Cantrips | Prepared\n2 | 3' },
@@ -118,7 +118,8 @@ test('custom subclass: spellcasting (one-third caster), resources and features u
       }),
     });
     const { entry } = await r.json();
-    assert.deepStrictEqual(entry.resources.map((x) => x.name), ['Superiority Dice'], 'an unusable resource is dropped');
+    assert.deepStrictEqual(entry.resources.map((x) => x.name), ['Superiority Dice', 'Brawn', 'Charm'], 'an unusable resource is dropped');
+    assert.deepStrictEqual(entry.resources.slice(1).map((x) => x.ability), ['str', 'cha']);
     assert.deepStrictEqual(entry.resources[0].uses, [{ level: 3, max: 4 }, { level: 7, max: 5 }, { level: 15, max: 6 }]);
     assert.strictEqual(entry.features.find((f) => f.name === 'War Magic').resource, '', 'only its own resources');
 
@@ -150,6 +151,8 @@ test('custom subclass: spellcasting (one-third caster), resources and features u
     assert.deepStrictEqual(ch.spellSlots.slice(0, 2).map((s) => s.max), [2, 0], 'a level 3 one-third caster: 2 first-level slots');
     assert.strictEqual(ch.spells.length, 5);
     assert.deepStrictEqual(ch.resources.find((x) => x.name === 'Superiority Dice'), { ...ch.resources.find((x) => x.name === 'Superiority Dice'), max: 4, recharge: 'short' });
+    assert.strictEqual(ch.resources.find((x) => x.name === 'Brawn').max, 3, 'STR 17: its modifier');
+    assert.strictEqual(ch.resources.find((x) => x.name === 'Charm').max, 1, 'CHA 8: at least 1');
     assert.deepStrictEqual(ch.customActions.map((a) => [a.name, a.type, a.resource, a.cost]), [['Parry Strike', 'bonus', 'Superiority Dice', 1]]);
     assert.match(ch.features, /Cantrips \| Prepared/, 'the text, with its table, on the sheet');
 
@@ -176,6 +179,57 @@ test('custom subclass: spellcasting (one-third caster), resources and features u
     assert.deepStrictEqual(ch.spellSlots.slice(0, 3).map((s) => s.max), [4, 2, 0]);
     assert.strictEqual(ch.resources.find((x) => x.name === 'Superiority Dice').max, 5);
     assert.ok(ch.customActions.some((a) => a.name === 'War Magic' && a.type === 'free' && a.resource === ''));
+  } finally {
+    await srv.close();
+  }
+});
+
+test('custom subclass: always-prepared spells by class level (pasted table rows)', async () => {
+  const srv = await startServer();
+  const base = `http://localhost:${srv.port}`;
+  try {
+    const r = await fetch(`${base}/api/content`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Kit-Role': 'dm' },
+      body: JSON.stringify({
+        kind: 'subclass', name: 'Test Patron Knight', source: 'Homebrew', classKey: 'fighter',
+        features: [{
+          level: 3, name: 'Patron Spells', desc: 'Always ready.',
+          spellsText: 'Fighter Level     Spells\n3     Detect Thoughts, Tasha’s Hideous Laughter\n5     Clairvoyance, Not A Real Spell',
+        }],
+      }),
+    });
+    const { entry } = await r.json();
+    assert.deepStrictEqual(entry.features[0].spells, [
+      { level: 3, name: 'Detect Thoughts' }, { level: 3, name: 'Tasha’s Hideous Laughter' },
+      { level: 5, name: 'Clairvoyance' }, { level: 5, name: 'Not A Real Spell' },
+    ]);
+    const FIGHTER = {
+      name: 'Pat', classKey: 'fighter', backgroundKey: 'soldier', speciesKey: 'dwarf',
+      abilityMethod: 'standard', abilities: { str: 15, dex: 13, con: 14, int: 12, wis: 10, cha: 8 },
+      backgroundBonus: { str: 2, con: 1 }, classSkills: ['Perception', 'History'],
+      level1: { fightingStyle: 'defense' }, equipment: { class: 0, background: 0 },
+    };
+    let ch = sanitizeCharacterPatch(blankCharacter('pk'), buildCharacter(blankCharacter('pk'), FIGHTER, ctx()).patch);
+    const up = (answers) => {
+      const res = applyLevelUp(ch, { classKey: 'fighter', hp: { method: 'average' }, ...answers }, ctx());
+      assert.ifError(res.error);
+      ch = sanitizeCharacterPatch(ch, res.patch);
+    };
+    up({});
+    up({ subclass: `c-${entry.id}` });
+    const names = () => ch.spells.map((s) => s.name).sort();
+    assert.deepStrictEqual(names(), ['Detect Thoughts', 'Hideous Laughter'], 'level 3 spells; "Tasha’s …" finds the SRD name');
+    assert.ok(ch.spells.every((s) => s.always && s.prepared && /Patron Spells/.test(s.from)));
+    up({ feat: { key: 'ability-score-improvement', plus: { con: 1, str: 1 } } }); // 4: nothing new
+    assert.strictEqual(ch.spells.length, 2);
+    const plan5 = require('../src/features/characters/builder/levelup').levelUpPlan(ch, 'fighter', ctx());
+    assert.ok(plan5.features.some((f) => /Always prepared now:\*\* Clairvoyance, Not A Real Spell/.test(f.desc)), 'the plan says what arrives');
+    up({});
+    assert.deepStrictEqual(names(), ['Clairvoyance', 'Detect Thoughts', 'Hideous Laughter']);
+    assert.match(ch.features, /not in the spell library: Not A Real Spell/);
+    // Not unpreparable by a sheet edit that forgets the flag? The flag stays as sent.
+    assert.strictEqual(sanitizeCharacterPatch(ch, { spells: ch.spells.map((s) => ({ ...s, prepared: false })) }).spells.every((s) => s.prepared), true, 'always means prepared');
   } finally {
     await srv.close();
   }

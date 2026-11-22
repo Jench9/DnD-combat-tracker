@@ -189,8 +189,8 @@ function mergeResources(existing, wanted, newId) {
 }
 
 // A custom subclass's resources at a class level (and total level, for the
-// proficiency bonus): [{ name, max, recharge }].
-function subclassResources(classes, rules) {
+// proficiency bonus; an ability modifier, at least 1): [{ name, max, recharge }].
+function subclassResources(classes, rules, abilities = {}) {
   const total = totalLevel(classes);
   const pb = Math.floor((Math.max(1, total) - 1) / 4) + 2;
   const out = [];
@@ -198,7 +198,7 @@ function subclassResources(classes, rules) {
     const def = rules.classByKey.get(c.key);
     const sub = def && c.subclass ? def.subclasses.find((s) => s.key === c.subclass) : null;
     (sub && sub.resources || []).forEach((r) => {
-      const max = r.pb ? pb : (r.uses || []).filter((u) => u.level <= c.level).reduce((m, u) => u.max, 0);
+      const max = r.pb ? pb : r.ability ? Math.max(1, mod(abilities[r.ability] || 10)) : (r.uses || []).filter((u) => u.level <= c.level).reduce((m, u) => u.max, 0);
       if (max > 0) out.push({ name: r.name, max, recharge: r.recharge });
     });
   });
@@ -213,7 +213,7 @@ function resourcesFor(ch, classes, abilities, rules, newId) {
     const row = def && levelRow(def, c.level);
     return { ...c, counters: row ? row.counters : {} };
   });
-  return mergeResources(ch.resources, [...classResources(withCounters, abilities), ...subclassResources(classes, rules)], newId);
+  return mergeResources(ch.resources, [...classResources(withCounters, abilities), ...subclassResources(classes, rules, abilities)], newId);
 }
 
 // ---------------------------------------------------------------- modifiers

@@ -9,11 +9,15 @@
 //     createdBy (account id, '' in open mode), createdAt, updatedAt, ...per kind }
 //   subclass   classKey, summary, desc,
 //              features: [{ level, name, desc, action, resource, cost }]
+//                spells: [{ level, name }] it makes always prepared from that
+//                class level on (domain / patron / oath spells); typed as lines
+//                "3: Detect Thoughts, Dissonant Whispers" (or the book's table rows)
 //                action: '' | action | bonus | reaction | free (shown in the
 //                sheet's Actions with a Use button), resource: the name of
 //                one of `resources` a use spends (cost uses)
 //              resources: [{ name, recharge: short | long | none,
-//                pb (uses = proficiency bonus) | uses: [{ level, max }] }]
+//                pb (uses = proficiency bonus) | ability: str…cha (uses = that
+//                modifier, at least 1) | uses: [{ level, max }] }]
 //              spellcasting: null | { type: third | half | full, ability,
 //                list (a class's spell list, e.g. wizard), cantrips[20],
 //                prepared[20] } — totals at each class level (index = level − 1);
@@ -74,6 +78,7 @@ function clean(raw, base = {}) {
         action: ACTION_TYPES.includes(f && f.action) ? f.action : '',
         resource: resNames.includes(f && f.resource) ? f.resource : '',
         cost: int(f && f.cost, 1, 20, 1),
+        spells: parseSpellLines(f && (f.spellsText !== undefined ? f.spellsText : f.spells), int(f && f.level, 1, 20, 3)),
       }))
       .filter((f) => f.name).slice(0, 40).sort((a, b) => a.level - b.level);
     e.spellcasting = cleanSpellcasting(r.spellcasting);
@@ -102,15 +107,47 @@ function clean(raw, base = {}) {
   return { entry: e };
 }
 
-// "PB" / "3:4, 7:5, 15:6" / "2" (or the stored shape) -> { pb } | { uses: [{ level, max }] }
+// Always-prepared spells: [{ level, name }] (stored) or text, one line per
+// class level — "3: Detect Thoughts, Dissonant Whispers", "5  Clairvoyance,
+// Hunger of Hadar" (rows pasted from a book's table: the level, then the
+// names) — or just names (they arrive with the feature, at `featureLevel`).
+// Header lines ("Warlock Level  Spells") are skipped.
+function parseSpellLines(v, featureLevel) {
+  const out = [];
+  const add = (level, name) => {
+    const n = text(name, 60).replace(/\.$/, '');
+    if (n && !out.some((x) => x.name.toLowerCase() === n.toLowerCase())) out.push({ level, name: n });
+  };
+  if (Array.isArray(v)) {
+    v.forEach((x) => (typeof x === 'string' ? add(featureLevel, x) : add(int(x && x.level, 1, 20, featureLevel), x && x.name)));
+  } else {
+    String(v || '').split(/\r?\n/).forEach((line) => {
+      const m = /^\s*(\d{1,2})(?:st|nd|rd|th)?\s*[:.)\-–]?\s+(.+)$/.exec(line);
+      if (m) m[2].split(/[,;]/).forEach((n) => add(int(m[1], 1, 20, featureLevel), n));
+      else if (line.includes(',') || !/\blevel\b|spells$/i.test(line.trim())) line.split(/[,;]/).forEach((n) => add(featureLevel, n));
+    });
+  }
+  return out.filter((x) => x.name).sort((a, b) => a.level - b.level).slice(0, 30);
+}
+
+const ABILITY_WORDS = { str: 'strength', dex: 'dexterity', con: 'constitution', int: 'intelligence', wis: 'wisdom', cha: 'charisma' };
+// "PB" / "CHA" or "Charisma modifier" / "3:4, 7:5, 15:6" / "2" (or the stored
+// shape) -> { pb } | { ability } | { uses: [{ level, max }] }
 function parseUses(v) {
-  if (v && typeof v === 'object' && !Array.isArray(v)) return v.pb ? { pb: true } : parseUses(v.uses);
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    if (v.pb) return { pb: true };
+    if (ABILITIES.includes(v.ability)) return { ability: v.ability };
+    return parseUses(v.uses);
+  }
   if (Array.isArray(v)) {
     const uses = v.map((u) => ({ level: int(u && u.level, 1, 20, 1), max: int(u && u.max, 0, 99, 0) })).filter((u) => u.max > 0);
     return { uses: uses.sort((a, b) => a.level - b.level).filter((u, i, all) => !all.slice(i + 1).some((x) => x.level === u.level)) };
   }
   const s = String(v || '').trim();
   if (/^pb$|proficiency/i.test(s)) return { pb: true };
+  const word = s.toLowerCase().replace(/\s*(modifier|mod)\.?$/, '').trim();
+  const ability = ABILITIES.find((k) => word === k || word === ABILITY_WORDS[k]);
+  if (ability) return { ability };
   if (/^\d+$/.test(s)) return { uses: [{ level: 1, max: int(s, 0, 99, 0) }].filter((u) => u.max > 0) };
   return parseUses([...s.matchAll(/(\d+)\s*[:=]\s*(\d+)/g)].map((m) => ({ level: m[1], max: m[2] })));
 }
@@ -118,9 +155,9 @@ function cleanResources(list) {
   return (Array.isArray(list) ? list : []).map((x) => {
     const name = text(x && x.name, 40);
     const recharge = RECHARGES.includes(x && x.recharge) ? x.recharge : 'long';
-    const u = parseUses(x && (x.pb ? { pb: true } : x.uses !== undefined ? x.uses : x.usesText));
-    return { name, recharge, ...(u.pb ? { pb: true } : { uses: u.uses || [] }) };
-  }).filter((x) => x.name && (x.pb || x.uses.length)).slice(0, 6);
+    const u = parseUses(x && (x.usesText !== undefined ? x.usesText : x.pb ? { pb: true } : x.ability ? { ability: x.ability } : x.uses));
+    return { name, recharge, ...(u.pb ? { pb: true } : u.ability ? { ability: u.ability } : { uses: u.uses || [] }) };
+  }).filter((x) => x.name && (x.pb || x.ability || x.uses.length)).slice(0, 6);
 }
 function cleanSpellcasting(sc) {
   if (!sc || typeof sc !== 'object' || !sc.enabled && sc.enabled !== undefined) return null;

@@ -145,8 +145,12 @@ function planFor(ch, def, classes, existing, ctx) {
     });
     choices.push({ type: 'subclass', options: subclasses.map((s) => ({ key: s.key, name: s.name })) });
   } else if (sub) {
+    // Always-prepared spells arriving now from features gained earlier.
+    const arriving = sub.features.filter((f) => f.level < newClassLevel)
+      .flatMap((f) => (f.spells || []).filter((x) => x.level === newClassLevel).map((x) => x.name));
+    if (arriving.length) features.push({ name: `${sub.name}: always-prepared spells`, desc: `**Always prepared now:** ${arriving.join(', ')}` });
     sub.features.filter((f) => f.level === newClassLevel).forEach((f) => {
-      features.push({ name: `${f.name} (${sub.name})`, desc: f.desc, action: f.action || '', resource: f.resource || '', cost: f.cost || 1, actionName: f.name });
+      features.push({ name: `${f.name} (${sub.name})`, desc: f.desc, action: f.action || '', resource: f.resource || '', cost: f.cost || 1, actionName: f.name, spells: f.spells || [] });
       const c = subclassFeatureChoice(f.name);
       if (c && c.type === 'fightingStyle') choices.push({ ...c, options: fightingStyleOptions(ch, rules) });
       else if (c) choices.push(c);
@@ -210,6 +214,40 @@ function workOf(ch) {
     inspiration: !!ch.inspiration,
     customActions: (ch.customActions || []).map((x) => ({ ...x })),
   };
+}
+
+// A library spell by the name a book uses: apostrophes and case don't
+// matter, the character's edition first; "Tasha's Hideous Laughter" also
+// finds the SRD's "Hideous Laughter" (named spells lose the name there).
+function findSpellByName(name, ctx, edition) {
+  const norm = (s) => String(s || '').replace(/\s*\((?:2014|2024)\)\s*$/, '').replace(/[’‘`]/g, "'").trim().toLowerCase();
+  const want = norm(name);
+  const tries = [want, want.replace(/^[a-z]+'s\s+/, '')];
+  for (const t of tries) {
+    const hits = ctx.spells.filter((s) => norm(s.name) === t);
+    const best = hits.find((s) => s.edition === edition) || hits.find((s) => !s.edition) || hits[0];
+    if (best) return best;
+  }
+  return null;
+}
+
+// Always-prepared spells (domain / patron / oath spells) of the subclass's
+// features that arrive at this class level — or, when the subclass is
+// chosen now, every one up to it. Added to the spellbook marked `always`.
+function addAlwaysSpells(w, sub, level, chosenNow, ctx) {
+  if (!sub || !sub.features) return;
+  const edition = w.ch.rulesEdition === '2014' ? '2014' : '2024';
+  const missing = [];
+  sub.features.filter((f) => f.level <= level).forEach((f) => (f.spells || []).forEach((s) => {
+    if (chosenNow ? s.level > level : s.level !== level) return;
+    const spell = findSpellByName(s.name, ctx, edition);
+    if (!spell) { missing.push(s.name); return; }
+    const had = w.spells.find((x) => x.spellId === spell.id);
+    const from = `${f.name} (${sub.name})`;
+    if (had) Object.assign(had, { prepared: true, always: true, from });
+    else w.spells.push({ id: ctx.newId(), spellId: spell.id, name: spell.name.slice(0, 60), prepared: true, always: true, from });
+  }));
+  if (missing.length) w.blocks.push(P.featureBlock('To do', `Always prepared, but not in the spell library: ${missing.join(', ')} — add them to the library (Spells page) and then to the spellbook.`));
 }
 
 // A subclass feature that's used in play (custom content: action type,
@@ -359,6 +397,10 @@ function gainClassLevel(w, plan, answers, ctx, classes) {
   // Features of this level.
   plan.features.forEach((f) => w.blocks.push(P.featureBlock(`${f.name} (${def.name} ${level})`, f.desc)));
   plan.features.forEach((f) => addCustomAction(w, f, entry.subclassName || def.name, ctx.newId));
+  // A subclass chosen earlier: its always-prepared spells for this level.
+  if (entry.subclass && !plan.choices.some((c) => c.type === 'subclass')) {
+    addAlwaysSpells(w, def.subclasses.find((s) => s.key === entry.subclass), level, false, ctx);
+  }
   w.modifiers = P.addPresets(w.modifiers, P.presetsAt(def.key, level), ctx.newId);
   if (entry.subclass) w.modifiers = P.addPresets(w.modifiers, P.presetsAt(entry.subclass, level), ctx.newId);
   if (entry.subclass === 'draconic-sorcery' && level > 3) w.hpGain += 1; // Draconic Resilience
@@ -381,6 +423,7 @@ function gainClassLevel(w, plan, answers, ctx, classes) {
       w.blocks.push(P.featureBlock(`${s.name} (${def.name} subclass)`, s.desc));
       s.features.forEach((f) => w.blocks.push(P.featureBlock(`${f.name} (${s.name} ${level})`, f.desc)));
       s.features.forEach((f) => addCustomAction(w, f, s.name, ctx.newId));
+      addAlwaysSpells(w, def.subclasses.find((x) => x.key === s.key), level, true, ctx);
       // A spellcasting subclass: its ability, if the character had none.
       const cdef = P.casterDef(def, s.key);
       if (cdef !== def && !w.spellAbility) w.spellAbility = cdef.spellAbility;

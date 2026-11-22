@@ -168,7 +168,10 @@ function sanitizeSpells(list) {
     if (!e || !INV_ID_RE.test(String(e.id)) || !INV_ID_RE.test(String(e.spellId)) || seen.has(e.id)) return;
     seen.add(e.id);
     out.push({
-      id: e.id, spellId: e.spellId, name: typeof e.name === 'string' ? e.name.slice(0, 60) : '', prepared: !!e.prepared,
+      id: e.id, spellId: e.spellId, name: typeof e.name === 'string' ? e.name.slice(0, 60) : '',
+      // always: given by a feature (domain spells…) — prepared, and it doesn't count
+      prepared: !!e.prepared || e.always === true,
+      ...(e.always === true ? { always: true, from: typeof e.from === 'string' ? e.from.slice(0, 80) : '' } : {}),
     });
   });
   return out;

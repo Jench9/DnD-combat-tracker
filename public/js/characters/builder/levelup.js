@@ -14,6 +14,13 @@ import {
 
 const ALL_SKILLS = SKILLS.map(([n]) => n);
 
+// A feature's text plus the spells it makes always prepared (custom content).
+function withSpells(f, level, upTo = false) {
+  const now = (f.spells || []).filter((x) => (upTo ? x.level <= level : x.level === level)).map((x) => x.name);
+  const later = (f.spells || []).filter((x) => x.level > level).map((x) => `${x.name} (${x.level})`);
+  return [f.desc, now.length ? `**Always prepared now:** ${now.join(', ')}` : '', later.length ? `Later: ${later.join(', ')}` : ''].filter(Boolean).join('\n\n');
+}
+
 export async function openLevelUp(ch, { onDone } = {}) {
   const d = makeDialog('levelUpDlg', `Level up — ${ch.name || 'character'}`);
   d.dlg.classList.add('wide');
@@ -85,7 +92,7 @@ export async function openLevelUp(ch, { onDone } = {}) {
 
   function drawPlan() {
     const head = section(`${plan.className} ${plan.newClassLevel}${plan.isNewClass ? ' (new class)' : ''} · character level ${plan.newTotalLevel}`);
-    if (plan.features.length) plan.features.forEach((f) => head.appendChild(details(f.name, f.desc)));
+    if (plan.features.length) plan.features.forEach((f) => head.appendChild(details(f.name, withSpells(f, plan.newClassLevel))));
     else head.appendChild(el('div', 'b-hint', 'No new class features at this level (spell slots and counters may still go up).'));
     d.body.appendChild(head);
 
@@ -157,7 +164,7 @@ export async function openLevelUp(ch, { onDone } = {}) {
     const chosen = (plan.subclasses || []).find((x) => x.key === a.subclass);
     if (chosen) {
       if (chosen.desc) s.appendChild(fillRich(el('div', 'b-desc'), chosen.desc));
-      chosen.features.forEach((f) => s.appendChild(details(f.name, f.desc)));
+      chosen.features.forEach((f) => s.appendChild(details(f.name, withSpells(f, plan.newClassLevel, true))));
     }
     if (a.subclass === 'custom') {
       const inp = el('input', 'b-text');

@@ -56,3 +56,5 @@ header { display: flex; justify-content: space-between; align-items: flex-end; g
 .ct-preview > summary { cursor: pointer; font-size: 12.5px; color: var(--blue); }
 .ct-preview-body { font-size: 13px; line-height: 1.45; padding: 6px 0 2px; }
 .ct-preview-h { font-weight: 700; margin: 8px 0 2px; }
+.ct-spells-l { flex: 1 1 100%; align-items: flex-start; flex-direction: column; }
+.ct-spells { width: 100%; min-height: 48px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; }

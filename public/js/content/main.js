@@ -67,9 +67,15 @@ function preview(e) {
     if (!d.open || body.childElementCount) return;
     if (e.kind === 'subclass') {
       block('', e.desc);
-      (e.resources || []).forEach((r) => body.appendChild(el('div', 'ct-item-sub', `${r.name}: ${r.pb ? 'proficiency bonus' : r.uses.map((u) => `${u.max} at ${u.level}`).join(', ')} · back on ${r.recharge === 'short' ? 'a Short or Long Rest' : r.recharge === 'long' ? 'a Long Rest' : 'nothing'}`)));
+      (e.resources || []).forEach((r) => body.appendChild(el('div', 'ct-item-sub', `${r.name}: ${r.pb ? 'proficiency bonus' : r.ability ? `${r.ability.toUpperCase()} modifier (at least 1)` : r.uses.map((u) => `${u.max} at ${u.level}`).join(', ')} · back on ${r.recharge === 'short' ? 'a Short or Long Rest' : r.recharge === 'long' ? 'a Long Rest' : 'nothing'}`)));
       if (e.spellcasting) body.appendChild(el('div', 'ct-item-sub', `Spellcasting: ${e.spellcasting.type} caster, ${e.spellcasting.ability.toUpperCase()}, ${e.spellcasting.list} list`));
-      e.features.forEach((f) => block(`Level ${f.level}: ${f.name}${f.action ? ` (${USED_AS.find((u) => u[0] === f.action)[1]}${f.resource ? `, spends ${f.cost} ${f.resource}` : ''})` : ''}`, f.desc));
+      e.features.forEach((f) => {
+        block(`Level ${f.level}: ${f.name}${f.action ? ` (${USED_AS.find((u) => u[0] === f.action)[1]}${f.resource ? `, spends ${f.cost} ${f.resource}` : ''})` : ''}`, f.desc);
+        const byLevel = {};
+        (f.spells || []).forEach((x) => { (byLevel[x.level] = byLevel[x.level] || []).push(x.name); });
+        const rows = Object.entries(byLevel).map(([lv, names]) => `| ${lv} | ${names.join(', ')} |`);
+        if (rows.length) block('', ['| Level | Always prepared |', '|---|---|', ...rows].join('\n'));
+      });
     } else if (e.kind === 'species') e.traits.forEach((t) => block(t.name, t.desc));
     else if (e.kind === 'feat') block('', e.desc);
     else block('', [`Skills: ${e.skills.join(', ')}`, e.tools.length ? `Tools: ${e.tools.join(', ')}` : '', `Equipment: ${e.equipment || '—'}${e.gp ? `, ${e.gp} GP` : ''} — or 50 GP`].filter(Boolean).join('\n'));
@@ -275,6 +281,20 @@ function featureMechanics(p) {
   cost.value = p.cost || 1;
   cost.addEventListener('input', () => { p.cost = cost.value; });
   mk('×', cost);
+  // Always-prepared spells (domain / patron / oath spells), by class level.
+  const sp = el('textarea', 'ct-spells');
+  sp.rows = 2;
+  sp.placeholder = 'Always-prepared spells, one line per class level — e.g.\n3: Detect Thoughts, Dissonant Whispers\n5: Clairvoyance';
+  sp.setAttribute('aria-label', 'Always-prepared spells, one line per class level');
+  sp.value = p.spellsText ?? (p.spells || []).reduce((lines, x) => {
+    const last = lines[lines.length - 1];
+    if (last && last.level === x.level) last.names.push(x.name); else lines.push({ level: x.level, names: [x.name] });
+    return lines;
+  }, []).map((l) => `${l.level}: ${l.names.join(', ')}`).join('\n');
+  sp.addEventListener('input', () => { p.spellsText = sp.value; });
+  const spl = el('label', 'ct-mini ct-spells-l');
+  spl.append(document.createTextNode('Always prepared'), sp);
+  wrap.appendChild(spl);
   return wrap;
 }
 
@@ -297,10 +317,10 @@ function resourceRows() {
       rc.value = r.recharge || 'short';
       rc.addEventListener('change', () => { r.recharge = rc.value; });
       const uses = el('input');
-      uses.placeholder = 'Uses: 3:4, 7:5, 15:6 — or PB';
-      uses.value = r.usesText ?? (r.pb ? 'PB' : (r.uses || []).map((u) => `${u.level}:${u.max}`).join(', '));
-      uses.setAttribute('aria-label', 'Uses by class level, or PB for the proficiency bonus');
-      uses.addEventListener('input', () => { r.usesText = uses.value; delete r.uses; delete r.pb; });
+      uses.placeholder = 'Uses: 3:4, 7:5, 15:6 — or PB, or CHA';
+      uses.value = r.usesText ?? (r.pb ? 'PB' : r.ability ? r.ability.toUpperCase() : (r.uses || []).map((u) => `${u.level}:${u.max}`).join(', '));
+      uses.setAttribute('aria-label', 'Uses by class level, PB for the proficiency bonus, or an ability (e.g. CHA) for its modifier');
+      uses.addEventListener('input', () => { r.usesText = uses.value; delete r.uses; delete r.pb; delete r.ability; });
       const x = el('button', 'ct-x', '×');
       x.type = 'button';
       x.setAttribute('aria-label', 'Remove this resource');
@@ -399,7 +419,7 @@ function drawEditor() {
     body.append(row, field('Description', area('desc', 'What the subclass is about (optional)', 3), { wide: true, hint: FORMAT_HINT }));
     const lvl = (data.classes.find((c) => c.key === form.classKey) || {}).subclassLevel || 3;
     body.appendChild(field('Resources', resourceRows(), {
-      wide: true, hint: 'Limited uses it gives (Superiority Dice…): uses by class level ("3:4, 7:5, 15:6") or PB. Level up adds them to the sheet\'s Resources.',
+      wide: true, hint: 'Limited uses it gives (Superiority Dice…): uses by class level ("3:4, 7:5, 15:6"), PB (proficiency bonus) or an ability such as CHA (its modifier, at least 1). Level up adds them to the sheet\'s Resources.',
     }));
     body.appendChild(field('Features', parts('features', { withLevel: true, label: 'Feature', defaultLevel: lvl, mechanics: true }), {
       wide: true, hint: 'One per feature, with the class level it arrives at; level up adds its text to the sheet. "Used as" puts it in the Actions list (with a Use button that spends its resource). ' + FORMAT_HINT,

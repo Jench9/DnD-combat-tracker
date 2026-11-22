@@ -320,7 +320,7 @@ test('content: a subclass with spellcasting, a resource and a feature used as a 
   await dlg.getByRole('button', { name: '+ Add resource' }).click();
   await dlg.getByLabel('Resource name').fill('Superiority Dice');
   await dlg.getByLabel('Resource name').blur();
-  await dlg.getByLabel('Uses by class level, or PB for the proficiency bonus').fill('3:4, 7:5');
+  await dlg.getByLabel(/^Uses by class level/).fill('3:4, 7:5');
   await dlg.getByRole('button', { name: '+ Add feature' }).click();
   await dlg.getByPlaceholder('Feature name').fill('Parry Strike');
   await dlg.getByPlaceholder('What it does').fill('Spend a die.\n| a | b |\n|---|---|\n| 1 | 2 |');
@@ -337,5 +337,38 @@ test('content: a subclass with spellcasting, a resource and a feature used as a 
   await expect(item).toContainText('Spellcasting: third caster, INT, wizard list');
   await expect(item).toContainText('Level 3: Parry Strike (Bonus Action, spends 1 Superiority Dice)');
   await expect(item.locator('table th')).toHaveText(['a', 'b']);
+  await noErrors(errors);
+});
+
+test('always-prepared spells: entered on a subclass feature, shown in the spellbook', async ({ page }) => {
+  const errors = watchErrors(page);
+  await as(page, 'dm');
+  await page.goto('/content.html');
+  await page.click('#addBtn');
+  const dlg = page.locator('#editDlg');
+  await dlg.getByPlaceholder('e.g. Battle Master').fill('Patron Test');
+  await dlg.locator('input[list="sourceList"]').fill('Homebrew');
+  await dlg.locator('label.ct-field', { hasText: /^Class/ }).locator('select').selectOption('warlock');
+  await dlg.getByRole('button', { name: '+ Add feature' }).click();
+  await dlg.getByPlaceholder('Feature name').fill('Patron Spells');
+  await dlg.getByLabel('Always-prepared spells, one line per class level').fill('Warlock Level\tSpells\n3\tDetect Thoughts, Phantasmal Force\n5\tClairvoyance');
+  await dlg.locator('#saveBtn').click();
+  await expect(dlg).toBeHidden();
+  const item = page.locator('.ct-item', { hasText: 'Patron Test' });
+  await item.locator('.ct-preview > summary').click();
+  await expect(item.locator('table tbody tr')).toHaveText([/3\s*Detect Thoughts, Phantasmal Force/, /5\s*Clairvoyance/]);
+
+  // A sheet with one of them given by a feature: "always prepared", no tick box.
+  const spells = (await snapshot('spellState')).spells;
+  const dt = spells.find((s) => s.name === 'Detect Thoughts');
+  await send([
+    ['addCharacter', { id: 'alwayspc' }],
+    ['updateCharacter', { id: 'alwayspc', patch: { name: 'Wren', spellAbility: 'cha', spells: [{ id: 'sp1', spellId: dt.id, name: dt.name, prepared: true, always: true, from: 'Patron Spells (Patron Test)' }] } }],
+  ]);
+  await page.goto('/characters.html#edit=alwayspc');
+  await page.locator('.tab-btn[data-tab="spells"]').click();
+  const row = page.locator('.spell-row', { hasText: 'Detect Thoughts' });
+  await expect(row.locator('.prep.always')).toHaveText('always prepared');
+  await expect(row.locator('input[type=checkbox]')).toHaveCount(0);
   await noErrors(errors);
 });

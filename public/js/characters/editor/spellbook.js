@@ -96,7 +96,14 @@ function renderBook(c) {
     main.append(name, sum);
     row.appendChild(main);
 
-    if (sp && sp.level > 0) {
+    if (sp && sp.level > 0 && e.always) {
+      // Given by a feature (domain / patron spells): always prepared, not counted.
+      const tag = document.createElement('span');
+      tag.className = 'prep always';
+      tag.textContent = 'always prepared';
+      tag.title = e.from ? `From ${e.from} — always prepared; doesn't count against your prepared spells` : 'Always prepared';
+      row.appendChild(tag);
+    } else if (sp && sp.level > 0) {
       const prep = document.createElement('label');
       prep.className = 'prep';
       const cb = document.createElement('input');
