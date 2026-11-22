@@ -29,6 +29,9 @@ services:
       # home wifi without a tunnel: remove COOKIE_SECURE (no HTTPS there)
       # SESSION_DAYS: "30"      # how long a login lasts
       # KIT_SETUP_CODE: "..."   # a fixed setup code instead of a random one
+      # Automatic backups to ./data/backups/ (default: every 7 days, newest 2 kept):
+      # AUTO_BACKUP_DAYS: "7"   # 0 = off
+      # AUTO_BACKUP_KEEP: "2"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/auth/status').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
       interval: 30s

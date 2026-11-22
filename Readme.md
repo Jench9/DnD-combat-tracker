@@ -145,6 +145,8 @@ The current fight (combatants, HP, round, turn) and the battle map (grid size, t
 
 **Backups:** as the DM, use **Backup & restore** at the bottom of the Home page. *Download backup* saves everything above (map images included) as one `.json` file; *Restore from file…* puts such a file back for everyone at the table, live — the data it replaces is first saved in `data/backups/` (the last 5 restores are kept).
 
+**Automatic backups:** the server also writes the same backup file to `data/backups/` **every week** by itself and keeps the **newest two** (a server that was switched off catches up shortly after it starts). The admin sees them under *Backup & restore* on the Home page, with a download button; to go back to one, download it and use *Restore from file…*. They sit in the same `data/` folder as everything else, so copy one somewhere else now and then (another disk, cloud storage) in case the disk itself fails. Change the schedule with `AUTO_BACKUP_DAYS` (0 = off) and `AUTO_BACKUP_KEEP` in `docker-compose.yaml`.
+
 ## How it works
 
 The server is the single source of truth. A client sends an action `{ type, payload }`; the server applies it and broadcasts the updated slice of state to **all** clients, including the sender. Clients only render what the server last sent them.

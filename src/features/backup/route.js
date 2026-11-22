@@ -1,9 +1,11 @@
-// REST side of backups (DM only):
+// REST side of backups (the admin; open mode: the DM):
 //   GET  /api/backup    downloads everything the app saves, as one JSON file
+//   GET  /api/backups   the automatic backups { everyDays, keep, backups: [{ name, createdAt, bytes }] }
+//   GET  /api/backups/:name   downloads one of them
 //   POST /api/restore   body: that file; replaces all data, then the server
 //                       rebroadcasts every slice (onRestored)
 const express = require('express');
-const { MAX_BACKUP_BYTES } = require('../../config');
+const { MAX_BACKUP_BYTES, AUTO_BACKUP_DAYS, AUTO_BACKUP_KEEP } = require('../../config');
 const { identityFromHeaders, isDm } = require('../../core/identity');
 const backup = require('./service');
 
@@ -22,6 +24,18 @@ function createBackupRouter({ onRestored }) {
     res.set('Content-Disposition', `attachment; filename="adventurers-kit-backup-${day}.json"`);
     res.set('Cache-Control', 'no-store');
     res.type('application/json').send(JSON.stringify(backup.createBackup()));
+  });
+
+  // The automatic backups: list, and download one (to restore it with "Restore from file").
+  router.get('/backups', dmOnly, (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.json({ everyDays: AUTO_BACKUP_DAYS, keep: AUTO_BACKUP_KEEP, backups: backup.autoBackups() });
+  });
+  router.get('/backups/:name', dmOnly, (req, res) => {
+    const file = backup.autoBackupPath(req.params.name);
+    if (!file || !require('fs').existsSync(file)) return res.status(404).json({ error: 'No such backup.' });
+    res.set('Cache-Control', 'no-store');
+    res.download(file, `adventurers-kit-${req.params.name}`);
   });
 
   // Raw body: a backup with map images is far over the normal JSON limit.

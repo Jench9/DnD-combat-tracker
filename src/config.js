@@ -28,5 +28,9 @@ module.exports = {
   // (otherwise Secure is used whenever the request came over HTTPS).
   SESSION_DAYS: Number.parseInt(process.env.SESSION_DAYS || '30', 10) || 30,
   COOKIE_SECURE: process.env.COOKIE_SECURE === '1',
+  // Automatic backups to DATA_DIR/backups/ (features/backup): every N days
+  // (0 = off), keeping the newest K.
+  AUTO_BACKUP_DAYS: Number.parseFloat(process.env.AUTO_BACKUP_DAYS ?? '7') || 0,
+  AUTO_BACKUP_KEEP: Math.max(1, Number.parseInt(process.env.AUTO_BACKUP_KEEP || '2', 10) || 2),
   MAX_WS_MESSAGE_BYTES: 4 * 1024 * 1024, // a sheet patch with a portrait fits easily
 };

@@ -125,4 +125,59 @@ function restoreBackup(bundle) {
   return { files: files.length, safetyCopy };
 }
 
-module.exports = { FORMAT, VERSION, BackupError, createBackup, restoreBackup, dataFiles };
+// ---- Automatic backups: the same bundle as "Download backup", written to
+// DATA_DIR/backups/auto-<time>.json every `days` days (checked hourly and
+// shortly after start, so a server that was off catches up); the newest
+// `keep` are kept. Restore one by downloading it and using "Restore from file".
+const AUTO_RE = /^auto-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.json$/;
+const DAY = 24 * 60 * 60 * 1000;
+const autoName = (date) => `auto-${date.toISOString().replace(/[:.]/g, '-')}.json`;
+// "auto-2026-11-22T10-00-00-000Z.json" -> its Date
+const autoDate = (name) => new Date(name.slice(5, -5).replace(/T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/, 'T$1:$2:$3.$4Z'));
+
+// Newest first: [{ name, createdAt, bytes }]
+function autoBackups() {
+  let names = [];
+  try { names = fs.readdirSync(BACKUP_DIR).filter((f) => AUTO_RE.test(f)); } catch { /* no folder yet */ }
+  return names.sort().reverse().map((name) => {
+    let bytes = 0;
+    try { bytes = fs.statSync(path.join(BACKUP_DIR, name)).size; } catch { /* just removed */ }
+    return { name, createdAt: autoDate(name).toISOString(), bytes };
+  });
+}
+
+const isAutoBackupName = (name) => AUTO_RE.test(String(name || ''));
+const autoBackupPath = (name) => (isAutoBackupName(name) ? path.join(BACKUP_DIR, name) : null);
+
+// Is a new one due? (none yet, or the newest is `days` old)
+function autoBackupDue(days, now = new Date()) {
+  const newest = autoBackups()[0];
+  return !newest || now - new Date(newest.createdAt) >= days * DAY - 60 * 1000; // a minute of slack for the hourly check
+}
+
+// Write one now and keep the newest `keep`. Returns its name.
+function runAutoBackup({ keep = 2, now = new Date() } = {}) {
+  const name = autoName(now);
+  writeAtomic(path.join(BACKUP_DIR, name), JSON.stringify(createBackup()));
+  autoBackups().slice(Math.max(1, keep)).forEach((b) => { try { fs.unlinkSync(path.join(BACKUP_DIR, b.name)); } catch { /* gone already */ } });
+  return name;
+}
+
+// Called by server.js (not by the tests' createApp). days <= 0: off.
+function startAutoBackups({ days, keep }) {
+  if (!(days > 0)) return null;
+  const check = () => {
+    try {
+      if (autoBackupDue(days)) console.log(`Automatic backup: data/backups/${runAutoBackup({ keep })} (keeping the newest ${keep})`);
+    } catch (err) {
+      console.error('Automatic backup failed:', err.message);
+    }
+  };
+  setTimeout(check, 30 * 1000).unref(); // soon after start: catch up if one was missed
+  return setInterval(check, 60 * 60 * 1000).unref();
+}
+
+module.exports = {
+  FORMAT, VERSION, BackupError, createBackup, restoreBackup, dataFiles,
+  autoBackups, autoBackupDue, runAutoBackup, startAutoBackups, autoBackupPath,
+};

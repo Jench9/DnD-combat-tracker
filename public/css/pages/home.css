@@ -38,3 +38,8 @@
 .backup-btns { display: flex; gap: 10px; flex-wrap: wrap; }
 .backup-msg { margin-top: 10px; font-size: 13px; color: var(--ink-soft); min-height: 1em; overflow-wrap: anywhere; }
 .backup-msg.error { color: var(--wax); }
+.auto-backups { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.auto-backups h3 { font-family: var(--font-display); font-size: 15px; margin: 0 0 4px; }
+.auto-backups p { margin-bottom: 8px; }
+.auto-backups ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; }
+.auto-backups li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

@@ -82,3 +82,41 @@ test('restore rejects files that are not backups, without touching the data', as
   }
   assert.strictEqual(require('../src/features/characters/service').all().length, before);
 });
+
+test('automatic backups: due weekly, newest 2 kept, listed and downloadable by the DM only, kept across a restore', async (t) => {
+  const s = await startServer();
+  t.after(() => s.close());
+  const backup = require('../src/features/backup/service');
+  const { DATA_DIR } = require('../src/config');
+  const dir = path.join(DATA_DIR, 'backups');
+  backup.autoBackups().forEach((b) => fs.unlinkSync(path.join(dir, b.name))); // a clean start
+
+  const day = 24 * 60 * 60 * 1000;
+  const t0 = new Date('2026-01-01T10:00:00.000Z');
+  assert.ok(backup.autoBackupDue(7, t0), 'none yet: due');
+  backup.runAutoBackup({ keep: 2, now: t0 });
+  assert.ok(!backup.autoBackupDue(7, new Date(+t0 + 6 * day)), 'six days later: not yet');
+  assert.ok(backup.autoBackupDue(7, new Date(+t0 + 7 * day)), 'a week later: due');
+  backup.runAutoBackup({ keep: 2, now: new Date(+t0 + 7 * day) });
+  backup.runAutoBackup({ keep: 2, now: new Date(+t0 + 14 * day) });
+  const list = backup.autoBackups();
+  assert.deepStrictEqual(list.map((b) => b.createdAt), [new Date(+t0 + 14 * day).toISOString(), new Date(+t0 + 7 * day).toISOString()]);
+  const saved = JSON.parse(fs.readFileSync(path.join(dir, list[0].name), 'utf8'));
+  assert.strictEqual(saved.format, backup.FORMAT, 'the same bundle as Download backup');
+
+  const base = `http://localhost:${s.port}`;
+  const r = await fetch(`${base}/api/backups`, { headers: DM });
+  const data = await r.json();
+  assert.strictEqual(data.keep, 2);
+  assert.strictEqual(data.everyDays, 7);
+  assert.strictEqual(data.backups.length, 2);
+  assert.strictEqual((await fetch(`${base}/api/backups`, { headers: { 'X-Kit-Role': 'player' } })).status, 403);
+  const dl = await fetch(`${base}/api/backups/${list[0].name}`, { headers: DM });
+  assert.strictEqual(dl.status, 200);
+  assert.strictEqual((await dl.json()).format, backup.FORMAT);
+  assert.strictEqual((await fetch(`${base}/api/backups/..%2Fcharacters.json`, { headers: DM })).status, 404);
+
+  // A restore keeps them (they live in backups/, not with the data).
+  await fetch(`${base}/api/restore`, { method: 'POST', headers: { ...DM, 'Content-Type': 'application/json' }, body: JSON.stringify(saved) });
+  assert.strictEqual(backup.autoBackups().length, 2);
+});
