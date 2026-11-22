@@ -1,20 +1,42 @@
+# docker-compose.yaml — the kit as you run it for the table.
+#   docker compose up -d --build        start / update (any code change needs --build)
+#   docker compose logs -f              logs (the first start prints the admin setup code)
+#   docker compose down                 stop
+#
+# Set up for Tailscale Funnel (or another HTTPS proxy/tunnel on this
+# machine): the app only listens on this machine, and the tunnel brings
+# the players in over HTTPS —  sudo tailscale funnel --bg 3000
+# For plain use on your home wifi instead, see the two "home wifi" notes.
+# (Project name: the folder's, dnd-combat-tracker; the dev file uses its own.)
+
 services:
-    combat-tracker:
-      build: .
-      ports:
-        - "3000:3000"
-        # Behind an HTTPS proxy or tunnel on this machine, listen only locally:
-        # - "127.0.0.1:3000:3000"
-      restart: unless-stopped
-      volumes:
-        - ./data:/app/data   # saved characters survive restarts and rebuilds
-      environment:
-        # Logins (default): the first start prints a setup code in the log
-        # (docker compose logs combat-tracker) to create the DM account.
-        # KIT_AUTH: open          # no login at all — trusted home network only
-        # Behind an HTTPS proxy / tunnel (Caddy, nginx, Cloudflare Tunnel…):
-        # TRUST_PROXY: "1"        # trust its X-Forwarded-* headers (HTTPS, client IP)
-        # COOKIE_SECURE: "1"      # session cookie only over HTTPS
-        # SESSION_DAYS: "30"      # how long a login lasts
-        # KIT_SETUP_CODE: "..."   # fixed setup code instead of a random one
-        NODE_ENV: production
+  combat-tracker:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"   # only this machine (Funnel connects here)
+      # home wifi: - "3000:3000"  (others open http://<this-computer's-IP>:3000)
+    volumes:
+      - ./data:/app/data        # characters, accounts, fights… survive restarts and rebuilds
+    environment:
+      NODE_ENV: production
+      # Logins (default). The first start prints a setup code in the log to
+      # create the admin account. KIT_AUTH: open = no login at all (a
+      # trusted home network only).
+      # KIT_AUTH: open
+      TRUST_PROXY: "1"          # Funnel is the HTTPS proxy in front (real HTTPS, visitor address)
+      COOKIE_SECURE: "1"        # the login cookie only over HTTPS (http://localhost still works)
+      # home wifi without a tunnel: remove COOKIE_SECURE (no HTTPS there)
+      # SESSION_DAYS: "30"      # how long a login lasts
+      # KIT_SETUP_CODE: "..."   # a fixed setup code instead of a random one
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/auth/status').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"         # keep the logs from filling the disk
+        max-file: "3"

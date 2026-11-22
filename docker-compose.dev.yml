@@ -1,11 +1,22 @@
-# docker-compose.dev.yml — bind-mounts the project and restarts on changes.
-#   docker compose -f docker-compose.dev.yml up --build
+# docker-compose.dev.yml — for testing changes: your folder is mounted into
+# the container and the server restarts when a file changes.
+#   docker compose -f docker-compose.dev.yml up --build     → http://localhost:3001
+#   docker compose -f docker-compose.dev.yml down
+#
+# It runs next to the real one (docker-compose.yaml) without touching it:
+# its own project name, port 3001 and data folder (./data-dev, not ./data).
+name: dnd-kit-dev
+
 services:
   combat-tracker:
     build: .
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - .:/app
-      - /app/node_modules   # keeps the container's installed packages from being hidden by your folder
+      - /app/node_modules       # keeps the container's installed packages from being hidden by your folder
+    environment:
+      DATA_DIR: /app/data-dev   # test data, separate from the real ./data
+      KIT_SETUP_CODE: DEV-SETUP # the admin setup code on a fresh data-dev (no need to read the log)
+      # KIT_AUTH: open          # no login: pick DM / a character directly (quick UI checks)
     command: node --watch server.js

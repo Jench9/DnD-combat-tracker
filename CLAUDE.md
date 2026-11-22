@@ -17,7 +17,7 @@ npm run test:e2e                       # browser tests (Playwright, e2e/*.spec.j
 npm run build:srd -- <folder>          # regenerate src/srd/*.json from 5e-bits/5e-database JSON (see Readme)
 
 docker compose up -d --build                        # production; code is baked in, so ANY change needs --build
-docker compose -f docker-compose.dev.yml up --build # dev: bind mount + node --watch
+docker compose -f docker-compose.dev.yml up --build # dev: bind mount + node --watch, port 3001, ./data-dev, setup code DEV-SETUP (separate project: runs next to production)
 docker compose logs -f combat-tracker
 ```
 

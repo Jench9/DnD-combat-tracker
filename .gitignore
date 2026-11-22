@@ -26,3 +26,6 @@ Thumbs.db
 # Playwright (npm run test:e2e)
 test-results/
 playwright-report/
+
+# Dev compose data (docker-compose.dev.yml)
+data-dev/
