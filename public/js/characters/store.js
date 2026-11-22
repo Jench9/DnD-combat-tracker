@@ -21,6 +21,7 @@ export const store = {
   combat: null, // combat state (is the familiar in the fight?)
   // Campaign filter on the list view: ALL, NONE, or a campaign id.
   campaignFilter: 'all',
+  showRetired: false, // list view: also show retired characters
   // Set by main.js once the socket exists.
   send: () => {},
 };

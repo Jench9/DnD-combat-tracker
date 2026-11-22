@@ -27,10 +27,19 @@
 //              equipment (text), gp (with the equipment; the other option is 50 GP)
 //   feat       type: origin | general | fighting-style | epic-boon, desc,
 //              minLevel, repeatable, asi: [abilities] (+1 to one of them, max 20)
+//   option     a class option picked at level up: optionType: invocation
+//              (Warlock Eldritch Invocations) | metamagic (Sorcerer), desc,
+//              minLevel (class level, 0 = any), prereq (text, shown),
+//              repeatable, action ('' | action | bonus | reaction | free: in
+//              the sheet's Actions), cost (metamagic: Sorcery Points a use
+//              spends), preset (an attack modifier it switches on, e.g.
+//              agonizing-blast — a key of public/js/core/modifier-presets.json)
 const { uid } = require('../../core/ids');
 const { createJsonStore } = require('../../core/jsonStore');
 
-const KINDS = ['subclass', 'species', 'background', 'feat'];
+const KINDS = ['subclass', 'species', 'background', 'feat', 'option'];
+const OPTION_TYPES = ['invocation', 'metamagic'];
+const PRESET_KEYS = new Set(require('../../../public/js/core/modifier-presets.json').map((p) => p.key));
 const ACTION_TYPES = ['', 'action', 'bonus', 'reaction', 'free'];
 const RECHARGES = ['short', 'long', 'none'];
 const CASTER_TYPES = ['third', 'half', 'full'];
@@ -57,7 +66,7 @@ const named = (list, max) => (Array.isArray(list) ? list : [])
 function clean(raw, base = {}) {
   const r = raw && typeof raw === 'object' ? raw : {};
   const kind = base.kind || r.kind;
-  if (!KINDS.includes(kind)) return { error: 'Choose what to add: subclass, species, background or feat.' };
+  if (!KINDS.includes(kind)) return { error: 'Choose what to add: subclass, species, background, feat or class option.' };
   const name = text(r.name ?? base.name, 60);
   if (!name) return { error: 'Give it a name.' };
   const source = text(r.source ?? base.source, 60);
@@ -97,6 +106,15 @@ function clean(raw, base = {}) {
     if (!e.featKey) return { error: 'Choose the origin feat it gives.' };
     e.equipment = text(r.equipment, 1000);
     e.gp = int(r.gp, 0, 1000, 0);
+  } else if (kind === 'option') {
+    e.optionType = OPTION_TYPES.includes(r.optionType) ? r.optionType : 'invocation';
+    e.desc = text(r.desc, 6000);
+    e.minLevel = int(r.minLevel, 0, 20, 0);
+    e.prereq = text(r.prereq, 120);
+    e.repeatable = r.repeatable === true;
+    e.action = ACTION_TYPES.includes(r.action) ? r.action : '';
+    e.cost = e.optionType === 'metamagic' ? int(r.cost, 0, 20, 1) : 0;
+    e.preset = PRESET_KEYS.has(r.preset) ? r.preset : '';
   } else {
     e.type = FEAT_TYPES.includes(r.type) ? r.type : 'general';
     e.desc = text(r.desc, 6000);
@@ -217,4 +235,4 @@ function remove(id) {
   if (entries.length !== before) persist();
 }
 
-module.exports = { KINDS, FEAT_TYPES, SIZES, SKILL_NAMES, ACTION_TYPES, RECHARGES, CASTER_TYPES, SPELL_LISTS, parseUses, reload, all, find, add, update, remove, getVersion };
+module.exports = { KINDS, OPTION_TYPES, FEAT_TYPES, SIZES, SKILL_NAMES, ACTION_TYPES, RECHARGES, CASTER_TYPES, SPELL_LISTS, parseUses, reload, all, find, add, update, remove, getVersion };

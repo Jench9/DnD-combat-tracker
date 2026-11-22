@@ -50,6 +50,14 @@
   "note": "Great Weapon Fighting: 1s and 2s on the weapon's damage dice are rerolled once."
  },
  {
+  "key": "two-weapon-fighting",
+  "name": "Two-Weapon Fighting",
+  "category": "Fighting style",
+  "edition": "",
+  "offHandMod": true,
+  "note": "Two-Weapon Fighting: the off-hand (Light) attack adds your ability modifier to its damage."
+ },
+ {
   "key": "thrown-weapon-fighting",
   "name": "Thrown Weapon Fighting (when throwing)",
   "category": "Fighting style",

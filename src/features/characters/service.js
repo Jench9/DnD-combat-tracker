@@ -54,6 +54,7 @@ function duplicate(id, newId) {
     id: newId,
     name: ('Copy of ' + (src.name || 'character')).slice(0, 40),
     ddbId: '',
+    retired: false,
   });
   copy.acAuto = src.acAuto;
   characters.splice(characters.indexOf(src), 0, copy);
@@ -110,7 +111,7 @@ function refreshImported(id, mappedPatch, { replaceInventory = false, replaceSpe
   } = mappedPatch;
   const fresh = {
     ...blankCharacter(id),
-    portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp, campaignIds: old.campaignIds,
+    portrait: old.portrait, notes: old.notes, hpTemp: old.hpTemp, campaignIds: old.campaignIds, retired: !!old.retired,
     inventory: replaceInventory && Array.isArray(inventory) ? inventory : old.inventory, acAuto: old.acAuto,
     // Kept unless the patch brings a list (the sync route passes existing +
     // newly detected ones), which is validated like any edit.

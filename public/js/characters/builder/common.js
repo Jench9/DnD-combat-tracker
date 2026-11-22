@@ -270,6 +270,33 @@ export function featExtras(feat, answer, ctx, redraw) {
 }
 
 // The <dialog> shell used by both: title, body, message line, buttons.
+// Eldritch Invocations / Metamagic (a level-up plan's `options` choice):
+// tick the Content page's options, or type others (their text by hand).
+// value: [names]; onChange([names]).
+export function optionPicker(choice, value, onChange) {
+  const box = el('div', 'b-options');
+  const listed = choice.options.map((o) => o.name);
+  let ticked = value.filter((n) => listed.includes(n));
+  let typed = value.filter((n) => !listed.includes(n));
+  const emit = () => onChange([...ticked, ...typed]);
+  if (choice.known && choice.known.length) box.appendChild(el('div', 'b-hint', `Already known: ${choice.known.join(', ')}`));
+  if (choice.options.length) {
+    const why = new Map(choice.options.map((o) => [o.name, o.why]));
+    box.appendChild(checkList(listed, ticked, choice.count, (v) => { ticked = v; emit(); }, { disabled: (n) => why.get(n) || '' }));
+    choice.options.forEach((o) => box.appendChild(details(`${o.name}${o.source ? ` — ${o.source}` : ''}${o.why ? ` (${o.why})` : ''}`,
+      [o.prereq ? `*Prerequisite: ${o.prereq}*` : '', o.cost ? `**Cost:** ${o.cost} Sorcery Point${o.cost === 1 ? '' : 's'}` : '', o.desc].filter(Boolean).join('\n'))));
+  } else {
+    box.appendChild(el('div', 'b-hint', `No ${choice.label} options on the Content page yet — a DM can add them there (with their text, action and attack modifier). Or type the names here.`));
+  }
+  const inp = el('input', 'b-text');
+  inp.placeholder = choice.options.length ? 'Others not listed, comma-separated' : `${choice.count} name${choice.count === 1 ? '' : 's'}, comma-separated`;
+  inp.setAttribute('aria-label', `${choice.label}: other names`);
+  inp.value = typed.join(', ');
+  inp.addEventListener('input', () => { typed = inp.value.split(',').map((s) => s.trim()).filter(Boolean); emit(); });
+  box.appendChild(inp);
+  return box;
+}
+
 export function makeDialog(id, title) {
   let dlg = document.getElementById(id);
   if (dlg) dlg.remove();

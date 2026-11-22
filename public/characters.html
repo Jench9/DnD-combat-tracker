@@ -38,6 +38,7 @@
         <label for="campaignSelect">Campaign</label>
         <select id="campaignSelect"><option value="all">All characters</option></select>
       </div>
+      <label class="show-retired"><input type="checkbox" id="showRetired"> Show retired</label>
       <button class="btn secondary small dm-only" id="campaignManageBtn" title="Create, rename, delete campaigns, choose the current one, and pick which characters are in each">⚙ Manage campaigns</button>
     </div>
 
@@ -82,6 +83,7 @@
         <button class="btn small" id="levelUpBtn" title="Gain a level: hit points, features, choices, spell slots">⬆ Level up</button>
         <button class="btn secondary small" id="ddbSyncBtn" title="Re-import stats from D&amp;D Beyond (e.g. after leveling up)">Sync from D&amp;D Beyond</button>
         <button class="btn secondary small dm-only" id="duplicateCharBtn" title="A copy of this sheet (not linked to D&amp;D Beyond): NPC allies, pregens">Duplicate</button>
+        <button class="btn secondary small dm-only" id="retireCharBtn" title="Dead or left the party: hidden from &quot;Who are you?&quot;, the Allies list and the character list (Show retired), without deleting it">Retire</button>
         <button class="btn secondary small" id="deleteCharBtn">Delete</button>
       </div>
     </div>

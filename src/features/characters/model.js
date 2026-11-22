@@ -11,6 +11,8 @@
 //   campaignIds: campaigns it belongs to (any number, [] = none),
 //   campaignId: the first of them ('' = none) — kept for older clients;
 //     a patch with only campaignId sets campaignIds to just that one,
+//   retired: the DM marked it dead / retired — hidden from the join screen,
+//     the Allies panel and lists (until "Show retired"); never deleted,
 //   inventory: [{ id, itemId, name, qty, equipped }] — items from the item
 //     library (`name` is a copy, shown if the library item is deleted),
 //   acAuto: true = AC is computed from equipped armor (see derived.js),
@@ -49,6 +51,7 @@ function blankCharacter(id) {
     ddbId: '',
     campaignIds: [],
     campaignId: '',
+    retired: false,
     inventory: [],
     acAuto: true,
     weaponProf: { simple: true, martial: false },
@@ -328,6 +331,7 @@ function sanitizeCharacterPatch(existing, patch) {
   }
   if (!Array.isArray(next.campaignIds)) next.campaignIds = existing.campaignId ? [existing.campaignId] : [];
   next.campaignId = next.campaignIds[0] || '';
+  if (patch.retired !== undefined) next.retired = patch.retired === true;
   if (typeof patch.ddbId === 'string' && /^\d{0,20}$/.test(patch.ddbId)) next.ddbId = patch.ddbId;
 
   if (patch.abilities && typeof patch.abilities === 'object') {

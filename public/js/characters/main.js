@@ -147,6 +147,15 @@ $('duplicateCharBtn').addEventListener('click', () => {
   openEditor(newId);
 });
 
+// DM: retire (dead, left the party) or bring back the open sheet.
+$('retireCharBtn').addEventListener('click', () => {
+  const ch = cur();
+  if (!ch) return;
+  ch.retired = !ch.retired; // optimistic; the server confirms
+  store.send('updateCharacter', { id: ch.id, patch: { retired: ch.retired } });
+  $('retireCharBtn').textContent = ch.retired ? 'Bring back' : 'Retire';
+});
+
 $('deleteCharBtn').addEventListener('click', () => {
   const ch = cur();
   if (!ch) return;

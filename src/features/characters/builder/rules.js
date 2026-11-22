@@ -76,6 +76,26 @@ function featFrom(e) {
   };
 }
 
+// Eldritch Invocations / Metamagic options (custom content only: the SRD
+// data has the features, not the option lists).
+function optionFrom(e) {
+  return {
+    key: customKey(e), name: e.name, optionType: e.optionType, desc: e.desc, minLevel: e.minLevel, prereq: e.prereq,
+    repeatable: e.repeatable, action: e.action, cost: e.cost, preset: e.preset, source: e.source, custom: true,
+  };
+}
+
+// SRD weapons that have a mastery property (2024): what Weapon Mastery picks from.
+function masteryWeapons() {
+  const items = require('../../../srd/items.json');
+  const list = Array.isArray(items) ? items : items.items || [];
+  const seen = new Set();
+  return list.filter((it) => it.type === 'weapon' && it.mastery && it.edition === '2024' && !it.magicBonus)
+    .filter((it) => !seen.has(it.name) && seen.add(it.name))
+    .map((it) => ({ name: it.name, category: it.weaponCategory, attackType: it.attackType, properties: it.properties || [], mastery: it.mastery }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 function build() {
   if (!srdText) srdText = fs.readFileSync(FILE, 'utf8');
   const rules = JSON.parse(srdText); // a fresh copy each time
@@ -91,6 +111,8 @@ function build() {
     const cls = rules.classes.find((c) => c.key === e.classKey);
     if (cls) cls.subclasses.push(subclassFrom(e, wizard));
   });
+  rules.options = custom.filter((e) => e.kind === 'option').map(optionFrom);
+  rules.masteryWeapons = masteryWeapons();
   const client = JSON.stringify(rules); // what the browser gets (no lookup maps)
   rules.classByKey = new Map(rules.classes.map((c) => [c.key, c]));
   rules.featByKey = featByKey;

@@ -8,7 +8,8 @@ async function fetchSummary() {
   try {
     const r = await fetch('/api/characters/summary');
     const data = await r.json();
-    return { characters: data.characters || [], campaigns: data.campaigns || [] };
+    // Retired characters (dead, left the party) aren't offered.
+    return { characters: (data.characters || []).filter((c) => !c.retired), campaigns: data.campaigns || [] };
   } catch {
     return { characters: [], campaigns: [] };
   }

@@ -75,7 +75,7 @@ function createApp() {
       characters: charService.all().filter((c) => AUTH_MODE === 'open'
         || req.identity.characterIds.includes(c.id)
         || (isDm(req.identity) && access.canSeeCharacter(access.accountOf(req.identity), c))).map((c) => ({
-        id: c.id, name: c.name, class: c.class, level: c.level, portrait: c.portrait, campaignId: c.campaignId, campaignIds: c.campaignIds,
+        id: c.id, name: c.name, class: c.class, level: c.level, portrait: c.portrait, campaignId: c.campaignId, campaignIds: c.campaignIds, retired: !!c.retired,
       })),
     });
   });

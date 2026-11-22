@@ -13,6 +13,7 @@ const BY_NAME = {
   dueling: 'dueling',
   'great weapon fighting': { 2014: 'gwf-2014', 2024: 'gwf-2024' },
   'thrown weapon fighting': 'thrown-weapon-fighting',
+  'two-weapon fighting': 'two-weapon-fighting',
   'great weapon master': { 2014: 'gwm-2014', 2024: 'gwm-2024' },
   sharpshooter: { 2014: 'ss-2014', 2024: 'ss-2024' },
   'savage attacker': 'savage-attacker',

@@ -25,6 +25,7 @@ function createContentRouter({ onChanged = () => {} } = {}) {
       canAdd: mayAdd(req.identity),
       kinds: content.KINDS,
       featTypes: content.FEAT_TYPES,
+      optionTypes: content.OPTION_TYPES,
       sizes: content.SIZES,
       skills: content.SKILL_NAMES,
       classes: rules.classes.map((c) => ({ key: c.key, name: c.name, subclassLevel: c.subclassLevel })),

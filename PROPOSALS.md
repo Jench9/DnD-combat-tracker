@@ -91,26 +91,6 @@ The guided creation and level up are 2024-only. Add the 2014 SRD 5.1 classes,
 races and backgrounds from 5e-bits (`build-rules.js` already reads that
 database), chosen by the sheet's rules edition.
 
-### 3.2 Builder: start above level 1 — S
-"Create at level N": run the level-up plan N−1 times inside the wizard
-(average HP by default, the same choices one level at a time), instead of
-making the player level up repeatedly after creation.
-
-### 3.3 Builder: invocations, metamagic, weapon mastery picks — M
-The choices the level up leaves "by hand" today: Eldritch Invocations
-(Warlock), Metamagic (Sorcerer) and Weapon Mastery weapons (martial classes),
-as pick lists that also switch on the matching attack modifiers.
-
-### 3.4 Two-weapon fighting — S
-Attacking with a Light weapon offers the off-hand attack under Bonus
-Actions (no ability modifier to damage unless the Two-Weapon Fighting style;
-2024 Nick mastery makes it part of the Attack action).
-
-### 3.5 Retire characters — S
-An "archived" flag (DM) that hides dead or retired characters from the
-"Who are you?" screen, the Allies list and the campaign manager's default
-view, without deleting them. A "Show retired" toggle on the Characters page.
-
 ---
 
 ## 4. Table & players

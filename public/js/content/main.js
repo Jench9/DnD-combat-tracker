@@ -1,4 +1,5 @@
-// Content page: the custom subclasses, species, backgrounds and feats
+// Content page: the custom subclasses, species, backgrounds, feats and class
+// options (Eldritch Invocations, Metamagic)
 // (src/features/content), with their source tags. DMs and the admin add
 // them; the one who added an entry (or the admin) edits or deletes it.
 // Everything goes through REST /api/content.
@@ -6,11 +7,13 @@ import { $ } from '../core/dom.js';
 import { renderNav } from '../core/nav.js';
 import { identityHeaders } from '../core/identity.js';
 import { fillRich } from '../core/richText.js';
+import { PRESETS } from '../core/modifiers.js';
 
 renderNav();
 
-const KIND_LABEL = { subclass: 'Subclasses', species: 'Species', background: 'Backgrounds', feat: 'Feats' };
-const ONE = { subclass: 'subclass', species: 'species', background: 'background', feat: 'feat' };
+const KIND_LABEL = { subclass: 'Subclasses', species: 'Species', background: 'Backgrounds', feat: 'Feats', option: 'Class options' };
+const ONE = { subclass: 'subclass', species: 'species', background: 'background', feat: 'feat', option: 'class option' };
+const OPTION_TYPE = { invocation: 'Eldritch Invocation (Warlock)', metamagic: 'Metamagic (Sorcerer)' };
 const FEAT_TYPE = { origin: 'Origin feat', general: 'General feat', 'fighting-style': 'Fighting Style', 'epic-boon': 'Epic Boon' };
 const ABILITIES = [['str', 'Strength'], ['dex', 'Dexterity'], ['con', 'Constitution'], ['int', 'Intelligence'], ['wis', 'Wisdom'], ['cha', 'Charisma']];
 const DEFAULT_SOURCE = "Player's Handbook (2024)";
@@ -51,6 +54,11 @@ function summary(e) {
   if (e.kind === 'subclass') return `${className(e.classKey)} subclass · ${e.features.length} feature${e.features.length === 1 ? '' : 's'}${e.summary ? ' · ' + e.summary : ''}`;
   if (e.kind === 'species') return `${e.size} · speed ${e.speed} ft · ${e.traits.length} trait${e.traits.length === 1 ? '' : 's'}${e.skillChoice ? ' · a skill of choice' : ''}`;
   if (e.kind === 'background') return `${e.abilities.map((a) => a.toUpperCase()).join(' / ')} · ${e.skills.join(', ')} · ${featName(e.featKey)}`;
+  if (e.kind === 'option') {
+    return [OPTION_TYPE[e.optionType], e.minLevel ? `level ${e.minLevel}+` : '', e.prereq, e.cost ? `${e.cost} Sorcery Point${e.cost === 1 ? '' : 's'}` : '',
+      e.action ? (USED_AS.find((u) => u[0] === e.action) || [])[1] : '', e.preset ? `switches on ${(PRESETS.find((p) => p.key === e.preset) || {}).name || e.preset}` : '',
+      e.repeatable ? 'repeatable' : ''].filter(Boolean).join(' · ');
+  }
   return `${FEAT_TYPE[e.type]}${e.minLevel ? ` · level ${e.minLevel}+` : ''}${e.asi.length ? ` · +1 ${e.asi.map((a) => a.toUpperCase()).join('/')}` : ''}${e.repeatable ? ' · repeatable' : ''}`;
 }
 
@@ -77,7 +85,7 @@ function preview(e) {
         if (rows.length) block('', ['| Level | Always prepared |', '|---|---|', ...rows].join('\n'));
       });
     } else if (e.kind === 'species') e.traits.forEach((t) => block(t.name, t.desc));
-    else if (e.kind === 'feat') block('', e.desc);
+    else if (e.kind === 'feat' || e.kind === 'option') block('', e.desc);
     else block('', [`Skills: ${e.skills.join(', ')}`, e.tools.length ? `Tools: ${e.tools.join(', ')}` : '', `Equipment: ${e.equipment || '—'}${e.gp ? `, ${e.gp} GP` : ''} — or 50 GP`].filter(Boolean).join('\n'));
   });
   d.appendChild(body);
@@ -186,7 +194,12 @@ function select(key, options, { placeholder } = {}) {
   if (placeholder) { const o = el('option', '', placeholder); o.value = ''; s.appendChild(o); }
   options.forEach(([v, l]) => { const o = el('option', '', l); o.value = v; s.appendChild(o); });
   s.value = form[key] ?? '';
-  s.addEventListener('change', () => { form[key] = s.value; if (key === 'kind') drawEditor(); });
+  s.addEventListener('change', () => {
+    form[key] = s.value;
+    if (key !== 'kind') return;
+    if (form.kind === 'option' && String(form.minLevel) === '4') form.minLevel = 0; // the feat default
+    drawEditor();
+  });
   return s;
 }
 function checks(key, options, max) {
@@ -401,7 +414,7 @@ function drawEditor() {
   const k = form.kind;
   const top = el('div', 'ct-row');
   if (!editing) top.appendChild(field('What', select('kind', data.kinds.map((x) => [x, ONE[x][0].toUpperCase() + ONE[x].slice(1)]))));
-  top.appendChild(field('Name', input('name', { placeholder: k === 'subclass' ? 'e.g. Battle Master' : k === 'species' ? 'e.g. Aasimar' : k === 'background' ? 'e.g. Noble' : 'e.g. Lucky' })));
+  top.appendChild(field('Name', input('name', { max: 50, placeholder: k === 'subclass' ? 'e.g. Battle Master' : k === 'species' ? 'e.g. Aasimar' : k === 'background' ? 'e.g. Noble' : k === 'option' ? (form.optionType === 'metamagic' ? 'e.g. Quickened Spell' : 'e.g. Agonizing Blast') : 'e.g. Lucky' })));
   const src = input('source', { placeholder: DEFAULT_SOURCE });
   src.setAttribute('list', 'sourceList');
   const dl = el('datalist');
@@ -452,6 +465,29 @@ function drawEditor() {
       field('Gold with it (GP)', input('gp', { type: 'number', min: 0, max: 1000 }), { hint: 'Option B is always 50 GP.' }),
     );
     body.append(row, row2);
+  } else if (k === 'option') {
+    const row = el('div', 'ct-row');
+    const type = select('optionType', (data.optionTypes || ['invocation', 'metamagic']).map((t) => [t, OPTION_TYPE[t]]));
+    type.addEventListener('change', () => drawEditor());
+    row.append(
+      field('Option of', type),
+      field('Minimum class level', input('minLevel', { type: 'number', min: 0, max: 20 }), { hint: form.optionType === 'metamagic' ? '0 = any.' : 'Warlock level; 0 = any.' }),
+    );
+    const row2 = el('div', 'ct-row');
+    row2.appendChild(field('Prerequisite (shown)', input('prereq', { max: 120, placeholder: 'e.g. a Warlock cantrip that deals damage' })));
+    if (form.optionType === 'metamagic') row2.appendChild(field('Sorcery Points', input('cost', { type: 'number', min: 0, max: 20 }), { hint: 'What a use costs.' }));
+    const row3 = el('div', 'ct-row');
+    row3.append(
+      field('Used as', select('action', USED_AS), { hint: 'Puts it in the sheet\'s Actions list' + (form.optionType === 'metamagic' ? ' (Use spends the Sorcery Points).' : '.') }),
+      field('Switches on', select('preset', PRESETS.filter((p) => p.when).map((p) => [p.key, p.name]), { placeholder: '— no attack modifier —' }), { hint: 'An attack modifier it adds to the sheet (e.g. Agonizing Blast).' }),
+    );
+    const rep = el('label', 'ct-check');
+    const cb = el('input');
+    cb.type = 'checkbox';
+    cb.checked = !!form.repeatable;
+    cb.addEventListener('change', () => { form.repeatable = cb.checked; });
+    rep.append(cb, document.createTextNode('Can be taken more than once'));
+    body.append(row, row2, row3, rep, field('Description', area('desc', 'What it does', 6), { wide: true, hint: FORMAT_HINT }));
   } else if (k === 'feat') {
     const row = el('div', 'ct-row');
     row.append(
@@ -473,7 +509,7 @@ function openEditor(entry) {
   editing = entry || null;
   form = entry
     ? JSON.parse(JSON.stringify({ ...entry, tools: (entry.tools || []).join(', ') }))
-    : { kind, source: data.entries.length ? data.entries[data.entries.length - 1].source : DEFAULT_SOURCE, size: 'Medium', speed: 30, type: 'general', minLevel: 4, gp: 0, features: [], traits: [], resources: [], spellcasting: null };
+    : { kind, source: data.entries.length ? data.entries[data.entries.length - 1].source : DEFAULT_SOURCE, size: 'Medium', speed: 30, type: 'general', minLevel: kind === 'feat' ? 4 : 0, gp: 0, features: [], traits: [], resources: [], spellcasting: null, optionType: 'invocation', cost: 1, action: '', preset: '' };
   $('editTitle').textContent = entry ? `Edit ${ONE[entry.kind]}: ${entry.name}` : 'Add content';
   $('deleteBtn').hidden = !entry;
   $('editMsg').textContent = '';

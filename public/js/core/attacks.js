@@ -75,6 +75,7 @@ export function buildActions(ch, itemsById, spellsById = new Map()) {
   const prof = env.prof;
   const actions = [];
 
+  const lights = []; // equipped Light weapons (two-weapon fighting)
   (ch.inventory || []).forEach((entry) => {
     const it = itemsById.get(entry.itemId);
     if (!it || entry.qty <= 0) return;
@@ -112,6 +113,7 @@ export function buildActions(ch, itemsById, spellsById = new Map()) {
         ].join(' · '),
         notes: [...new Set([...fx.notes, ...(fx2 ? fx2.notes : [])])],
       });
+      if (it.properties.includes('light')) lights.push({ entry, it, base, fx, itemExtra, ability, toHit: actions[actions.length - 1].toHit });
     } else if (it.type === 'gear' && it.effectDice) {
       actions.push({
         key: entry.id, kind: 'use', name: it.name, qty: entry.qty, actionType: itemActionType(it, ch),
@@ -119,6 +121,8 @@ export function buildActions(ch, itemsById, spellsById = new Map()) {
       });
     }
   });
+
+  actions.push(...offHandAttacks(ch, lights, env));
 
   // Cantrips are always ready; leveled spells when prepared.
   (ch.spells || []).forEach((entry) => {
@@ -143,6 +147,41 @@ export function buildActions(ch, itemsById, spellsById = new Map()) {
     notes: ufx.notes,
   });
   return actions;
+}
+
+// Two-weapon fighting: holding two Light weapons (two equipped, or a pair
+// — qty 2 — of one), attacking with one lets you make one extra attack with
+// the other as a Bonus Action. No ability modifier on its damage (unless
+// negative) without the Two-Weapon Fighting style. 2024: any Light weapon,
+// and with the Nick mastery the extra attack is part of the Attack action
+// instead; 2014: melee Light weapons only.
+function offHandAttacks(ch, lights, env) {
+  const legacy = ch.rulesEdition === '2014';
+  const usable = lights.filter((l) => !legacy || l.it.attackType === 'melee');
+  const held = usable.reduce((n, l) => n + Math.min(2, l.entry.qty || 1), 0);
+  if (held < 2) return [];
+  const style = resolveModifiers(ch).some(({ def }) => def.offHandMod);
+  return usable.map((l) => {
+    const mod = env.abilityMods[l.ability];
+    const magic = l.it.magicBonus || 0;
+    const nick = !legacy && l.it.mastery === 'nick' && l.fx.notes.some((n) => /^Nick/.test(n));
+    return {
+      key: `${l.entry.id}:offhand`,
+      kind: 'attack',
+      offHand: true,
+      actionType: nick ? 'attack' : 'bonus',
+      name: `${l.it.name} (off-hand)`,
+      toHit: l.toHit,
+      toHitDice: l.fx.toHitDice,
+      critRange: l.fx.critRange,
+      grips: [grip('Damage', l.it.damage, l.it.damageType, (style ? mod : Math.min(0, mod)) + magic, l.fx, l.itemExtra)],
+      detail: [
+        nick ? 'Nick: part of the Attack action, once per turn' : 'after attacking with a Light weapon',
+        style ? 'Two-Weapon Fighting: ability modifier to damage' : 'no ability modifier to damage',
+      ].join(' · '),
+      notes: [],
+    };
+  });
 }
 
 const partText = (p) => ` + ${p.dice} ${p.type}${p.label ? ` (${p.label})` : ''}`.replace(/ +\(/, ' (').replace(/\s+$/, '');
@@ -400,12 +439,12 @@ export function renderActions(container, {
   // Sections by what each costs in the turn; spells stay together (tagged
   // with their casting time).
   const feats = featureActions(character);
-  const attacks = actions.filter((a) => a.kind === 'attack');
+  const attacks = actions.filter((a) => a.kind === 'attack' && a.actionType !== 'bonus');
   const perAction = attacksPerAction(character);
   const groups = [
     { key: 'attack', title: 'Attacks', hint: perAction > 1 ? `Attack action: ${perAction} attacks` : 'Attack action', actions: attacks, feats: feats.filter((f) => f.type === 'attack') },
     { key: 'action', title: 'Actions', actions: actions.filter((a) => a.kind === 'use' && a.actionType === 'action'), feats: feats.filter((f) => f.type === 'action') },
-    { key: 'bonus', title: 'Bonus Actions', hint: 'one per turn', actions: actions.filter((a) => a.kind === 'use' && a.actionType === 'bonus'), feats: feats.filter((f) => f.type === 'bonus') },
+    { key: 'bonus', title: 'Bonus Actions', hint: 'one per turn', actions: actions.filter((a) => (a.kind === 'use' || a.kind === 'attack') && a.actionType === 'bonus'), feats: feats.filter((f) => f.type === 'bonus') },
     { key: 'reaction', title: 'Reactions', hint: 'one per round', actions: [], feats: feats.filter((f) => f.type === 'reaction') },
     { key: 'free', title: 'No action needed', actions: [], feats: feats.filter((f) => f.type === 'free') },
     { key: 'spell', title: 'Spells', actions: actions.filter((a) => a.kind === 'spell'), feats: [] },

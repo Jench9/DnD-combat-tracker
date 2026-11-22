@@ -216,6 +216,40 @@ function resourcesFor(ch, classes, abilities, rules, newId) {
   return mergeResources(ch.resources, [...classResources(withCounters, abilities), ...subclassResources(classes, rules, abilities)], newId);
 }
 
+// ---------------------------------------------------------------- weapon mastery
+
+// How many kinds of weapons a class level masters (2024): the Barbarian and
+// Fighter tables' column, 2 for Paladin / Ranger / Rogue. Multiclassed: the
+// best of them (they don't add up).
+const MASTERY_FIXED = { paladin: 2, ranger: 2, rogue: 2 };
+function masteryCount(classes, rules) {
+  return classes.reduce((best, c) => {
+    const def = rules.classByKey.get(c.key);
+    const row = def && levelRow(def, c.level);
+    const n = row && row.counters && row.counters.weapon_mastery ? row.counters.weapon_mastery : MASTERY_FIXED[c.key] || 0;
+    return Math.max(best, n);
+  }, 0);
+}
+// Weapons a class may master: Barbarian melee ones; Rogue Simple, or Martial
+// with Finesse or Light; the others any.
+function masteryEligible(classKey, w) {
+  if (classKey === 'barbarian') return w.attackType === 'melee';
+  if (classKey === 'rogue') return w.category === 'simple' || w.properties.includes('finesse') || w.properties.includes('light');
+  return ['fighter', 'paladin', 'ranger'].includes(classKey);
+}
+// The weapon kinds chosen so far (the Weapon Mastery modifier's "only for").
+const masteryChosen = (modifiers) => {
+  const m = (modifiers || []).find((x) => x.preset === 'weapon-mastery');
+  return m ? String(m.only || '').split(',').map((s) => s.trim()).filter(Boolean) : [];
+};
+// What a set of classes may pick, minus what's chosen: weapon names.
+function masteryOptions(classes, rules, chosen) {
+  const lower = new Set(chosen.map((n) => n.toLowerCase()));
+  return (rules.masteryWeapons || [])
+    .filter((w) => classes.some((c) => masteryEligible(c.key, w)) && !lower.has(w.name.toLowerCase()))
+    .map((w) => w.name);
+}
+
 // ---------------------------------------------------------------- modifiers
 
 // Modifier presets (public/js/core/modifier-presets.json) that a class,
@@ -231,7 +265,7 @@ const CLASS_PRESETS = {
   'draconic-sorcery': { 3: ['draconic-resilience-2024'] },
   evoker: { 10: ['empowered-evocation'] },
 };
-const FEAT_PRESETS = { archery: 'archery', defense: 'defense', 'great-weapon-fighting': 'gwf-2024', 'savage-attacker': 'savage-attacker' };
+const FEAT_PRESETS = { archery: 'archery', defense: 'defense', 'great-weapon-fighting': 'gwf-2024', 'two-weapon-fighting': 'two-weapon-fighting', 'savage-attacker': 'savage-attacker' };
 
 // Situational switches start off; always-on ones (and Sneak Attack, like
 // the D&D Beyond import) start on.
@@ -296,6 +330,7 @@ function applyIncrease(abilities, plus, { total, perAbility, allowed, max }) {
 module.exports = {
   SKILLS, SKILL_NAMES, ABILITY_LABEL, PRESET_KEYS, CLASS_PRESETS, FEAT_PRESETS,
   classesOf, classText, totalLevel, hitDiceText, levelRow,
+  masteryCount, masteryEligible, masteryChosen, masteryOptions,
   slotTable, applySlots, maxSpellLevel, spellPicks, spellFits, casterDef, spellListOf, subclassResources,
   classResources, mergeResources, resourcesFor,
   addPresets, presetsAt, featureBlock, appendFeatures, featAllowed, applyIncrease,

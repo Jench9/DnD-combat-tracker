@@ -8,8 +8,9 @@ import { SKILLS, abilityMod, fmtMod } from '../rules.js';
 import { rollBatch, rollDie, RollCancelled } from '../../core/dice.js';
 import {
   ABILITY_NAMES, ABILITY_KEYS, loadRules, api, el, details, section, checkList, cards, select,
-  spellPicker, featExtras, makeDialog, button, withSource,
+  spellPicker, featExtras, makeDialog, button, withSource, optionPicker,
 } from './common.js';
+import { openLevelUp } from './levelup.js';
 
 const STANDARD = [15, 14, 13, 12, 10, 8];
 const POINT_COST = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
@@ -17,6 +18,9 @@ const ALL_SKILLS = SKILLS.map(([n]) => n);
 const ALIGNMENTS = ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'Neutral', 'Chaotic Neutral',
   'Lawful Evil', 'Neutral Evil', 'Chaotic Evil', 'Unaligned'];
 const MI_LIST_NAME = { cleric: 'Cleric', druid: 'Druid', wizard: 'Wizard' };
+
+// The class's level 1 answers (reset when the class changes).
+const blankLevel1 = () => ({ fightingStyle: '', expertise: [], spells: { cantrips: [], spells: [] }, weaponMastery: [], options: { invocation: [] } });
 
 export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
   let rules;
@@ -39,9 +43,10 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
     bonusMode: '2-1', bonus: {},
     classSkills: [], speciesSkill: '',
     originFeat: { key: '' }, backgroundFeat: {},
-    level1: { fightingStyle: '', expertise: [], spells: { cantrips: [], spells: [] } },
+    level1: blankLevel1(),
     equipment: { class: 0, background: 0 },
     name: '', alignment: '',
+    startLevel: 1, // above 1: the level-up dialog follows, once per level
   };
 
   // ---- derived
@@ -92,6 +97,24 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
     return out;
   };
 
+  // Weapon Mastery at level 1 (as the server's progression.js): how many
+  // kinds, and which weapons the class may pick.
+  const MASTERY_FIXED = { paladin: 2, ranger: 2, rogue: 2 };
+  const masteryCount = () => (cls() ? (cls().levels[0].counters || {}).weapon_mastery || MASTERY_FIXED[cls().key] || 0 : 0);
+  const masteryWeapons = () => (rules.masteryWeapons || []).filter((w) => {
+    const k = st.classKey;
+    if (k === 'barbarian') return w.attackType === 'melee';
+    if (k === 'rogue') return w.category === 'simple' || w.properties.includes('finesse') || w.properties.includes('light');
+    return true;
+  }).map((w) => w.name);
+  // Warlock 1: one Eldritch Invocation (the Content page's, or typed).
+  const invocationCount = () => (cls() ? (cls().levels[0].counters || {}).eldritch_invocations || 0 : 0);
+  const invocationChoice = () => ({
+    type: 'options', optionType: 'invocation', label: 'Eldritch Invocation', count: invocationCount(), known: [],
+    options: (rules.options || []).filter((o) => o.optionType === 'invocation').map((o) => ({ ...o, ok: o.minLevel <= 1, why: o.minLevel > 1 ? `Warlock level ${o.minLevel}+` : '' }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  });
+
   // ---- steps
   const steps = [
     { key: 'class', title: 'Class', render: stepClass, check: () => (!cls() ? 'Choose a class.' : '') },
@@ -99,8 +122,8 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
     { key: 'background', title: 'Background', render: stepBackground, check: checkBackground },
     { key: 'abilities', title: 'Abilities', render: stepAbilities, check: checkAbilities },
     { key: 'skills', title: 'Skills', render: stepSkills, check: checkSkills },
-    { key: 'spells', title: 'Spells', render: stepSpells, check: checkSpells, show: () => level1Spells().cantrips + level1Spells().spells > 0 || miSources().length > 0 },
-    { key: 'equipment', title: 'Equipment', render: stepEquipment, check: () => '' },
+    { key: 'spells', title: 'Spells', render: stepSpells, check: checkSpells, show: () => level1Spells().cantrips + level1Spells().spells > 0 || miSources().length > 0 || invocationCount() > 0 },
+    { key: 'equipment', title: 'Equipment', render: stepEquipment, check: checkEquipment },
     { key: 'review', title: 'Name & review', render: stepReview, check: () => (!st.name.trim() ? 'Give your character a name.' : '') },
   ];
   const visible = () => steps.filter((s) => !s.show || s.show());
@@ -148,7 +171,7 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
       key: c.key, title: c.name,
       sub: `d${c.hitDie} · ${c.primaryDesc}${c.spellAbility ? ' · spells' : ''}`,
     })), st.classKey, (k) => {
-      if (k !== st.classKey) { st.classKey = k; st.classSkills = []; st.level1 = { fightingStyle: '', expertise: [], spells: { cantrips: [], spells: [] } }; st.equipment.class = 0; }
+      if (k !== st.classKey) { st.classKey = k; st.classSkills = []; st.level1 = blankLevel1(); st.equipment.class = 0; }
       redraw();
     }));
     body.appendChild(s);
@@ -424,6 +447,11 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
       if (n.spells) s.appendChild(spellPicker({ title: 'Level 1 spells', listKey: c.key, cantrip: false, maxLevel: 1, count: n.spells, selected: st.level1.spells.spells, onChange: (v) => { st.level1.spells.spells = v; } }));
       body.appendChild(s);
     }
+    if (invocationCount()) {
+      const s = section('Eldritch Invocation', `Choose ${invocationCount()}.`);
+      s.appendChild(optionPicker(invocationChoice(), st.level1.options.invocation, (v) => { st.level1.options.invocation = v; }));
+      body.appendChild(s);
+    }
     miSources().forEach((m) => {
       const s = section(`Magic Initiate (${m.who === 'background' ? bg().name : 'Human'})`, m.fixedList ? `${MI_LIST_NAME[m.fixedList]} spells: two cantrips and one level 1 spell (you can cast it once per long rest without a slot).` : 'Choose a spell list, then two cantrips and one level 1 spell.');
       s.appendChild(featExtras(featOf('magic-initiate'), m.answer, { abilities: finalScores(), skillProf: {}, allSkills: ALL_SKILLS, fixedList: m.fixedList }, redraw));
@@ -435,6 +463,8 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
     const sp1 = st.level1.spells;
     if (sp1.cantrips.length !== n.cantrips) return `Choose ${n.cantrips} cantrips.`;
     if (sp1.spells.length !== n.spells) return `Choose ${n.spells} level 1 spells.`;
+    const inv = new Set(st.level1.options.invocation).size;
+    if (inv && inv !== invocationCount()) return `Choose ${invocationCount()} Eldritch Invocation (or none, to add it later).`;
     const all = [...sp1.cantrips, ...sp1.spells];
     const lists = [];
     for (const m of miSources()) {
@@ -464,6 +494,20 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
       body.appendChild(s);
     });
     body.appendChild(el('div', 'b-hint', 'Items from the library go into the Equipment tab (armor equipped); anything else is listed under "Other equipment". Gold goes into Coins.'));
+    const n = masteryCount();
+    if (n) {
+      const s = section('Weapon Mastery', `Choose ${n} kinds of weapons whose mastery property you can use (Topple, Vex, Nick…). You can change one after a Long Rest: the Weapon Mastery modifier's "only for" on the Actions tab.`);
+      const options = masteryWeapons();
+      st.level1.weaponMastery = st.level1.weaponMastery.filter((x) => options.includes(x));
+      s.appendChild(checkList(options, st.level1.weaponMastery, n, (v) => { st.level1.weaponMastery = v; }));
+      body.appendChild(s);
+    }
+  }
+  function checkEquipment() {
+    const n = masteryCount();
+    const k = st.level1.weaponMastery.length;
+    if (n && k && k !== n) return `Weapon Mastery: choose ${n} kinds of weapons (or none, to set them later).`;
+    return '';
   }
 
   // ---- 8. review
@@ -478,6 +522,14 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
     s.appendChild(name);
     s.appendChild(select(ALIGNMENTS.map((a) => ({ value: a, label: a })), st.alignment, (v) => { st.alignment = v; }, { placeholder: 'Alignment (optional)' }));
     body.appendChild(s);
+
+    const lv = section('Starting level', 'Above 1, the level up follows right after, one level at a time (hit points: the average unless you roll; the subclass, feats and spells as each level asks).');
+    const lvSel = select(Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: `Level ${i + 1}` })), String(st.startLevel), (v) => { st.startLevel = parseInt(v, 10) || 1; draw(); });
+    lvSel.firstChild.remove(); // no "Choose…": level 1 by default
+    lvSel.value = String(st.startLevel);
+    lvSel.setAttribute('aria-label', 'Starting level');
+    lv.appendChild(lvSel);
+    body.appendChild(lv);
     setTimeout(() => name.focus(), 0);
 
     const c = cls();
@@ -492,7 +544,9 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
       `Feats: ${[bgFeat() && bgFeat().name, humanFeat() && humanFeat().name, featOf(st.level1.fightingStyle) && featOf(st.level1.fightingStyle).name].filter(Boolean).join(', ')}`,
     ];
     lines.forEach((l) => r.appendChild(el('div', 'b-facts', l)));
-    r.appendChild(el('div', 'b-hint', 'After this you can edit anything on the sheet. To start above level 1, use ⬆ Level up on the sheet.'));
+    r.appendChild(el('div', 'b-hint', st.startLevel > 1
+      ? `Next: ${st.startLevel - 1} level up${st.startLevel > 2 ? 's' : ''} to reach level ${st.startLevel}. If you stop, carry on later with ⬆ Level up on the sheet.`
+      : 'After this you can edit anything on the sheet.'));
     body.appendChild(r);
   }
 
@@ -519,6 +573,7 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
       const { character } = await api('/create', { id: id || undefined, campaignId, build });
       d.dlg.close();
       if (onDone) onDone(character);
+      if (st.startLevel > 1) levelUpTo(character, st.startLevel, onDone);
     } catch (e) {
       d.msg.textContent = e.message;
       btn.disabled = false;
@@ -528,4 +583,17 @@ export async function openCreator({ id = '', campaignId = '', onDone } = {}) {
 
   draw();
   d.dlg.showModal();
+}
+
+// Starting above level 1: the level-up dialog once per level (each one
+// saves its level, so closing it keeps what's done so far).
+function levelUpTo(ch, target, onDone) {
+  if ((parseInt(ch.level, 10) || 1) >= target) return;
+  openLevelUp(ch, {
+    progress: `level ${(parseInt(ch.level, 10) || 1) + 1} of ${target}`,
+    onDone: (next) => {
+      if (onDone) onDone(next);
+      levelUpTo(next, target, onDone);
+    },
+  });
 }

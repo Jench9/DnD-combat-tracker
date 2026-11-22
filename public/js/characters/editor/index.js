@@ -128,6 +128,8 @@ function applyAccess(ch) {
   $('viewOnlyTag').hidden = editable;
   $('deleteCharBtn').hidden = !editable;
   $('ddbSyncBtn').hidden = !editable;
+  $('retireCharBtn').textContent = ch.retired ? 'Bring back' : 'Retire';
+  $('retireCharBtn').title = ch.retired ? 'Retired: show it again on "Who are you?", the Allies list and the character list' : 'Dead or left the party: hidden from "Who are you?", the Allies list and the character list (Show retired), without deleting it';
   const empty = !String(ch.class || '').trim();
   $('guidedBtn').hidden = !editable || !empty;
   $('levelUpBtn').hidden = !editable || empty || (parseInt(ch.level, 10) || 1) >= 20;

@@ -4,12 +4,15 @@
 // spells). The plan comes from GET /api/builder/plan; POST /levelup applies
 // it and the server checks every answer again.
 //
-//   openLevelUp(character, { onDone(character, summary) })
+//   openLevelUp(character, { onDone(character, summary), onCancel(), progress })
+//     progress: e.g. "level 3 of 5" when the creation goes on to a
+//     starting level (wizard.js) — shown in the title; onCancel when the
+//     dialog is closed without levelling up
 import { fillRich } from '../../core/richText.js';
 import { SKILLS } from '../rules.js';
 import { rollBatch, rollDie, RollCancelled } from '../../core/dice.js';
 import {
-  api, el, details, section, checkList, cards, select, spellPicker, featExtras, increasePicker, makeDialog, button, withSource,
+  api, el, details, section, checkList, cards, select, spellPicker, featExtras, increasePicker, makeDialog, button, withSource, optionPicker,
 } from './common.js';
 
 const ALL_SKILLS = SKILLS.map(([n]) => n);
@@ -21,9 +24,11 @@ function withSpells(f, level, upTo = false) {
   return [f.desc, now.length ? `**Always prepared now:** ${now.join(', ')}` : '', later.length ? `Later: ${later.join(', ')}` : ''].filter(Boolean).join('\n\n');
 }
 
-export async function openLevelUp(ch, { onDone } = {}) {
-  const d = makeDialog('levelUpDlg', `Level up — ${ch.name || 'character'}`);
+export async function openLevelUp(ch, { onDone, onCancel, progress = '' } = {}) {
+  const d = makeDialog('levelUpDlg', `Level up — ${ch.name || 'character'}${progress ? ` (${progress})` : ''}`);
   d.dlg.classList.add('wide');
+  let finished = false;
+  d.dlg.addEventListener('close', () => { if (!finished && onCancel) onCancel(); });
   d.body.appendChild(el('div', 'b-hint', 'Loading…'));
   d.dlg.showModal();
 
@@ -54,7 +59,7 @@ export async function openLevelUp(ch, { onDone } = {}) {
   async function loadPlan() {
     plan = null;
     d.msg.textContent = '';
-    a = { classKey, hp: { method: 'average' }, feat: { key: '' }, spells: { cantrips: [], spells: [] }, expertise: [], skills: [] };
+    a = { classKey, hp: { method: 'average' }, feat: { key: '' }, spells: { cantrips: [], spells: [] }, expertise: [], skills: [], weaponMastery: [], options: {} };
     if (!classKey) { draw(); return; }
     try {
       plan = await api(`/plan?id=${encodeURIComponent(ch.id)}&class=${encodeURIComponent(classKey)}`);
@@ -116,6 +121,16 @@ export async function openLevelUp(ch, { onDone } = {}) {
       if (c.type === 'skills') {
         const s = section(plan.isNewClass ? `${plan.className} multiclass skill` : 'Skill proficiencies', `Choose ${c.count}.`);
         s.appendChild(checkList(c.from, a.skills, c.count, (v) => { a.skills = v; }, { disabled: (x) => ((ch.skillProf || {})[x] ? 'Already proficient' : '') }));
+        d.body.appendChild(s);
+      }
+      if (c.type === 'weaponMastery') {
+        const s = section('Weapon Mastery', `Choose ${c.count} more kind${c.count === 1 ? '' : 's'} of weapon whose mastery property you can use${c.chosen.length ? ` (now: ${c.chosen.join(', ')})` : ''}. You can change them after a Long Rest: the Weapon Mastery modifier's "only for" on the Actions tab. Leave it empty to set them later.`);
+        s.appendChild(checkList(c.options, a.weaponMastery, c.count, (v) => { a.weaponMastery = v; }));
+        d.body.appendChild(s);
+      }
+      if (c.type === 'options') {
+        const s = section(c.optionType === 'invocation' ? 'Eldritch Invocations' : 'Metamagic', `Choose ${c.count} — or leave it empty and add them to Features later.`);
+        s.appendChild(optionPicker(c, a.options[c.optionType] || [], (v) => { a.options[c.optionType] = v; }));
         d.body.appendChild(s);
       }
       if (c.type === 'spells') {
@@ -219,6 +234,7 @@ export async function openLevelUp(ch, { onDone } = {}) {
     if (!plan.choices.some((c) => c.type === 'feat')) delete answers.feat;
     try {
       const { character, summary } = await api('/levelup', { id: ch.id, answers });
+      finished = true;
       d.dlg.close();
       if (onDone) onDone(character, summary);
     } catch (e) {

@@ -372,3 +372,117 @@ test('always-prepared spells: entered on a subclass feature, shown in the spellb
   await expect(row.locator('input[type=checkbox]')).toHaveCount(0);
   await noErrors(errors);
 });
+
+test('attacks: two Light weapons give an off-hand attack (Bonus Action; with Nick, part of the Attack action)', async ({ page }) => {
+  const errors = watchErrors(page);
+  const lib = (await snapshot('itemState')).items;
+  const pick = (name) => lib.find((i) => i.name === name && i.edition === '2024');
+  const dagger = pick('Dagger');
+  const scimitar = pick('Scimitar');
+  expect(scimitar.mastery).toBe('nick');
+  await send([
+    ['addCharacter', { id: 'twfpc', campaignId: 'flowa' }],
+    ['updateCharacter', { id: 'twfpc', patch: {
+      name: 'Twin', class: 'Rogue 3', level: 3, abilities: { str: 10, dex: 16, con: 12, int: 10, wis: 10, cha: 10 },
+      weaponProf: { simple: true, martial: true },
+      inventory: [{ id: 'i1', itemId: dagger.id, name: 'Dagger', qty: 2, equipped: true }],
+    } }],
+  ]);
+  await as(page, 'dm');
+  await page.goto('/characters.html#edit=twfpc');
+  await page.locator('.tab-btn', { hasText: 'Actions' }).click();
+  const bonus = page.locator('.action-group[data-group="bonus"]');
+  await expect(bonus).toBeVisible();
+  // A pair of daggers: the off-hand attack is a Bonus Action, without DEX on damage.
+  const off = page.locator('.action-row', { has: page.locator('.action-name', { hasText: 'Dagger (off-hand)' }) });
+  await expect(off.locator('.action-stat')).toHaveText(/\+5 to hit · 1d4 piercing$/);
+  await expect(off.locator('.action-detail')).toContainText('no ability modifier to damage');
+
+  // A scimitar (Nick) with Weapon Mastery on it + the Two-Weapon Fighting style.
+  await send([['updateCharacter', { id: 'twfpc', patch: {
+    inventory: [{ id: 'i1', itemId: dagger.id, name: 'Dagger', qty: 1, equipped: true }, { id: 'i2', itemId: scimitar.id, name: 'Scimitar', qty: 1, equipped: true }],
+    modifiers: [{ id: 'm1', preset: 'weapon-mastery', active: true, only: 'Scimitar' }, { id: 'm2', preset: 'two-weapon-fighting', active: true }],
+  } }]]);
+  const nick = page.locator('.action-row', { has: page.locator('.action-name', { hasText: 'Scimitar (off-hand)' }) });
+  await expect(nick).toBeVisible();
+  await expect(nick.locator('.action-stat')).toHaveText(/1d6\+3 slashing$/);
+  await expect(nick.locator('.action-detail')).toContainText('Nick: part of the Attack action');
+  // Listed with the attacks (its row comes before the Bonus Actions heading).
+  const order = await page.locator('.action-group, .action-row .action-name').allTextContents();
+  expect(order.indexOf('Scimitar (off-hand)')).toBeLessThan(order.findIndex((t) => t.startsWith('Bonus Actions')));
+  await noErrors(errors);
+});
+
+test('characters: a DM retires a character; hidden from the list and Allies until "Show retired"', async ({ page }) => {
+  const errors = watchErrors(page);
+  await send([
+    ['addCharacter', { id: 'oldpc', campaignId: 'flowa' }],
+    ['updateCharacter', { id: 'oldpc', patch: { name: 'Gone Gary', class: 'Fighter 1' } }],
+  ]);
+  await as(page, 'dm');
+  await page.goto('/characters.html#edit=oldpc');
+  await expect(page.locator('#csName')).toHaveValue('Gone Gary');
+  await page.locator('#retireCharBtn').click();
+  await expect(page.locator('#retireCharBtn')).toHaveText('Bring back');
+  await expect.poll(async () => (await charById('oldpc')).retired).toBe(true);
+  await page.locator('#backToListBtn').click();
+  await expect(page.locator('.char-card-name', { hasText: 'Brakka' }).first()).toBeVisible();
+  await expect(page.locator('.char-card-name', { hasText: 'Gone Gary' })).toHaveCount(0);
+  await page.locator('#showRetired').check();
+  await expect(page.locator('.char-card.retired', { hasText: 'Gone Gary' }).first()).toBeVisible();
+  await page.locator('#showRetired').uncheck();
+
+  await page.goto('/combat.html');
+  const allies = page.locator('#alliesPanel');
+  await expect(allies.locator('.party-row', { hasText: 'Brakka' }).first()).toBeAttached();
+  await expect(allies.locator('.party-row', { hasText: 'Gone Gary' })).toHaveCount(0);
+  await noErrors(errors);
+});
+
+test('characters: guided creation at level 3 goes on with the level up (Weapon Mastery picked)', async ({ page }) => {
+  const errors = watchErrors(page);
+  await as(page, 'dm');
+  await page.goto('/characters.html');
+  await page.locator('#newCharBtn').click();
+  const dlg = page.locator('#creatorDlg');
+  const next = async () => {
+    await dlg.getByRole('button', { name: 'Next →' }).click();
+    await expect(dlg.locator('.b-msg')).toHaveText('');
+  };
+  const card = (name) => dlg.locator('.b-card', { has: page.locator('.b-card-title', { hasText: new RegExp(`^${name}$`) }) });
+  await card('Fighter').click();
+  await next();
+  await card('Dwarf').click();
+  await next();
+  await card('Soldier').click();
+  const selects = dlg.locator('.b-select');
+  await selects.nth(1).selectOption('str');
+  await selects.nth(2).selectOption('con');
+  await next();
+  await dlg.getByRole('button', { name: /Suggest for/ }).click();
+  await next();
+  const free = dlg.locator('.b-check:has(input:not(:disabled):not(:checked))');
+  while (await dlg.locator('.b-count:not(.done)').count()) await free.first().click();
+  await dlg.locator('.b-select').first().selectOption('defense');
+  await next(); // equipment + Weapon Mastery
+  for (const w of ['Longsword', 'Greataxe', 'Longbow']) await dlg.locator('.b-check', { hasText: new RegExp(`^${w}$`) }).click();
+  await expect(dlg.locator('.b-count')).toHaveText('3 / 3 chosen');
+  await next();
+  await dlg.locator('input.b-text').first().fill('Thrice');
+  await dlg.getByLabel('Starting level').selectOption('3');
+  await expect(dlg).toContainText('Next: 2 level ups to reach level 3');
+  await dlg.getByRole('button', { name: /Create character/ }).click();
+
+  const lu = page.locator('#levelUpDlg');
+  await expect(lu.locator('h3')).toHaveText('Level up — Thrice (level 2 of 3)');
+  await lu.getByRole('button', { name: /Become Fighter 2/ }).click();
+  await expect(lu.locator('h3')).toHaveText('Level up — Thrice (level 3 of 3)');
+  await lu.locator('.b-card', { hasText: 'Champion' }).click();
+  await lu.getByRole('button', { name: /Become Fighter 3/ }).click();
+  await expect(lu).toBeHidden({ timeout: 10000 });
+  await expect(page.locator('#csName')).toHaveValue('Thrice');
+  const ch = (await snapshot('charState')).characters.find((c) => c.name === 'Thrice');
+  expect(ch.class).toMatch(/Fighter 3/);
+  expect(ch.modifiers.find((m) => m.preset === 'weapon-mastery').only).toBe('Longsword, Greataxe, Longbow');
+  await noErrors(errors);
+});

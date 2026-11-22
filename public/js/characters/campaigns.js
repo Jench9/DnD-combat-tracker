@@ -10,6 +10,7 @@ import { el, makeDialog, button } from './builder/common.js';
 import { isAdmin, authMode } from '../core/identity.js';
 
 const FILTER_KEY = 'kit.campaignFilter';
+const RETIRED_KEY = 'kit.showRetired';
 let loaded = false; // campaign list received from the server at least once
 
 function saveFilter() {
@@ -29,10 +30,11 @@ export function campaignForNew() {
 
 export function charactersInView() {
   const f = store.campaignFilter;
-  if (f === ALL) return store.characters;
+  const list = store.showRetired ? store.characters : store.characters.filter((c) => !c.retired);
+  if (f === ALL) return list;
   // Characters whose campaigns no longer exist count as "No campaign".
-  if (f === NONE) return store.characters.filter((c) => !campaignsOf(c).some((id) => campaignName(id)));
-  return store.characters.filter((c) => inCampaign(c, f));
+  if (f === NONE) return list.filter((c) => !campaignsOf(c).some((id) => campaignName(id)));
+  return list.filter((c) => inCampaign(c, f));
 }
 
 function option(value, text) {
@@ -165,7 +167,9 @@ function drawManager() {
       list.innerHTML = '';
       const q = (mgr.filter || '').trim().toLowerCase();
       // Alphabetical (not members first: rows would jump when ticked).
+      // Retired characters only when asked for (or still in this campaign).
       const chars = store.characters
+        .filter((ch) => !ch.retired || mgr.retired || inCampaign(ch, camp.id))
         .filter((ch) => !q || (ch.name || '').toLowerCase().includes(q))
         .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       if (!chars.length) list.appendChild(el('div', 'cm-empty', store.characters.length ? 'No character matches.' : 'No characters yet.'));
@@ -183,13 +187,20 @@ function drawManager() {
         const text = el('span', 'cm-char-text');
         text.appendChild(el('span', 'cm-char-name', ch.name || 'Unnamed character'));
         const others = campaignsOf(ch).filter((x) => x !== camp.id).map(campaignName).filter(Boolean);
-        text.appendChild(el('span', 'cm-char-meta', [['Lv ' + (ch.level || 1), ch.class].filter(Boolean).join(' '),
+        text.appendChild(el('span', 'cm-char-meta', [['Lv ' + (ch.level || 1), ch.class].filter(Boolean).join(' '), ch.retired ? 'retired' : '',
           others.length ? 'also in ' + others.join(', ') : ''].filter(Boolean).join(' · ')));
         row.append(cb, text);
         list.appendChild(row);
       });
     };
     filter.addEventListener('input', () => { mgr.filter = filter.value; drawList(); });
+    const retiredBox = el('label', 'cm-retired');
+    const rcb = el('input');
+    rcb.type = 'checkbox';
+    rcb.checked = !!mgr.retired;
+    rcb.addEventListener('change', () => { mgr.retired = rcb.checked; drawList(); });
+    retiredBox.append(rcb, document.createTextNode(' Show retired characters'));
+    main.appendChild(retiredBox);
     drawList();
     main.appendChild(list);
     requestAnimationFrame(() => { list.scrollTop = top; });
@@ -232,6 +243,15 @@ export function initCampaigns({ onFilterChange }) {
     store.campaignFilter = e.target.value;
     saveFilter();
     renderCampaignControls();
+    onFilterChange();
+  });
+
+  try { store.showRetired = localStorage.getItem(RETIRED_KEY) === '1'; } catch { /* storage unavailable */ }
+  const retired = $('showRetired');
+  retired.checked = store.showRetired;
+  retired.addEventListener('change', () => {
+    store.showRetired = retired.checked;
+    try { localStorage.setItem(RETIRED_KEY, retired.checked ? '1' : '0'); } catch { /* storage unavailable */ }
     onFilterChange();
   });
 

@@ -21,7 +21,7 @@ function avatarNode(ch) {
 
 function renderCard(ch, onOpen) {
   const card = document.createElement('div');
-  card.className = 'char-card';
+  card.className = 'char-card' + (ch.retired ? ' retired' : '');
   card.addEventListener('click', () => onOpen(ch.id));
   card.appendChild(avatarNode(ch));
 
@@ -38,6 +38,12 @@ function renderCard(ch, onOpen) {
   lvl.className = 'lvl-pill';
   lvl.textContent = 'Lv ' + (ch.level || 1);
   top.appendChild(lvl);
+  if (ch.retired) {
+    const r = document.createElement('span');
+    r.className = 'retired-pill';
+    r.textContent = 'Retired';
+    top.appendChild(r);
+  }
   body.appendChild(top);
 
   const sub = document.createElement('div');

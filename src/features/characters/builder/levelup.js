@@ -12,7 +12,10 @@
 //     fightingStyle: featKey | 'custom', fightingStyleName,
 //     expertise: [skill names],
 //     skills: [skill names],                              // multiclass / Bonus Proficiencies
-//     spells: { cantrips: [spellIds], spells: [spellIds] } }
+//     spells: { cantrips: [spellIds], spells: [spellIds] },
+//     weaponMastery: [weapon names],                     // more kinds to master
+//     options: { invocation: [names], metamagic: [names] } }  // Content-page
+//       options by name, or any other name typed in (its text by hand)
 const { mod } = require('../model');
 const P = require('./progression');
 
@@ -93,6 +96,25 @@ function levelUpPlan(ch, classKey, ctx) {
   return planFor(ch, def, classes, existing, ctx);
 }
 
+// Eldritch Invocations / Metamagic: the Content page's options (the SRD
+// data has no option lists), each with why it can't be taken yet; any other
+// name can be typed in.
+const OPTION_LABEL = { invocation: 'Eldritch Invocation', metamagic: 'Metamagic' };
+const optionTag = (type, name) => `${type}:${name}`.slice(0, 60);
+function optionChoice(optionType, count, ch, classLevel, rules) {
+  const feats = (ch.feats || []).map((f) => f.toLowerCase());
+  const known = (ch.feats || []).filter((f) => f.toLowerCase().startsWith(optionType + ':')).map((f) => f.slice(optionType.length + 1));
+  const options = (rules.options || []).filter((o) => o.optionType === optionType).map((o) => {
+    const taken = !o.repeatable && feats.includes(optionTag(optionType, o.name).toLowerCase());
+    const low = o.minLevel > classLevel;
+    return {
+      key: o.key, name: o.name, desc: o.desc, prereq: o.prereq, source: o.source, cost: o.cost,
+      ok: !taken && !low, why: taken ? 'already chosen' : low ? `${optionType === 'invocation' ? 'Warlock' : 'Sorcerer'} level ${o.minLevel}+` : '',
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name));
+  return { type: 'options', optionType, label: OPTION_LABEL[optionType], count, options, known };
+}
+
 // The plan for the next level of `def` (`existing` = its current entry, or
 // null for a new class; no `classes` at all = the character's first level).
 function planFor(ch, def, classes, existing, ctx) {
@@ -170,9 +192,16 @@ function planFor(ch, def, classes, existing, ctx) {
 
   const prevRow = newClassLevel > 1 ? P.levelRow(def, newClassLevel - 1) : null;
   const counter = (k) => ((row.counters || {})[k] || 0) - (((prevRow || {}).counters || {})[k] || 0);
-  if (counter('weapon_mastery') > 0) notes.push(`Weapon Mastery: you can use the mastery of ${counter('weapon_mastery')} more kind(s) of weapon (set it with the modifier's "only for").`);
-  if (def.key === 'warlock' && counter('eldritch_invocations') > 0) notes.push(`Choose ${counter('eldritch_invocations')} more Eldritch Invocation(s) and add them to Features.`);
-  if (row.features.includes('sorcerer-metamagic')) notes.push('Choose two Metamagic options and add them to Features.');
+  // Weapon Mastery: more kinds of weapons (the classes after this level).
+  const after = [...classes.filter((c) => c.key !== def.key), { key: def.key, level: newClassLevel }];
+  const chosen = P.masteryChosen(ch.modifiers);
+  const moreMastery = P.masteryCount(after, rules) - chosen.length;
+  if (moreMastery > 0) {
+    const options = P.masteryOptions(after.filter((c) => P.masteryCount([c], rules) > 0), rules, chosen);
+    choices.push({ type: 'weaponMastery', count: Math.min(moreMastery, options.length), chosen, options });
+  }
+  if (def.key === 'warlock' && counter('eldritch_invocations') > 0) choices.push(optionChoice('invocation', counter('eldritch_invocations'), ch, newClassLevel, rules));
+  if (row.features.includes('sorcerer-metamagic')) choices.push(optionChoice('metamagic', 2, ch, newClassLevel, rules));
   if (!existing && !first) {
     const extra = def.multiclass.proficiencies.filter((p) => !/Weapons$/.test(p));
     if (extra.length) notes.push(`Multiclass training: ${extra.join(', ')}.`);
@@ -353,6 +382,40 @@ function applyFightingStyle(w, answer, alternative, ctx) {
   applyFeat(w, { key: feat.key }, ctx, { origin: true });
 }
 
+// More weapon kinds to master: set on the Weapon Mastery modifier's "only for".
+function applyWeaponMastery(w, c, answer, ctx) {
+  const picked = uniq((Array.isArray(answer) ? answer : []).map((n) => String(n).trim()).filter(Boolean));
+  if (!picked.length) { w.blocks.push(P.featureBlock('To do', `Weapon Mastery: ${c.count} more kind${c.count === 1 ? '' : 's'} of weapon — set them in the Weapon Mastery modifier's "only for" (Actions tab).`)); return; }
+  if (picked.length !== c.count) fail(`Weapon Mastery: choose ${c.count} kind${c.count === 1 ? '' : 's'} of weapon (or none, to set them later).`);
+  picked.forEach((n) => { if (!c.options.includes(n)) fail(`Weapon Mastery: ${n} isn't one of the options.`); });
+  if (!w.modifiers.some((m) => m.preset === 'weapon-mastery')) w.modifiers = P.addPresets(w.modifiers, ['weapon-mastery'], ctx.newId);
+  const m = w.modifiers.find((x) => x.preset === 'weapon-mastery');
+  const all = [...P.masteryChosen(w.modifiers), ...picked];
+  m.only = all.join(', ').slice(0, 200);
+  w.blocks.push(P.featureBlock(`Weapon Mastery: ${all.join(', ')}`, ''));
+}
+
+// Eldritch Invocations / Metamagic picked by name: a Content-page option
+// (its text, action, attack modifier) or a name typed in.
+function applyOptions(w, c, answer, ctx, level) {
+  const picked = uniq((Array.isArray(answer) ? answer : []).map((n) => String(n).trim().slice(0, 50)).filter(Boolean));
+  if (!picked.length) { w.blocks.push(P.featureBlock('To do', `Choose ${c.count} ${c.label}${c.count === 1 ? '' : 's'} and add them to Features.`)); return; }
+  if (picked.length !== c.count) fail(`${c.label}: choose ${c.count} (or none, to add them by hand).`);
+  picked.forEach((name) => {
+    const o = (ctx.rules.options || []).find((x) => x.optionType === c.optionType && x.name.toLowerCase() === name.toLowerCase());
+    const tag = optionTag(c.optionType, o ? o.name : name);
+    if (w.feats.some((f) => f.toLowerCase() === tag.toLowerCase()) && !(o && o.repeatable)) fail(`${c.label}: you already have ${name}.`);
+    if (o && o.minLevel > level) fail(`${o.name} needs ${c.optionType === 'invocation' ? 'Warlock' : 'Sorcerer'} level ${o.minLevel}.`);
+    w.feats.push(tag);
+    if (!o) { w.blocks.push(P.featureBlock(`${c.label}: ${name}`, 'Add its rules text here.')); return; }
+    const cost = c.optionType === 'metamagic' && o.cost ? `**Cost:** ${o.cost} Sorcery Point${o.cost === 1 ? '' : 's'}.` : '';
+    const text = [o.prereq ? `*Prerequisite: ${o.prereq}*` : '', cost, o.desc].filter(Boolean).join('\n');
+    w.blocks.push(P.featureBlock(`${c.label}: ${o.name}`, text));
+    if (o.action) addCustomAction(w, { name: o.name, action: o.action, desc: text, resource: c.optionType === 'metamagic' && o.cost ? 'Sorcery Points' : '', cost: o.cost || 1 }, o.source || c.label, ctx.newId);
+    if (o.preset) w.modifiers = P.addPresets(w.modifiers, [o.preset], ctx.newId);
+  });
+}
+
 // Gain one level in `def` (the plan says which choices it needs). Mutates
 // `w`; returns the new classes list.
 function gainClassLevel(w, plan, answers, ctx, classes) {
@@ -447,6 +510,10 @@ function gainClassLevel(w, plan, answers, ctx, classes) {
       const picked = checkSkills(a.skills, Math.min(c.count, c.from.length), c.from, w, { label: 'Skill proficiencies' });
       picked.forEach((s) => { w.skillProf[s] = true; });
       if (picked.length) w.blocks.push(P.featureBlock(`Skill proficiencies: ${picked.join(', ')}`, ''));
+    } else if (c.type === 'weaponMastery') {
+      applyWeaponMastery(w, c, a.weaponMastery, ctx);
+    } else if (c.type === 'options') {
+      applyOptions(w, c, ((a.options || {})[c.optionType]), ctx, level);
     } else if (c.type === 'spells') {
       const sp = a.spells || {};
       if (c.cantrips) addSpells(w, sp.cantrips, ctx, { listKey: c.list, cantrip: true, count: c.cantrips, label: def.name });

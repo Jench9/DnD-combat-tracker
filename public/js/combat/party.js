@@ -29,7 +29,8 @@ function groups() {
   // The active campaign first; a character in two campaigns is in both
   // (adding it twice does nothing). With no campaigns at all, "No
   // campaign" would read oddly.
-  return groupByCampaign(view.characters, view.campaigns, { noneLabel: view.campaigns.length ? 'No campaign' : 'All characters' })
+  // Retired characters (dead, left the party) aren't offered.
+  return groupByCampaign(view.characters.filter((ch) => !ch.retired), view.campaigns, { noneLabel: view.campaigns.length ? 'No campaign' : 'All characters' })
     .map((g) => ({ ...g, name: (g.active ? '★ ' : '') + g.name }));
 }
 

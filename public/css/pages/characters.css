@@ -9,6 +9,12 @@ input[type=number].bare::-webkit-outer-spin-button { -webkit-appearance: none; m
 .campaign-bar { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .campaign-bar .field { flex: 1 1 220px; max-width: 320px; margin: 0; }
 .campaign-bar .btn { height: 34px; }
+.campaign-bar .show-retired { display: inline-flex; align-items: center; gap: 5px; height: 34px; font-size: 13px; color: var(--ink-soft); cursor: pointer; }
+.char-card.retired { opacity: 0.6; }
+.retired-pill {
+  font-size: 11px; color: var(--ink-soft); border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; flex-shrink: 0;
+}
+.cm-retired { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--ink-soft); margin: 6px 0 2px; cursor: pointer; }
 .char-group-head {
   grid-column: 1 / -1;
   font-family: var(--font-display); font-weight: 700; font-size: 17px;

@@ -46,6 +46,8 @@ module.exports = {
       const { campaignId, ...rest } = patch;
       patch = ch && wanted ? { ...rest, campaignIds: access.allowedCampaignIds(identity, ch, wanted) } : { ...rest, campaignIds: undefined };
     }
+    // Retiring (dead, left the party): the DM's call.
+    if (patch.retired !== undefined && identity.role !== 'dm') patch = { ...patch, retired: undefined };
     // A familiar's stat block comes from the library (POST /api/familiars);
     // edits only change its name, creature type and HP, or release it (null).
     if (patch.familiar && typeof patch.familiar === 'object') {
