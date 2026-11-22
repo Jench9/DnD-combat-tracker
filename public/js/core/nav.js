@@ -13,16 +13,15 @@ function diceToggle() {
   b.className = 'id-badge dice-toggle';
   const ic = document.createElement('span');
   ic.className = 'ic';
-  const lbl = document.createElement('span');
-  lbl.className = 'lbl';
-  b.append(ic, lbl);
+  ic.setAttribute('aria-hidden', 'true');
+  b.append(ic); // icon only: the words are in the tooltip and the accessible name
   const draw = () => {
     const on = manualDice();
     ic.textContent = on ? '✋' : '🎲';
-    lbl.textContent = on ? 'Hand dice' : 'App dice';
     b.title = on
       ? 'Hand dice: you roll your own dice and type the results — click to let the app roll'
       : 'App dice: the app rolls for you — click to roll your own dice and type the results';
+    b.setAttribute('aria-label', on ? 'Hand dice (you roll)' : 'App dice (the app rolls)');
     b.setAttribute('aria-pressed', String(on));
     b.classList.toggle('on', on);
   };

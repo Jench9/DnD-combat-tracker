@@ -251,3 +251,91 @@ test('content: a DM adds a species with a source tag; the guided creation shows 
   await expect(wiz).toContainText('Celestial Resistance');
   await noErrors(errors);
 });
+
+test('sheet: formatted Features (tables, bold, never HTML) and a custom action that spends its resource', async ({ page }) => {
+  const errors = watchErrors(page);
+  let alerted = false;
+  page.on('dialog', (d) => { alerted = true; d.dismiss(); });
+  const features = [
+    '◆ Spellcasting (Spell Knight 3)',
+    'You learn **two** cantrips and *three* spells.',
+    '| Fighter Level | Prepared | 1st |',
+    '|---|---|---|',
+    '| 3 | 3 | 2 |',
+    '| 4 | 4 | 3 |',
+    '',
+    '◆ Copied from a web page',
+    'Level\tSlots',
+    '3\t2',
+    '7\t4',
+    '- a list item',
+    '<img src=x onerror=alert(1)>',
+  ].join('\n');
+  await send([
+    ['addCharacter', { id: 'fmtpc' }],
+    ['updateCharacter', { id: 'fmtpc', patch: {
+      name: 'Kay', class: 'Fighter 3', level: 3, features,
+      resources: [{ id: 'sd', name: 'Superiority Dice', max: 4, used: 0, recharge: 'short' }],
+      customActions: [{ id: 'pa1', name: 'Parry Strike', type: 'bonus', text: '**Bonus Action.** Spend a die.', resource: 'Superiority Dice', cost: 1, source: 'Spell Knight' }],
+    } }],
+  ]);
+  await as(page, 'dm');
+  await page.goto('/characters.html#edit=fmtpc');
+  await page.locator('.tab-btn[data-tab="features"]').click();
+  const read = page.locator('#featRead');
+  await expect(read).toBeVisible();
+  await expect(read.locator('.rt-h')).toHaveText(['Spellcasting (Spell Knight 3)', 'Copied from a web page']);
+  await expect(read.locator('strong', { hasText: 'two' })).toBeVisible();
+  await expect(read.locator('table')).toHaveCount(2);
+  await expect(read.locator('table').first().locator('th')).toHaveText(['Fighter Level', 'Prepared', '1st']);
+  await expect(read.locator('table').nth(1).locator('tbody tr')).toHaveCount(2);
+  await expect(read.locator('.rt-list li')).toHaveText(['a list item']);
+  await expect(read).toContainText('<img src=x onerror=alert(1)>');
+  await expect(read.locator('img')).toHaveCount(0);
+  await page.locator('#featEditBtn').click();
+  await expect(page.locator('#featList')).toBeVisible();
+  await page.locator('#featReadBtn').click();
+  await expect(read).toBeVisible();
+
+  // The custom action: under Bonus Actions, Use spends a die.
+  await page.locator('.tab-btn[data-tab="actions"]').click();
+  const row = page.locator('.action-row.feature', { hasText: 'Parry Strike' });
+  await expect(row).toContainText('4/4 Superiority Dice');
+  await expect(row.locator('strong', { hasText: 'Bonus Action.' })).toBeVisible();
+  await row.getByRole('button', { name: /^Use/ }).click();
+  await expect(row).toContainText('3/4 Superiority Dice');
+  expect(alerted).toBe(false);
+  await noErrors(errors);
+});
+
+test('content: a subclass with spellcasting, a resource and a feature used as a Bonus Action', async ({ page }) => {
+  const errors = watchErrors(page);
+  await as(page, 'dm');
+  await page.goto('/content.html');
+  await page.click('#addBtn');
+  const dlg = page.locator('#editDlg');
+  await dlg.getByPlaceholder('e.g. Battle Master').fill('Spell Knight');
+  await dlg.locator('input[list="sourceList"]').fill('Homebrew');
+  await dlg.locator('label.ct-field', { hasText: /^Class/ }).locator('select').selectOption('fighter');
+  await dlg.getByRole('button', { name: '+ Add resource' }).click();
+  await dlg.getByLabel('Resource name').fill('Superiority Dice');
+  await dlg.getByLabel('Resource name').blur();
+  await dlg.getByLabel('Uses by class level, or PB for the proficiency bonus').fill('3:4, 7:5');
+  await dlg.getByRole('button', { name: '+ Add feature' }).click();
+  await dlg.getByPlaceholder('Feature name').fill('Parry Strike');
+  await dlg.getByPlaceholder('What it does').fill('Spend a die.\n| a | b |\n|---|---|\n| 1 | 2 |');
+  await dlg.locator('.ct-mech select').first().selectOption('bonus');
+  await dlg.locator('.ct-mech select').nth(1).selectOption('Superiority Dice');
+  await dlg.getByText('This subclass gives spellcasting').click();
+  await dlg.getByLabel('Prepared spells at level 3').fill('3');
+  await dlg.getByLabel('Cantrips at level 3').fill('2');
+  await dlg.locator('#saveBtn').click();
+  await expect(dlg).toBeHidden();
+  const item = page.locator('.ct-item', { hasText: 'Spell Knight' });
+  await item.locator('.ct-preview > summary').click();
+  await expect(item).toContainText('Superiority Dice: 4 at 3, 5 at 7');
+  await expect(item).toContainText('Spellcasting: third caster, INT, wizard list');
+  await expect(item).toContainText('Level 3: Parry Strike (Bonus Action, spends 1 Superiority Dice)');
+  await expect(item.locator('table th')).toHaveText(['a', 'b']);
+  await noErrors(errors);
+});

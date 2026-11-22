@@ -7,7 +7,17 @@
 //
 //   { id, kind: 'subclass' | 'species' | 'background' | 'feat', name, source,
 //     createdBy (account id, '' in open mode), createdAt, updatedAt, ...per kind }
-//   subclass   classKey, summary, desc, features: [{ level, name, desc }]
+//   subclass   classKey, summary, desc,
+//              features: [{ level, name, desc, action, resource, cost }]
+//                action: '' | action | bonus | reaction | free (shown in the
+//                sheet's Actions with a Use button), resource: the name of
+//                one of `resources` a use spends (cost uses)
+//              resources: [{ name, recharge: short | long | none,
+//                pb (uses = proficiency bonus) | uses: [{ level, max }] }]
+//              spellcasting: null | { type: third | half | full, ability,
+//                list (a class's spell list, e.g. wizard), cantrips[20],
+//                prepared[20] } — totals at each class level (index = level − 1);
+//                slots come from the multiclass spellcaster table
 //   species    size, speed, skillChoice (bool: "choose one skill"), traits: [{ name, desc }]
 //   background abilities: [3 of str…cha], skills: [2], tools: [..], featKey,
 //              equipment (text), gp (with the equipment; the other option is 50 GP)
@@ -17,6 +27,10 @@ const { uid } = require('../../core/ids');
 const { createJsonStore } = require('../../core/jsonStore');
 
 const KINDS = ['subclass', 'species', 'background', 'feat'];
+const ACTION_TYPES = ['', 'action', 'bonus', 'reaction', 'free'];
+const RECHARGES = ['short', 'long', 'none'];
+const CASTER_TYPES = ['third', 'half', 'full'];
+const SPELL_LISTS = ['bard', 'cleric', 'druid', 'paladin', 'ranger', 'sorcerer', 'warlock', 'wizard'];
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 const FEAT_TYPES = ['origin', 'general', 'fighting-style', 'epic-boon'];
 const SIZES = ['Small', 'Medium', 'Small or Medium', 'Large'];
@@ -50,9 +64,19 @@ function clean(raw, base = {}) {
     if (!/^[a-z-]{2,30}$/.test(e.classKey)) return { error: 'Choose the class it belongs to.' };
     e.summary = text(r.summary, 200);
     e.desc = text(r.desc, 4000);
+    e.resources = cleanResources(r.resources);
+    const resNames = e.resources.map((x) => x.name);
     e.features = (Array.isArray(r.features) ? r.features : [])
-      .map((f) => ({ level: int(f && f.level, 1, 20, 3), name: text(f && f.name, 80), desc: text(f && f.desc, 6000) }))
+      .map((f) => ({
+        level: int(f && f.level, 1, 20, 3),
+        name: text(f && f.name, 80),
+        desc: text(f && f.desc, 6000),
+        action: ACTION_TYPES.includes(f && f.action) ? f.action : '',
+        resource: resNames.includes(f && f.resource) ? f.resource : '',
+        cost: int(f && f.cost, 1, 20, 1),
+      }))
       .filter((f) => f.name).slice(0, 40).sort((a, b) => a.level - b.level);
+    e.spellcasting = cleanSpellcasting(r.spellcasting);
   } else if (kind === 'species') {
     e.size = SIZES.includes(r.size) ? r.size : 'Medium';
     e.speed = int(r.speed, 5, 120, 30);
@@ -76,6 +100,39 @@ function clean(raw, base = {}) {
     e.asi = pickList(r.asi, ABILITIES, 6);
   }
   return { entry: e };
+}
+
+// "PB" / "3:4, 7:5, 15:6" / "2" (or the stored shape) -> { pb } | { uses: [{ level, max }] }
+function parseUses(v) {
+  if (v && typeof v === 'object' && !Array.isArray(v)) return v.pb ? { pb: true } : parseUses(v.uses);
+  if (Array.isArray(v)) {
+    const uses = v.map((u) => ({ level: int(u && u.level, 1, 20, 1), max: int(u && u.max, 0, 99, 0) })).filter((u) => u.max > 0);
+    return { uses: uses.sort((a, b) => a.level - b.level).filter((u, i, all) => !all.slice(i + 1).some((x) => x.level === u.level)) };
+  }
+  const s = String(v || '').trim();
+  if (/^pb$|proficiency/i.test(s)) return { pb: true };
+  if (/^\d+$/.test(s)) return { uses: [{ level: 1, max: int(s, 0, 99, 0) }].filter((u) => u.max > 0) };
+  return parseUses([...s.matchAll(/(\d+)\s*[:=]\s*(\d+)/g)].map((m) => ({ level: m[1], max: m[2] })));
+}
+function cleanResources(list) {
+  return (Array.isArray(list) ? list : []).map((x) => {
+    const name = text(x && x.name, 40);
+    const recharge = RECHARGES.includes(x && x.recharge) ? x.recharge : 'long';
+    const u = parseUses(x && (x.pb ? { pb: true } : x.uses !== undefined ? x.uses : x.usesText));
+    return { name, recharge, ...(u.pb ? { pb: true } : { uses: u.uses || [] }) };
+  }).filter((x) => x.name && (x.pb || x.uses.length)).slice(0, 6);
+}
+function cleanSpellcasting(sc) {
+  if (!sc || typeof sc !== 'object' || !sc.enabled && sc.enabled !== undefined) return null;
+  const nums = (list) => Array.from({ length: 20 }, (_, i) => int(Array.isArray(list) ? list[i] : 0, 0, 30, 0));
+  const out = {
+    type: CASTER_TYPES.includes(sc.type) ? sc.type : 'third',
+    ability: ['int', 'wis', 'cha'].includes(sc.ability) ? sc.ability : 'int',
+    list: SPELL_LISTS.includes(sc.list) ? sc.list : 'wizard',
+    cantrips: nums(sc.cantrips),
+    prepared: nums(sc.prepared),
+  };
+  return out.prepared.some((n) => n > 0) || out.cantrips.some((n) => n > 0) ? out : null;
 }
 
 function load() {
@@ -123,4 +180,4 @@ function remove(id) {
   if (entries.length !== before) persist();
 }
 
-module.exports = { KINDS, FEAT_TYPES, SIZES, SKILL_NAMES, reload, all, find, add, update, remove, getVersion };
+module.exports = { KINDS, FEAT_TYPES, SIZES, SKILL_NAMES, ACTION_TYPES, RECHARGES, CASTER_TYPES, SPELL_LISTS, parseUses, reload, all, find, add, update, remove, getVersion };

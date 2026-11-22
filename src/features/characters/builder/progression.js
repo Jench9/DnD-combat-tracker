@@ -56,6 +56,25 @@ function hitDiceText(classes, rules) {
 
 const levelRow = (def, level) => def.levels.find((l) => l.level === level) || null;
 
+// The class as a spellcaster: itself if it casts spells; a non-caster class
+// whose subclass casts spells (a custom one-third caster like the Eldritch
+// Knight) becomes a caster with the subclass's spell rows, ability and list.
+// Otherwise the class unchanged.
+function casterDef(def, subclassKey) {
+  if (!def || def.caster || !subclassKey) return def;
+  const sub = def.subclasses.find((s) => s.key === subclassKey);
+  const sc = sub && sub.spellcasting;
+  if (!sc || !sc.rows) return def;
+  return {
+    ...def,
+    caster: sc.type,
+    spellAbility: sc.ability,
+    spellList: sc.list,
+    levels: def.levels.map((l) => ({ ...l, spells: sc.rows[l.level - 1] || null })),
+  };
+}
+const spellListOf = (def) => def.spellList || def.key;
+
 // ---------------------------------------------------------------- spells
 
 // Spell slots for these classes: one spellcasting class uses its own table;
@@ -64,14 +83,17 @@ const levelRow = (def, level) => def.levels.find((l) => l.level === level) || nu
 // and its slots are added to the same level's pips (as the sheet stores them).
 // Returns { spellSlots maxes [9], pactMagic { level, count } }.
 function slotTable(classes, rules) {
-  const casters = classes.map((c) => ({ c, def: rules.classByKey.get(c.key) })).filter((x) => x.def && x.def.caster);
+  const casters = classes.map((c) => ({ c, def: casterDef(rules.classByKey.get(c.key), c.subclass) })).filter((x) => x.def && x.def.caster);
   const slots = Array(9).fill(0);
   const regular = casters.filter((x) => x.def.caster !== 'pact');
   if (regular.length === 1) {
     const row = levelRow(regular[0].def, regular[0].c.level);
     if (row && row.spells) row.spells.slots.forEach((n, i) => { slots[i] = n; });
   } else if (regular.length > 1) {
-    const casterLevel = regular.reduce((n, x) => n + (x.def.caster === 'full' ? x.c.level : Math.ceil(x.c.level / 2)), 0);
+    // Multiclass: full casters count all levels, half casters half (up),
+    // one-third casters a third (down).
+    const share = (x) => (x.def.caster === 'full' ? x.c.level : x.def.caster === 'third' ? Math.floor(x.c.level / 3) : Math.ceil(x.c.level / 2));
+    const casterLevel = regular.reduce((n, x) => n + share(x), 0);
     const full = rules.classByKey.get('wizard');
     const row = levelRow(full, Math.min(20, casterLevel));
     if (row && row.spells) row.spells.slots.forEach((n, i) => { slots[i] = n; });
@@ -166,14 +188,32 @@ function mergeResources(existing, wanted, newId) {
   return list;
 }
 
-// Resources for these classes at their levels (counters from the rules).
+// A custom subclass's resources at a class level (and total level, for the
+// proficiency bonus): [{ name, max, recharge }].
+function subclassResources(classes, rules) {
+  const total = totalLevel(classes);
+  const pb = Math.floor((Math.max(1, total) - 1) / 4) + 2;
+  const out = [];
+  classes.forEach((c) => {
+    const def = rules.classByKey.get(c.key);
+    const sub = def && c.subclass ? def.subclasses.find((s) => s.key === c.subclass) : null;
+    (sub && sub.resources || []).forEach((r) => {
+      const max = r.pb ? pb : (r.uses || []).filter((u) => u.level <= c.level).reduce((m, u) => u.max, 0);
+      if (max > 0) out.push({ name: r.name, max, recharge: r.recharge });
+    });
+  });
+  return out;
+}
+
+// Resources for these classes at their levels (counters from the rules,
+// plus a custom subclass's own resources).
 function resourcesFor(ch, classes, abilities, rules, newId) {
   const withCounters = classes.map((c) => {
     const def = rules.classByKey.get(c.key);
     const row = def && levelRow(def, c.level);
     return { ...c, counters: row ? row.counters : {} };
   });
-  return mergeResources(ch.resources, classResources(withCounters, abilities), newId);
+  return mergeResources(ch.resources, [...classResources(withCounters, abilities), ...subclassResources(classes, rules)], newId);
 }
 
 // ---------------------------------------------------------------- modifiers
@@ -256,7 +296,7 @@ function applyIncrease(abilities, plus, { total, perAbility, allowed, max }) {
 module.exports = {
   SKILLS, SKILL_NAMES, ABILITY_LABEL, PRESET_KEYS, CLASS_PRESETS, FEAT_PRESETS,
   classesOf, classText, totalLevel, hitDiceText, levelRow,
-  slotTable, applySlots, maxSpellLevel, spellPicks, spellFits,
+  slotTable, applySlots, maxSpellLevel, spellPicks, spellFits, casterDef, spellListOf, subclassResources,
   classResources, mergeResources, resourcesFor,
   addPresets, presetsAt, featureBlock, appendFeatures, featAllowed, applyIncrease,
 };

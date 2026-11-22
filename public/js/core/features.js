@@ -132,6 +132,26 @@ export function featureActions(ch) {
       roll: f.roll ? f.roll(c) : null,
     });
   });
+  // Features from custom content (subclasses the DMs added): the level up
+  // put them on the sheet with their action type and the resource they spend.
+  (Array.isArray(ch.customActions) ? ch.customActions : []).forEach((a) => {
+    if (out.some((f) => f.name.toLowerCase() === a.name.toLowerCase())) return;
+    const resource = a.resource ? resources.find((r) => r.name.toLowerCase() === a.resource.toLowerCase()) || null : null;
+    out.push({
+      key: 'custom-' + a.id,
+      name: a.name,
+      type: ACTION_TYPES.includes(a.type) ? a.type : 'action',
+      text: a.text,
+      stat: a.source || '',
+      resource: resource ? { id: resource.id, name: resource.name, max: resource.max, used: resource.used || 0 } : null,
+      cost: a.cost || 1,
+      optional: false,
+      pool: false,
+      noUse: !a.resource,
+      tracks: !!a.resource,
+      roll: null,
+    });
+  });
   return out;
 }
 

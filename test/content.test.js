@@ -95,3 +95,88 @@ test('custom content: DMs add it with a source tag; the builder offers and uses 
     await srv.close();
   }
 });
+
+test('custom subclass: spellcasting (one-third caster), resources and features used in play', async () => {
+  const srv = await startServer();
+  const base = `http://localhost:${srv.port}`;
+  try {
+    const cantrips = Array(20).fill(0);
+    const prepared = Array(20).fill(0);
+    for (let lv = 3; lv <= 20; lv++) { cantrips[lv - 1] = lv >= 10 ? 3 : 2; prepared[lv - 1] = lv === 3 ? 3 : lv < 7 ? 4 : 5; }
+    const r = await fetch(`${base}/api/content`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Kit-Role': 'dm' },
+      body: JSON.stringify({
+        kind: 'subclass', name: 'Spell Knight', source: 'Homebrew', classKey: 'fighter',
+        resources: [{ name: 'Superiority Dice', recharge: 'short', usesText: '3:4, 7:5, 15:6' }, { name: 'Bad', usesText: 'nonsense' }],
+        features: [
+          { level: 3, name: 'Parry Strike', desc: '**Bonus Action.** Spend a die.', action: 'bonus', resource: 'Superiority Dice', cost: 1 },
+          { level: 3, name: 'Spellcasting', desc: 'Cantrips | Prepared\n2 | 3' },
+          { level: 7, name: 'War Magic', desc: 'Cast and attack.', action: 'free', resource: 'Not a resource' },
+        ],
+        spellcasting: { type: 'third', ability: 'int', list: 'wizard', cantrips, prepared },
+      }),
+    });
+    const { entry } = await r.json();
+    assert.deepStrictEqual(entry.resources.map((x) => x.name), ['Superiority Dice'], 'an unusable resource is dropped');
+    assert.deepStrictEqual(entry.resources[0].uses, [{ level: 3, max: 4 }, { level: 7, max: 5 }, { level: 15, max: 6 }]);
+    assert.strictEqual(entry.features.find((f) => f.name === 'War Magic').resource, '', 'only its own resources');
+
+    const key = `c-${entry.id}`;
+    const spellsBy = (lvl, n, cantrip) => spells.all().filter((s) => s.edition === '2024' && (s.classes || []).includes('wizard') && (cantrip ? s.level === 0 : s.level === lvl)).slice(0, n).map((s) => s.id);
+    // A Fighter 2 (SRD), then level 3 with the custom subclass.
+    const FIGHTER = {
+      name: 'Kay', classKey: 'fighter', backgroundKey: 'soldier', speciesKey: 'human', originFeat: { key: 'alert' },
+      abilityMethod: 'standard', abilities: { str: 15, dex: 13, con: 14, int: 12, wis: 10, cha: 8 },
+      backgroundBonus: { str: 2, con: 1 }, classSkills: ['Perception', 'History'], speciesSkill: 'Insight',
+      level1: { fightingStyle: 'defense' }, equipment: { class: 0, background: 0 },
+    };
+    const made = buildCharacter(blankCharacter('sk'), FIGHTER, ctx());
+    assert.ifError(made.error);
+    let ch = sanitizeCharacterPatch(blankCharacter('sk'), made.patch);
+    ch = sanitizeCharacterPatch(ch, applyLevelUp(ch, { classKey: 'fighter', hp: { method: 'average' } }, ctx()).patch);
+    assert.strictEqual(ch.spellAbility, '');
+
+    const plan = require('../src/features/characters/builder/levelup').levelUpPlan(ch, 'fighter', ctx());
+    const opt = plan.subclasses.find((s) => s.key === key);
+    assert.deepStrictEqual(opt.choices.find((c) => c.type === 'spells'), { type: 'spells', list: 'wizard', cantrips: 2, spells: 3, maxLevel: 1 });
+    const up3 = applyLevelUp(ch, {
+      classKey: 'fighter', hp: { method: 'average' }, subclass: key,
+      spells: { cantrips: spellsBy(0, 2, true), spells: spellsBy(1, 3) },
+    }, ctx());
+    assert.ifError(up3.error);
+    ch = sanitizeCharacterPatch(ch, up3.patch);
+    assert.strictEqual(ch.spellAbility, 'int');
+    assert.deepStrictEqual(ch.spellSlots.slice(0, 2).map((s) => s.max), [2, 0], 'a level 3 one-third caster: 2 first-level slots');
+    assert.strictEqual(ch.spells.length, 5);
+    assert.deepStrictEqual(ch.resources.find((x) => x.name === 'Superiority Dice'), { ...ch.resources.find((x) => x.name === 'Superiority Dice'), max: 4, recharge: 'short' });
+    assert.deepStrictEqual(ch.customActions.map((a) => [a.name, a.type, a.resource, a.cost]), [['Parry Strike', 'bonus', 'Superiority Dice', 1]]);
+    assert.match(ch.features, /Cantrips \| Prepared/, 'the text, with its table, on the sheet');
+
+    // Level 4: one more spell (3 → 4 prepared), 3 slots.
+    const p4 = require('../src/features/characters/builder/levelup').levelUpPlan(ch, 'fighter', ctx());
+    assert.deepStrictEqual(p4.choices.find((c) => c.type === 'spells'), { type: 'spells', list: 'wizard', cantrips: 0, spells: 1, maxLevel: 1 });
+    const taken = new Set(ch.spells.map((s) => s.spellId));
+    const one = spells.all().find((s) => s.edition === '2024' && s.level === 1 && (s.classes || []).includes('wizard') && !taken.has(s.id)).id;
+    const up4 = applyLevelUp(ch, { classKey: 'fighter', hp: { method: 'average' }, spells: { spells: [one] }, feat: { key: 'ability-score-improvement', plus: { con: 1, str: 1 } } }, ctx());
+    assert.ifError(up4.error);
+    ch = sanitizeCharacterPatch(ch, up4.patch);
+    assert.strictEqual(ch.spellSlots[0].max, 3);
+    // Up to 7: 4 + 2 slots, 5 dice, War Magic (no resource) in the Actions list.
+    for (let lv = 5; lv <= 7; lv++) {
+      const pl = require('../src/features/characters/builder/levelup').levelUpPlan(ch, 'fighter', ctx());
+      const sp = pl.choices.find((c) => c.type === 'spells');
+      const have = new Set(ch.spells.map((s) => s.spellId));
+      const picks = sp && sp.spells ? spells.all().filter((s) => s.edition === '2024' && s.level >= 1 && s.level <= sp.maxLevel && (s.classes || []).includes('wizard') && !have.has(s.id)).slice(0, sp.spells).map((s) => s.id) : [];
+      const feat = pl.choices.some((c) => c.type === 'feat') ? { feat: { key: 'ability-score-improvement', plus: { dex: 1, wis: 1 } } } : {}; // Fighter 6
+      const res = applyLevelUp(ch, { classKey: 'fighter', hp: { method: 'average' }, spells: { spells: picks }, ...feat }, ctx());
+      assert.ifError(res.error);
+      ch = sanitizeCharacterPatch(ch, res.patch);
+    }
+    assert.deepStrictEqual(ch.spellSlots.slice(0, 3).map((s) => s.max), [4, 2, 0]);
+    assert.strictEqual(ch.resources.find((x) => x.name === 'Superiority Dice').max, 5);
+    assert.ok(ch.customActions.some((a) => a.name === 'War Magic' && a.type === 'free' && a.resource === ''));
+  } finally {
+    await srv.close();
+  }
+});

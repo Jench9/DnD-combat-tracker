@@ -16,8 +16,28 @@ let cache = null; // { version, rules, client }
 
 const customKey = (e) => `c-${e.id}`;
 
-function subclassFrom(e) {
-  return { key: customKey(e), name: e.name, summary: e.summary, desc: e.desc, features: e.features, source: e.source, custom: true };
+// A spellcasting subclass (e.g. a one-third caster): its own row per class
+// level — cantrips and prepared spells as typed in, slots from the full
+// caster table at the caster level (third: level / 3 rounded up — the same
+// numbers as the books' one-third caster tables; half: level / 2 up).
+function spellRows(sc, fullCaster) {
+  if (!sc) return null;
+  const divisor = sc.type === 'third' ? 3 : sc.type === 'half' ? 2 : 1;
+  return Array.from({ length: 20 }, (_, i) => {
+    const level = i + 1;
+    if (!sc.prepared[i] && !sc.cantrips[i]) return null;
+    const casterLevel = Math.ceil(level / divisor);
+    const row = fullCaster.levels.find((l) => l.level === casterLevel);
+    return { cantrips: sc.cantrips[i], prepared: sc.prepared[i], slots: row && row.spells ? [...row.spells.slots] : Array(9).fill(0) };
+  });
+}
+
+function subclassFrom(e, fullCaster) {
+  return {
+    key: customKey(e), name: e.name, summary: e.summary, desc: e.desc, features: e.features, source: e.source, custom: true,
+    resources: e.resources || [],
+    spellcasting: e.spellcasting ? { type: e.spellcasting.type, ability: e.spellcasting.ability, list: e.spellcasting.list, rows: spellRows(e.spellcasting, fullCaster) } : null,
+  };
 }
 function speciesFrom(e) {
   const traits = [...e.traits];
@@ -66,9 +86,10 @@ function build() {
   const featByKey = new Map(rules.feats.map((f) => [f.key, f]));
   custom.filter((e) => e.kind === 'species').forEach((e) => rules.species.push(speciesFrom(e)));
   custom.filter((e) => e.kind === 'background').forEach((e) => rules.backgrounds.push(backgroundFrom(e, featByKey)));
+  const wizard = rules.classes.find((c) => c.key === 'wizard');
   custom.filter((e) => e.kind === 'subclass').forEach((e) => {
     const cls = rules.classes.find((c) => c.key === e.classKey);
-    if (cls) cls.subclasses.push(subclassFrom(e));
+    if (cls) cls.subclasses.push(subclassFrom(e, wizard));
   });
   const client = JSON.stringify(rules); // what the browser gets (no lookup maps)
   rules.classByKey = new Map(rules.classes.map((c) => [c.key, c]));

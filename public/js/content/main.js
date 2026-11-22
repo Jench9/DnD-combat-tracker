@@ -5,6 +5,7 @@
 import { $ } from '../core/dom.js';
 import { renderNav } from '../core/nav.js';
 import { identityHeaders } from '../core/identity.js';
+import { fillRich } from '../core/richText.js';
 
 renderNav();
 
@@ -53,6 +54,30 @@ function summary(e) {
   return `${FEAT_TYPE[e.type]}${e.minLevel ? ` · level ${e.minLevel}+` : ''}${e.asi.length ? ` · +1 ${e.asi.map((a) => a.toUpperCase()).join('/')}` : ''}${e.repeatable ? ' · repeatable' : ''}`;
 }
 
+// The entry's text, formatted, under a "Show" toggle.
+function preview(e) {
+  const d = el('details', 'ct-preview');
+  d.appendChild(el('summary', '', 'Show'));
+  const body = el('div', 'ct-preview-body');
+  const block = (title, text) => {
+    if (title) body.appendChild(el('div', 'ct-preview-h', title));
+    if (text) body.appendChild(fillRich(el('div'), text));
+  };
+  d.addEventListener('toggle', () => {
+    if (!d.open || body.childElementCount) return;
+    if (e.kind === 'subclass') {
+      block('', e.desc);
+      (e.resources || []).forEach((r) => body.appendChild(el('div', 'ct-item-sub', `${r.name}: ${r.pb ? 'proficiency bonus' : r.uses.map((u) => `${u.max} at ${u.level}`).join(', ')} · back on ${r.recharge === 'short' ? 'a Short or Long Rest' : r.recharge === 'long' ? 'a Long Rest' : 'nothing'}`)));
+      if (e.spellcasting) body.appendChild(el('div', 'ct-item-sub', `Spellcasting: ${e.spellcasting.type} caster, ${e.spellcasting.ability.toUpperCase()}, ${e.spellcasting.list} list`));
+      e.features.forEach((f) => block(`Level ${f.level}: ${f.name}${f.action ? ` (${USED_AS.find((u) => u[0] === f.action)[1]}${f.resource ? `, spends ${f.cost} ${f.resource}` : ''})` : ''}`, f.desc));
+    } else if (e.kind === 'species') e.traits.forEach((t) => block(t.name, t.desc));
+    else if (e.kind === 'feat') block('', e.desc);
+    else block('', [`Skills: ${e.skills.join(', ')}`, e.tools.length ? `Tools: ${e.tools.join(', ')}` : '', `Equipment: ${e.equipment || '—'}${e.gp ? `, ${e.gp} GP` : ''} — or 50 GP`].filter(Boolean).join('\n'));
+  });
+  d.appendChild(body);
+  return d;
+}
+
 function drawFilters() {
   const tabs = $('kindTabs');
   tabs.innerHTML = '';
@@ -96,6 +121,7 @@ function drawList() {
     const name = el('div', 'ct-item-name', e.name);
     name.appendChild(el('span', 'ct-tag', e.source));
     main.append(name, el('div', 'ct-item-sub', summary(e)));
+    main.appendChild(preview(e));
     item.appendChild(main);
     if (e.mine) {
       const edit = el('button', 'btn secondary small', 'Edit');
@@ -176,7 +202,10 @@ function checks(key, options, max) {
   return box;
 }
 // A list of { level?, name, desc } parts (subclass features, species traits).
-function parts(key, { withLevel, label, defaultLevel = 3 }) {
+const USED_AS = [['', 'Not an action (text only)'], ['action', 'Action'], ['bonus', 'Bonus Action'], ['reaction', 'Reaction'], ['free', 'No action needed']];
+const FORMAT_HINT = 'Formatting: **bold**, *italic*, lines starting with "- " for a list, tables as lines of cells separated by | (or pasted straight from a web page).';
+
+function parts(key, { withLevel, label, defaultLevel = 3, mechanics = false }) {
   const box = el('div', 'ct-parts');
   const draw = () => {
     box.innerHTML = '';
@@ -209,6 +238,7 @@ function parts(key, { withLevel, label, defaultLevel = 3 }) {
       ds.value = p.desc;
       ds.addEventListener('input', () => { p.desc = ds.value; });
       row.append(nm, x, ds);
+      if (mechanics) row.appendChild(featureMechanics(p));
       box.appendChild(row);
     });
     const add = el('button', 'btn secondary small', `+ Add ${label.toLowerCase()}`);
@@ -217,6 +247,131 @@ function parts(key, { withLevel, label, defaultLevel = 3 }) {
     box.appendChild(add);
   };
   draw();
+  return box;
+}
+
+// A subclass feature in play: its action type (it then shows in the sheet's
+// Actions list) and the resource a use spends.
+function featureMechanics(p) {
+  const wrap = el('div', 'ct-mech');
+  const mk = (labelText, control) => { const l = el('label', 'ct-mini'); l.append(document.createTextNode(labelText), control); wrap.appendChild(l); };
+  const used = el('select');
+  USED_AS.forEach(([v, l]) => { const o = el('option', '', l); o.value = v; used.appendChild(o); });
+  used.value = p.action || '';
+  used.addEventListener('change', () => { p.action = used.value; });
+  mk('Used as', used);
+  const spends = el('select');
+  const none = el('option', '', '— nothing —');
+  none.value = '';
+  spends.appendChild(none);
+  (form.resources || []).filter((r) => r.name).forEach((r) => { const o = el('option', '', r.name); o.value = r.name; spends.appendChild(o); });
+  spends.value = p.resource || '';
+  spends.addEventListener('change', () => { p.resource = spends.value; });
+  mk('Spends', spends);
+  const cost = el('input', 'ct-cost');
+  cost.type = 'number';
+  cost.min = '1';
+  cost.max = '20';
+  cost.value = p.cost || 1;
+  cost.addEventListener('input', () => { p.cost = cost.value; });
+  mk('×', cost);
+  return wrap;
+}
+
+// The subclass's limited-use resources: name, recharge, uses by level.
+function resourceRows() {
+  const box = el('div', 'ct-parts');
+  const draw = () => {
+    box.innerHTML = '';
+    (form.resources || []).forEach((r, i) => {
+      const row = el('div', 'ct-res');
+      const nm = el('input');
+      nm.maxLength = 40;
+      nm.placeholder = 'e.g. Superiority Dice';
+      nm.value = r.name || '';
+      nm.setAttribute('aria-label', 'Resource name');
+      nm.addEventListener('change', () => { r.name = nm.value; drawEditor(); }); // features' "Spends" lists it
+      const rc = el('select');
+      rc.setAttribute('aria-label', 'Comes back on');
+      [['short', 'Short or Long Rest'], ['long', 'Long Rest'], ['none', 'Not automatically']].forEach(([v, l]) => { const o = el('option', '', l); o.value = v; rc.appendChild(o); });
+      rc.value = r.recharge || 'short';
+      rc.addEventListener('change', () => { r.recharge = rc.value; });
+      const uses = el('input');
+      uses.placeholder = 'Uses: 3:4, 7:5, 15:6 — or PB';
+      uses.value = r.usesText ?? (r.pb ? 'PB' : (r.uses || []).map((u) => `${u.level}:${u.max}`).join(', '));
+      uses.setAttribute('aria-label', 'Uses by class level, or PB for the proficiency bonus');
+      uses.addEventListener('input', () => { r.usesText = uses.value; delete r.uses; delete r.pb; });
+      const x = el('button', 'ct-x', '×');
+      x.type = 'button';
+      x.setAttribute('aria-label', 'Remove this resource');
+      x.addEventListener('click', () => { form.resources.splice(i, 1); drawEditor(); });
+      row.append(nm, rc, uses, x);
+      box.appendChild(row);
+    });
+    const add = el('button', 'btn secondary small', '+ Add resource');
+    add.type = 'button';
+    add.addEventListener('click', () => { form.resources = [...(form.resources || []), { name: '', recharge: 'short', usesText: '' }]; draw(); });
+    box.appendChild(add);
+  };
+  draw();
+  return box;
+}
+
+// Spellcasting a subclass gives (e.g. a one-third caster): type, ability,
+// spell list and, per class level, cantrips known and spells prepared.
+function spellcastingBox() {
+  const box = el('div', 'ct-sc');
+  const on = el('label', 'ct-check');
+  const cb = el('input');
+  cb.type = 'checkbox';
+  cb.checked = !!form.spellcasting;
+  on.append(cb, document.createTextNode('This subclass gives spellcasting'));
+  box.appendChild(on);
+  cb.addEventListener('change', () => {
+    form.spellcasting = cb.checked ? { type: 'third', ability: 'int', list: 'wizard', cantrips: Array(20).fill(0), prepared: Array(20).fill(0) } : null;
+    drawEditor();
+  });
+  const sc = form.spellcasting;
+  if (!sc) return box;
+  const row = el('div', 'ct-row');
+  const pick = (labelText, key, options) => {
+    const s = el('select');
+    options.forEach(([v, l]) => { const o = el('option', '', l); o.value = v; s.appendChild(o); });
+    s.value = sc[key];
+    s.addEventListener('change', () => { sc[key] = s.value; });
+    row.appendChild(field(labelText, s));
+  };
+  pick('Caster type', 'type', [['third', 'One-third caster (spell slots of a full caster of a third of your level)'], ['half', 'Half caster'], ['full', 'Full caster']]);
+  pick('Ability', 'ability', [['int', 'Intelligence'], ['wis', 'Wisdom'], ['cha', 'Charisma']]);
+  pick('Spell list', 'list', ['bard', 'cleric', 'druid', 'paladin', 'ranger', 'sorcerer', 'warlock', 'wizard'].map((x) => [x, x[0].toUpperCase() + x.slice(1)]));
+  box.appendChild(row);
+  box.appendChild(el('div', 'ct-hint', 'Type the totals from your book for each class level (leave 0 before the subclass level). Spell slots are worked out for you.'));
+  const from = (data.classes.find((c) => c.key === form.classKey) || {}).subclassLevel || 3;
+  const wrap = el('div', 'rt-table-wrap');
+  const t = el('table', 'rt-table ct-sc-table');
+  const head = el('tr');
+  ['Class level', 'Cantrips known', 'Spells prepared'].forEach((h) => head.appendChild(el('th', '', h)));
+  t.createTHead().appendChild(head);
+  const body = t.createTBody();
+  for (let lv = from; lv <= 20; lv++) {
+    const tr = el('tr');
+    tr.appendChild(el('td', '', String(lv)));
+    ['cantrips', 'prepared'].forEach((k) => {
+      const td = el('td');
+      const inp = el('input', 'ct-num');
+      inp.type = 'number';
+      inp.min = '0';
+      inp.max = '30';
+      inp.value = sc[k][lv - 1] || 0;
+      inp.setAttribute('aria-label', `${k === 'cantrips' ? 'Cantrips' : 'Prepared spells'} at level ${lv}`);
+      inp.addEventListener('input', () => { sc[k][lv - 1] = parseInt(inp.value, 10) || 0; });
+      td.appendChild(inp);
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  }
+  wrap.appendChild(t);
+  box.appendChild(wrap);
   return box;
 }
 
@@ -241,11 +396,15 @@ function drawEditor() {
       field('Class', select('classKey', data.classes.map((c) => [c.key, c.name]), { placeholder: 'Choose…' })),
       field('Summary', input('summary', { max: 200, placeholder: 'One line, shown on its card' })),
     );
-    body.append(row, field('Description', area('desc', 'What the subclass is about (optional)', 3), { wide: true }));
+    body.append(row, field('Description', area('desc', 'What the subclass is about (optional)', 3), { wide: true, hint: FORMAT_HINT }));
     const lvl = (data.classes.find((c) => c.key === form.classKey) || {}).subclassLevel || 3;
-    body.appendChild(field('Features', parts('features', { withLevel: true, label: 'Feature', defaultLevel: lvl }), {
-      wide: true, hint: 'One per feature, with the class level it arrives at. Level up adds them to the sheet.',
+    body.appendChild(field('Resources', resourceRows(), {
+      wide: true, hint: 'Limited uses it gives (Superiority Dice…): uses by class level ("3:4, 7:5, 15:6") or PB. Level up adds them to the sheet\'s Resources.',
     }));
+    body.appendChild(field('Features', parts('features', { withLevel: true, label: 'Feature', defaultLevel: lvl, mechanics: true }), {
+      wide: true, hint: 'One per feature, with the class level it arrives at; level up adds its text to the sheet. "Used as" puts it in the Actions list (with a Use button that spends its resource). ' + FORMAT_HINT,
+    }));
+    body.appendChild(field('Spellcasting', spellcastingBox(), { wide: true }));
   } else if (k === 'species') {
     const row = el('div', 'ct-row');
     row.append(
@@ -258,7 +417,7 @@ function drawEditor() {
     cb.checked = !!form.skillChoice;
     cb.addEventListener('change', () => { form.skillChoice = cb.checked; });
     skill.append(cb, document.createTextNode('Gives one skill of the player\'s choice'));
-    body.append(row, skill, field('Traits', parts('traits', { withLevel: false, label: 'Trait' }), { wide: true, hint: 'Darkvision, resistances, spells… they go on the sheet\'s features.' }));
+    body.append(row, skill, field('Traits', parts('traits', { withLevel: false, label: 'Trait' }), { wide: true, hint: 'Darkvision, resistances, spells… they go on the sheet\'s features. ' + FORMAT_HINT }));
   } else if (k === 'background') {
     body.appendChild(field('Ability scores (tick three)', checks('abilities', ABILITIES, 3), { wide: true }));
     body.appendChild(field('Skills (tick two)', checks('skills', data.skills.map((s) => [s, s]), 2), { wide: true }));
@@ -286,7 +445,7 @@ function drawEditor() {
     cb.addEventListener('change', () => { form.repeatable = cb.checked; });
     rep.append(cb, document.createTextNode('Can be taken more than once'));
     body.append(row, field('+1 to one of (optional)', checks('asi', ABILITIES), { wide: true, hint: 'The ability increase it gives, if any (max 20).' }), rep,
-      field('Description', area('desc', 'What the feat does', 6), { wide: true }));
+      field('Description', area('desc', 'What the feat does', 6), { wide: true, hint: FORMAT_HINT }));
   }
 }
 
@@ -294,7 +453,7 @@ function openEditor(entry) {
   editing = entry || null;
   form = entry
     ? JSON.parse(JSON.stringify({ ...entry, tools: (entry.tools || []).join(', ') }))
-    : { kind, source: data.entries.length ? data.entries[data.entries.length - 1].source : DEFAULT_SOURCE, size: 'Medium', speed: 30, type: 'general', minLevel: 4, gp: 0, features: [], traits: [] };
+    : { kind, source: data.entries.length ? data.entries[data.entries.length - 1].source : DEFAULT_SOURCE, size: 'Medium', speed: 30, type: 'general', minLevel: 4, gp: 0, features: [], traits: [], resources: [], spellcasting: null };
   $('editTitle').textContent = entry ? `Edit ${ONE[entry.kind]}: ${entry.name}` : 'Add content';
   $('deleteBtn').hidden = !entry;
   $('editMsg').textContent = '';

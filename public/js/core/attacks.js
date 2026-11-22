@@ -20,6 +20,7 @@
 // On top of that, the character's modifiers (feats, fighting styles, class
 // features, weapon mastery, Hex…; see modifiers.js) add to hit, damage,
 // extra dice, reroll rules, a wider crit range and rules notes.
+import { fillRich } from './richText.js';
 import { abilityMod, profBonusForLevel, fmtMod } from '../characters/rules.js';
 import { roll, rollDie, rollBatch, RollCancelled, formatDice, addDice, scaleDice } from './dice.js';
 import { slotLabel, spellHeader } from '../spells/format.js';
@@ -565,7 +566,7 @@ function featureRow(f, { character, canUse, onSpendResource, onToggleModifier })
   row.appendChild(head);
   const det = document.createElement('div');
   det.className = 'action-detail';
-  det.textContent = f.text;
+  fillRich(det, f.text);
   row.appendChild(det);
   if (f.tracks && !f.resource) appendNotes(row, [`Add a "${f.name}" resource (Actions tab → Resources) to count its uses.`]);
 

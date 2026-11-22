@@ -116,6 +116,7 @@ function refreshImported(id, mappedPatch, { replaceInventory = false, replaceSpe
     // newly detected ones), which is validated like any edit.
     modifiers: old.modifiers,
     resources: old.resources,
+    customActions: old.customActions,
     hitDiceUsed: old.hitDiceUsed,
     rulesEdition: old.rulesEdition, // detection is a guess; a choice made on the sheet wins
     inspiration: old.inspiration,

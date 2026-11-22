@@ -5,6 +5,7 @@
 // it and the server checks every answer again.
 //
 //   openLevelUp(character, { onDone(character, summary) })
+import { fillRich } from '../../core/richText.js';
 import { SKILLS } from '../rules.js';
 import { rollBatch, rollDie, RollCancelled } from '../../core/dice.js';
 import {
@@ -155,7 +156,7 @@ export async function openLevelUp(ch, { onDone } = {}) {
     s.appendChild(cards(opts, a.subclass, (k) => { a.subclass = k; a.skills = []; a.fightingStyle = ''; draw(); }, { name: 'lu-sub' }));
     const chosen = (plan.subclasses || []).find((x) => x.key === a.subclass);
     if (chosen) {
-      if (chosen.desc) s.appendChild(el('div', 'b-desc', chosen.desc));
+      if (chosen.desc) s.appendChild(fillRich(el('div', 'b-desc'), chosen.desc));
       chosen.features.forEach((f) => s.appendChild(details(f.name, f.desc)));
     }
     if (a.subclass === 'custom') {

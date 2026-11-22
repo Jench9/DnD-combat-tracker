@@ -1,6 +1,7 @@
 // Shared pieces of the creation wizard and the level-up dialog: the rules
 // data, REST calls, and small form widgets (skills, spells, feats, ability
 // increases). The server validates everything again.
+import { fillRich } from '../../core/richText.js';
 import { identityHeaders } from '../../core/identity.js';
 import { store } from '../store.js';
 
@@ -46,7 +47,7 @@ export function details(title, body, open = false) {
   const d = el('details', 'b-details');
   d.open = open;
   d.appendChild(el('summary', '', title));
-  if (body) d.appendChild(el('div', 'b-desc', body));
+  if (body) d.appendChild(fillRich(el('div', 'b-desc'), body)); // **bold**, lists, tables
   return d;
 }
 

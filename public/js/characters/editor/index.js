@@ -1,4 +1,5 @@
 // The character editor view: open / refresh from server / close.
+import { fillRich } from '../../core/richText.js';
 import { $ } from '../../core/dom.js';
 import { store, findChar, cur, clearTouched } from '../store.js';
 import { updateDerived, renderAbilitiesGrid, renderSaves, renderSkills, refreshAbilityInputs } from './abilities.js';
@@ -23,9 +24,34 @@ function showTab(name) {
 }
 
 // Wire up the editor's static controls. Call once at startup.
+// Which Features view this browser prefers ('read' | 'edit'); an empty
+// list always opens in Edit (there's nothing to read).
+const FEAT_VIEW_KEY = 'kit.featView';
+function featView() {
+  try { return localStorage.getItem(FEAT_VIEW_KEY) === 'edit' ? 'edit' : 'read'; } catch { return 'read'; }
+}
+function setFeatView(view) {
+  try { localStorage.setItem(FEAT_VIEW_KEY, view); } catch { /* storage blocked */ }
+  const ch = cur();
+  if (ch) drawFeatRead(ch);
+  if (view === 'edit') featEd.resize();
+}
+function drawFeatRead(ch) {
+  const empty = !String(ch.features || '').trim();
+  const read = featView() === 'read' && !empty;
+  $('featRead').hidden = !read;
+  $('featEditView').hidden = read;
+  $('featReadBtn').setAttribute('aria-pressed', String(read));
+  $('featEditBtn').setAttribute('aria-pressed', String(!read));
+  if (read) fillRich($('featRead'), ch.features);
+}
+
 export function initEditor() {
   equipEd = makeListEditor({ listId: 'equipList', addId: 'equipAdd', addBtnId: 'equipAddBtn', prop: 'equipment', withQty: true, multiline: false });
   featEd = makeListEditor({ listId: 'featList', addId: 'featAdd', addBtnId: 'featAddBtn', prop: 'features', withQty: false, multiline: true });
+  // Features: a formatted read view (core/richText.js) or the row editor.
+  $('featReadBtn').addEventListener('click', () => setFeatView('read'));
+  $('featEditBtn').addEventListener('click', () => setFeatView('edit'));
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   initPortrait();
   initInventory();
@@ -50,6 +76,7 @@ export function openEditor(id) {
   renderSkills(ch);
   equipEd.render(ch.equipment);
   featEd.render(ch.features);
+  drawFeatRead(ch);
   showTab('stats');
   refreshInventoryUi(ch);
   refreshSpellbookUi(ch);
@@ -81,6 +108,7 @@ export function refreshEditorFromServer() {
   renderSkills(ch);
   if (!equipEd.busy()) equipEd.render(ch.equipment);
   if (!featEd.busy()) featEd.render(ch.features);
+  drawFeatRead(ch);
   refreshInventoryUi(ch);
   refreshSpellbookUi(ch);
   if (!$('modList').contains(document.activeElement)) refreshModifierUi(ch); // not under the cursor
@@ -104,7 +132,7 @@ function applyAccess(ch) {
   $('guidedBtn').hidden = !editable || !empty;
   $('levelUpBtn').hidden = !editable || empty || (parseInt(ch.level, 10) || 1) >= 20;
   view.querySelectorAll('input, select, textarea, button').forEach((el) => {
-    if (el.id === 'backToListBtn' || el.classList.contains('tab-btn')) return;
+    if (el.id === 'backToListBtn' || el.classList.contains('tab-btn') || el.closest('.feat-views')) return; // switching views changes nothing
     el.disabled = !editable;
   });
 }

@@ -64,7 +64,16 @@
   .nav-btn:not(.active) .lbl { display: none; } /* icon only; the current page keeps its name */
   .nav-btn { padding-left: 11px; padding-right: 11px; }
   .nav-side { padding: 0 6px; gap: 4px; }
-  .dice-toggle .lbl { display: none; }
+}
+/* Wide screens: the bar spans more than the page column (up to 1280 px),
+   centred on it, so the tabs fit without scrolling. */
+@media (min-width: 900px) {
+  .app-nav {
+    width: min(1280px, calc(100vw - 48px));
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
 
 button { font-family: var(--font-body); cursor: pointer; border: none; }
@@ -138,7 +147,7 @@ body.is-dm .player-only { display: none !important; }
   padding: 5px 12px; font-size: 12.5px; font-weight: 600;
 }
 .id-badge:hover { background: rgba(255, 255, 255, 0.16); }
-.dice-toggle { display: inline-flex; align-items: center; gap: 5px; }
+.dice-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 38px; font-size: 16px; }
 .dice-toggle.on { background: rgba(212, 174, 76, 0.28); }
 @media (max-width: 420px) { .id-badge { max-width: 96px; padding: 5px 9px; } }
 
@@ -374,3 +383,15 @@ body.is-dm .player-only { display: none !important; }
 /* DM view ⇄ player view at a table you run and play at (core/join.js). */
 .id-badge.view-switch { border-style: dashed; }
 @media (max-width: 760px) { .id-badge.view-switch { max-width: 44px; overflow: hidden; white-space: nowrap; } }
+/* Formatted rules text (core/richText.js): paragraphs, lists, headings, tables. */
+.rt .rt-p { margin: 0 0 6px; }
+.rt .rt-p:last-child { margin-bottom: 0; }
+.rt .rt-h { font-weight: 700; color: var(--ink); margin: 10px 0 4px; }
+.rt .rt-h:first-child { margin-top: 0; }
+.rt .rt-list { margin: 0 0 6px; padding-left: 20px; }
+.rt-table-wrap { overflow-x: auto; margin: 6px 0 8px; }
+.rt-table { border-collapse: collapse; font-size: 12.5px; min-width: 60%; }
+.rt-table th, .rt-table td { border: 1px solid var(--line); padding: 3px 8px; text-align: center; }
+.rt-table th { background: var(--bg); font-weight: 700; color: var(--ink); }
+.rt-table tbody tr:nth-child(even) td { background: rgba(127, 127, 127, 0.06); }
+.rt-table td:first-child, .rt-table th:first-child { text-align: left; }

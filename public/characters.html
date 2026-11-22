@@ -306,11 +306,21 @@
 
     <div class="tab-pane" id="tab-features">
       <div class="panel">
-        <div class="subhead">Features, traits &amp; spells</div>
-        <div id="featList"></div>
-        <div class="item-add">
-          <input id="featAdd" type="text" placeholder="Add a feature, trait or spell">
-          <button class="btn" id="featAddBtn">Add</button>
+        <div class="feat-head">
+          <div class="subhead">Features, traits &amp; spells</div>
+          <div class="feat-views" role="group" aria-label="Features view">
+            <button type="button" class="btn secondary small" id="featReadBtn" aria-pressed="true">📖 Read</button>
+            <button type="button" class="btn secondary small" id="featEditBtn" aria-pressed="false">✏️ Edit</button>
+          </div>
+        </div>
+        <div id="featRead" class="feat-read" hidden></div>
+        <div id="featEditView">
+          <div id="featList"></div>
+          <div class="item-add">
+            <input id="featAdd" type="text" placeholder="Add a feature, trait or spell">
+            <button class="btn" id="featAddBtn">Add</button>
+          </div>
+          <div class="feat-hint">Formatting shows in <b>Read</b>: **bold**, *italic*, lines starting with “- ” as a list, tables as rows of cells separated by | (or pasted from a web page).</div>
         </div>
       </div>
     </div>

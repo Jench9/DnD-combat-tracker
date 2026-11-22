@@ -70,6 +70,11 @@ function blankCharacter(id) {
     feats: [],
     // Find Familiar / Pact of the Chain (characters/familiars.js), or null.
     familiar: null,
+    // Features used in play that the rules here don't know (from custom
+    // content, added by level up): shown in the Actions list by type, Use
+    // spends `cost` of the resource named `resource`.
+    // [{ id, name, type: action|bonus|reaction|free, text, resource, cost, source }]
+    customActions: [],
   };
 }
 
@@ -266,6 +271,17 @@ function sanitizeCharacterPatch(existing, patch) {
     next.pactMagic = { level: clampInt(patch.pactMagic.level, 0, 9), count: clampInt(patch.pactMagic.count, 0, 9) };
   }
   if (Array.isArray(patch.resources)) next.resources = sanitizeResources(patch.resources);
+  if (Array.isArray(patch.customActions)) {
+    next.customActions = patch.customActions.filter((x) => x && typeof x === 'object' && typeof x.name === 'string' && x.name.trim()).slice(0, 40).map((x, i) => ({
+      id: typeof x.id === 'string' && /^[\w-]{1,40}$/.test(x.id) ? x.id : `ca${i}`,
+      name: x.name.trim().slice(0, 80),
+      type: ['action', 'bonus', 'reaction', 'free'].includes(x.type) ? x.type : 'action',
+      text: typeof x.text === 'string' ? x.text.slice(0, 1500) : '',
+      resource: typeof x.resource === 'string' ? x.resource.slice(0, 40) : '',
+      cost: Math.max(1, Math.min(20, parseInt(x.cost, 10) || 1)),
+      source: typeof x.source === 'string' ? x.source.slice(0, 60) : '',
+    }));
+  }
   if (patch.rulesEdition === '2014' || patch.rulesEdition === '2024') next.rulesEdition = patch.rulesEdition;
   if (patch.inspiration !== undefined) next.inspiration = !!patch.inspiration;
   if (patch.exhaustion !== undefined) next.exhaustion = clampInt(patch.exhaustion, 0, 6);

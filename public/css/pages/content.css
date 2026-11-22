@@ -43,3 +43,16 @@ header { display: flex; justify-content: space-between; align-items: flex-end; g
 .ct-dlg-btns { display: flex; gap: 8px; padding: 10px 18px 16px; }
 .ct-spacer { flex: 1; }
 @media (max-width: 600px) { .ct-part { grid-template-columns: 56px 1fr auto; } }
+.ct-mech { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ct-mini { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-soft); }
+.ct-mini select, .ct-mini input { padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; }
+.ct-cost { width: 56px; }
+.ct-res { display: grid; grid-template-columns: 1.2fr 1fr 1.4fr auto; gap: 6px; align-items: center; }
+.ct-res input, .ct-res select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); font: inherit; font-size: 13.5px; min-width: 0; }
+@media (max-width: 600px) { .ct-res { grid-template-columns: 1fr 1fr; } }
+.ct-sc { display: flex; flex-direction: column; gap: 8px; }
+.ct-sc-table .ct-num { width: 64px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--ink); font: inherit; text-align: center; }
+.ct-preview { margin-top: 4px; }
+.ct-preview > summary { cursor: pointer; font-size: 12.5px; color: var(--blue); }
+.ct-preview-body { font-size: 13px; line-height: 1.45; padding: 6px 0 2px; }
+.ct-preview-h { font-weight: 700; margin: 8px 0 2px; }

@@ -128,15 +128,25 @@ function planFor(ch, def, classes, existing, ctx) {
   let subclasses;
   const sub = existing && existing.subclass ? def.subclasses.find((s) => s.key === existing.subclass) : null;
   if (newClassLevel === def.subclassLevel && !(existing && (existing.subclass || existing.subclassName))) {
-    subclasses = def.subclasses.map((s) => ({
-      key: s.key, name: s.name, summary: s.summary, desc: s.desc, source: s.source,
-      features: s.features.filter((f) => f.level === newClassLevel),
-      choices: s.features.filter((f) => f.level === newClassLevel).map((f) => subclassFeatureChoice(f.name)).filter(Boolean),
-    }));
+    subclasses = def.subclasses.map((s) => {
+      const choices = s.features.filter((f) => f.level === newClassLevel).map((f) => subclassFeatureChoice(f.name)).filter(Boolean);
+      // A subclass that brings spellcasting (a custom one-third caster):
+      // its cantrips and spells come with choosing it.
+      const cdef = P.casterDef(def, s.key);
+      if (cdef !== def) {
+        const picks = P.spellPicks(cdef, newClassLevel);
+        if (picks.cantrips || picks.spells) choices.push({ type: 'spells', list: P.spellListOf(cdef), ...picks });
+      }
+      return {
+        key: s.key, name: s.name, summary: s.summary, desc: s.desc, source: s.source,
+        features: s.features.filter((f) => f.level === newClassLevel),
+        choices,
+      };
+    });
     choices.push({ type: 'subclass', options: subclasses.map((s) => ({ key: s.key, name: s.name })) });
   } else if (sub) {
     sub.features.filter((f) => f.level === newClassLevel).forEach((f) => {
-      features.push({ name: `${f.name} (${sub.name})`, desc: f.desc });
+      features.push({ name: `${f.name} (${sub.name})`, desc: f.desc, action: f.action || '', resource: f.resource || '', cost: f.cost || 1, actionName: f.name });
       const c = subclassFeatureChoice(f.name);
       if (c && c.type === 'fightingStyle') choices.push({ ...c, options: fightingStyleOptions(ch, rules) });
       else if (c) choices.push(c);
@@ -149,8 +159,10 @@ function planFor(ch, def, classes, existing, ctx) {
     choices.push({ type: 'skills', count: def.multiclass.skills.choose, from: def.multiclass.skills.from.filter((s) => !(ch.skillProf || {})[s]) });
   }
 
-  const picks = P.spellPicks(def, newClassLevel);
-  if (picks.cantrips || picks.spells) choices.push({ type: 'spells', list: def.key, ...picks });
+  // Spells: the class's own, or its (already chosen) spellcasting subclass's.
+  const cdef = P.casterDef(def, existing && existing.subclass);
+  const picks = P.spellPicks(cdef, newClassLevel);
+  if (picks.cantrips || picks.spells) choices.push({ type: 'spells', list: P.spellListOf(cdef), ...picks });
 
   const prevRow = newClassLevel > 1 ? P.levelRow(def, newClassLevel - 1) : null;
   const counter = (k) => ((row.counters || {})[k] || 0) - (((prevRow || {}).counters || {})[k] || 0);
@@ -196,7 +208,17 @@ function workOf(ch) {
     hpGain: 0,
     spellAbility: ch.spellAbility || '',
     inspiration: !!ch.inspiration,
+    customActions: (ch.customActions || []).map((x) => ({ ...x })),
   };
+}
+
+// A subclass feature that's used in play (custom content: action type,
+// resource it spends) becomes an entry in the sheet's Actions list.
+function addCustomAction(w, f, sourceName, newId) {
+  if (!f.action) return;
+  const name = f.actionName || f.name;
+  if (w.customActions.some((x) => x.name.toLowerCase() === name.toLowerCase())) return;
+  w.customActions.push({ id: newId(), name, type: f.action, text: String(f.desc || '').slice(0, 1500), resource: f.resource || '', cost: f.cost || 1, source: sourceName });
 }
 
 const fail = (msg) => { const e = new Error(msg); e.userError = true; throw e; };
@@ -336,6 +358,7 @@ function gainClassLevel(w, plan, answers, ctx, classes) {
 
   // Features of this level.
   plan.features.forEach((f) => w.blocks.push(P.featureBlock(`${f.name} (${def.name} ${level})`, f.desc)));
+  plan.features.forEach((f) => addCustomAction(w, f, entry.subclassName || def.name, ctx.newId));
   w.modifiers = P.addPresets(w.modifiers, P.presetsAt(def.key, level), ctx.newId);
   if (entry.subclass) w.modifiers = P.addPresets(w.modifiers, P.presetsAt(entry.subclass, level), ctx.newId);
   if (entry.subclass === 'draconic-sorcery' && level > 3) w.hpGain += 1; // Draconic Resilience
@@ -357,6 +380,10 @@ function gainClassLevel(w, plan, answers, ctx, classes) {
       entry.subclassName = s.name;
       w.blocks.push(P.featureBlock(`${s.name} (${def.name} subclass)`, s.desc));
       s.features.forEach((f) => w.blocks.push(P.featureBlock(`${f.name} (${s.name} ${level})`, f.desc)));
+      s.features.forEach((f) => addCustomAction(w, f, s.name, ctx.newId));
+      // A spellcasting subclass: its ability, if the character had none.
+      const cdef = P.casterDef(def, s.key);
+      if (cdef !== def && !w.spellAbility) w.spellAbility = cdef.spellAbility;
       w.modifiers = P.addPresets(w.modifiers, P.presetsAt(s.key, level), ctx.newId);
       if (s.key === 'draconic-sorcery') w.hpGain += level; // +3 at level 3
       subChoices.push(...s.choices);
@@ -416,6 +443,7 @@ function finishPatch(w, classes, ctx, gainedDie) {
     modifiers: w.modifiers,
     spells: w.spells,
     spellAbility: w.spellAbility,
+    customActions: w.customActions,
     spellSlots: slots.spellSlots,
     pactMagic: slots.pactMagic,
     resources: P.resourcesFor({ ...ch, resources: ch.resources }, classes, w.abilities, rules, ctx.newId),
