@@ -155,6 +155,8 @@ Then, in `docker-compose.yaml`:
       - "127.0.0.1:3000:3000"   # if the proxy/tunnel runs on the same machine: no direct access from outside
 ```
 
+**Updating a server** that runs the kit from a git clone: commit and push, then run `scripts/deploy.sh` on your computer. It connects over SSH, pulls `origin/master` on the server, saves the server's `data/` as a tarball in `~/deploy-snapshots` (newest 5 kept), rebuilds, waits for the health check and removes old images. `scripts/deploy.sh <commit>` deploys or rolls back to a specific commit. Settings go in a git-ignored `.env.deploy` in the repo root: `KIT_SERVER=ubuntu@<server-ip>` (required), `KIT_DIR` (the clone's folder in the server's home, default `DnD-combat-tracker`) and `KIT_URL` (checked at the end). Server-only files such as a `Caddyfile` and `docker-compose.override.yml` are left alone.
+
 Built in: passwords hashed with scrypt, sessions in an `HttpOnly`, `SameSite=Lax` cookie (only a hash of each session token is stored), failed logins limited (10 per 15 minutes per username, 30 per address; successful logins don't count), invite and reset links used once and stored as hashes, requests and WebSocket connections from other sites refused, security headers (Content-Security-Policy, no framing, `nosniff`), WebSocket messages capped at 4 MB. Accounts and sessions live in `data/accounts.json`, `invites.json` and `sessions.json`; they are **not** included in *Download backup* (no password hashes in a downloaded file) and a restore never replaces them — copy them along with `data/` when moving the server.
 
 ## Data persistence
