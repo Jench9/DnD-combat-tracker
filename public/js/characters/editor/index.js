@@ -133,9 +133,16 @@ function applyAccess(ch) {
   const empty = !String(ch.class || '').trim();
   $('guidedBtn').hidden = !editable || !empty;
   $('levelUpBtn').hidden = !editable || empty || (parseInt(ch.level, 10) || 1) >= 20;
+  // Only undo what this did: controls disabled for their own reasons (Cast
+  // with no slots left, a free cast already used) stay disabled.
   view.querySelectorAll('input, select, textarea, button').forEach((el) => {
     if (el.id === 'backToListBtn' || el.classList.contains('tab-btn') || el.closest('.feat-views')) return; // switching views changes nothing
-    el.disabled = !editable;
+    if (!editable) {
+      if (!el.disabled) { el.disabled = true; el.dataset.viewOnly = '1'; }
+    } else if (el.dataset.viewOnly) {
+      el.disabled = false;
+      delete el.dataset.viewOnly;
+    }
   });
 }
 

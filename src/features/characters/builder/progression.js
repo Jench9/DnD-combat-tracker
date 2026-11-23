@@ -289,10 +289,29 @@ const clip = (s) => (s.length > MAX_DESC ? s.slice(0, MAX_DESC).replace(/\s+\S*$
 const featureBlock = (title, desc) => `◆ ${title}${desc ? '\n' + clip(desc.trim()) : ''}`;
 
 // Append blocks to the Features text (newest last).
-function appendFeatures(features, blocks) {
+// A D&D Beyond import ends with "◆ Later levels (not yet)" (features still
+// to come, "- Name (Warlock 9)"): new blocks go above it, and with `classes`
+// the lines for levels now reached are dropped (level up adds their text).
+const LATER_HEAD = '◆ Later levels (not yet)';
+function appendFeatures(features, blocks, classes = null) {
   const add = blocks.filter(Boolean).join('\n\n');
-  if (!add) return features || '';
-  return features && features.trim() ? `${features.trim()}\n\n${add}` : add;
+  let text = String(features || '').trim();
+  let later = '';
+  const at = text.indexOf(LATER_HEAD);
+  if (at !== -1) {
+    later = text.slice(at);
+    text = text.slice(0, at).trim();
+    if (classes) {
+      const lines = later.split('\n').slice(1).filter((line) => {
+        const m = /\(([^()]*?)\s(\d{1,2})\)\s*$/.exec(line);
+        if (!m) return true;
+        const cls = classes.find((c) => m[1].toLowerCase().endsWith(c.name.toLowerCase()));
+        return !cls || cls.level < parseInt(m[2], 10);
+      });
+      later = lines.some((l) => l.trim()) ? [LATER_HEAD, ...lines].join('\n') : '';
+    }
+  }
+  return [text, add, later].filter(Boolean).join('\n\n');
 }
 
 // ---------------------------------------------------------------- feats

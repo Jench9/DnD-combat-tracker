@@ -187,15 +187,30 @@ function mapDndBeyondData(data, ddbId) {
     .map((i) => `${(i.definition && i.definition.name) || 'Item'}${i.quantity > 1 ? ` x${i.quantity}` : ''}`)
     .join('\n');
 
+  // D&D Beyond lists every class (and subclass) feature up to level 20:
+  // the ones the character has, then the ones still to come under their own
+  // heading, with the class level they arrive at.
   const features = [];
+  const later = [];
   (data.classes || []).forEach((c) => {
-    ((c.classFeatures) || []).forEach((f) => {
-      if (f.definition && f.definition.name) features.push(f.definition.name);
-    });
+    const lvl = parseInt(c.level, 10) || 0;
+    const cls = (c.definition && c.definition.name) || 'Class';
+    const sub = c.subclassDefinition || {};
+    const list = [...(c.classFeatures || []).map((f) => [f, cls]), ...(sub.classFeatures || []).map((f) => [f, sub.name || cls])];
+    list
+      .map(([f, from]) => [f && f.definition, from])
+      .filter(([d]) => d && d.name)
+      .map(([d, from]) => ({ name: String(d.name).replace(/^\d{1,2}:\s*/, ''), req: parseInt(d.requiredLevel, 10) || 1, from }))
+      .sort((a, b) => a.req - b.req)
+      .forEach((f) => {
+        if (f.req <= lvl) { if (!features.includes(f.name)) features.push(f.name); }
+        else later.push(`- ${f.name} (${f.from === cls ? cls : `${f.from}, ${cls}`} ${f.req})`);
+      });
   });
   (data.feats || []).forEach((f) => {
     if (f.definition && f.definition.name) features.push(f.definition.name);
   });
+  if (later.length) features.push('', '◆ Later levels (not yet)', ...[...new Set(later)]);
 
   // v5 payloads keep it under decorations; older ones at the top level.
   const avatarUrl = (data.decorations && data.decorations.avatarUrl) || data.avatarUrl || '';

@@ -57,7 +57,8 @@ function summary(e) {
   if (e.kind === 'option') {
     return [OPTION_TYPE[e.optionType], e.minLevel ? `level ${e.minLevel}+` : '', e.prereq, e.cost ? `${e.cost} Sorcery Point${e.cost === 1 ? '' : 's'}` : '',
       e.action ? (USED_AS.find((u) => u[0] === e.action) || [])[1] : '', e.preset ? `switches on ${(PRESETS.find((p) => p.key === e.preset) || {}).name || e.preset}` : '',
-      e.repeatable ? 'repeatable' : ''].filter(Boolean).join(' · ');
+      e.repeatable ? 'repeatable' : '',
+      ...(e.spells || []).map((s) => `${s.name}${s.free ? ` (${(FREE_CAST.find((f) => f[0] === s.free) || [])[1].toLowerCase()})` : ''}`)].filter(Boolean).join(' · ');
   }
   return `${FEAT_TYPE[e.type]}${e.minLevel ? ` · level ${e.minLevel}+` : ''}${e.asi.length ? ` · +1 ${e.asi.map((a) => a.toUpperCase()).join('/')}` : ''}${e.repeatable ? ' · repeatable' : ''}`;
 }
@@ -85,7 +86,10 @@ function preview(e) {
         if (rows.length) block('', ['| Level | Always prepared |', '|---|---|', ...rows].join('\n'));
       });
     } else if (e.kind === 'species') e.traits.forEach((t) => block(t.name, t.desc));
-    else if (e.kind === 'feat' || e.kind === 'option') block('', e.desc);
+    else if (e.kind === 'feat' || e.kind === 'option') {
+      block('', e.desc);
+      (e.spells || []).forEach((s) => body.appendChild(el('div', 'ct-item-sub', `${s.name}: ${(FREE_CAST.find((f) => f[0] === s.free) || [])[1]}${s.note ? ` — ${s.note}` : ''}`)));
+    }
     else block('', [`Skills: ${e.skills.join(', ')}`, e.tools.length ? `Tools: ${e.tools.join(', ')}` : '', `Equipment: ${e.equipment || '—'}${e.gp ? `, ${e.gp} GP` : ''} — or 50 GP`].filter(Boolean).join('\n'));
   });
   d.appendChild(body);
@@ -311,6 +315,47 @@ function featureMechanics(p) {
   return wrap;
 }
 
+// A class option's spells: name, how it's cast for free, what it adds.
+const FREE_CAST = [['', 'Uses a spell slot'], ['at-will', 'At will (no slot)'], ['long', 'Free once per Long Rest'], ['short', 'Free once per Short Rest']];
+function optionSpellRows() {
+  const box = el('div', 'ct-parts');
+  const draw = () => {
+    box.innerHTML = '';
+    (form.spells || []).forEach((sp, i) => {
+      const row = el('div', 'ct-res ct-ospell');
+      const nm = el('input');
+      nm.maxLength = 60;
+      nm.placeholder = 'Spell, e.g. Mage Armor';
+      nm.value = sp.name || '';
+      nm.setAttribute('aria-label', 'Spell name');
+      nm.addEventListener('input', () => { sp.name = nm.value; });
+      const fr = el('select');
+      fr.setAttribute('aria-label', 'How it is cast');
+      FREE_CAST.forEach(([v, l]) => { const o = el('option', '', l); o.value = v; fr.appendChild(o); });
+      fr.value = sp.free || '';
+      fr.addEventListener('change', () => { sp.free = fr.value; });
+      const note = el('input');
+      note.maxLength = 300;
+      note.placeholder = 'What it adds (optional), e.g. on yourself only';
+      note.value = sp.note || '';
+      note.setAttribute('aria-label', 'What it adds to the spell');
+      note.addEventListener('input', () => { sp.note = note.value; });
+      const x = el('button', 'ct-x', '×');
+      x.type = 'button';
+      x.setAttribute('aria-label', 'Remove this spell');
+      x.addEventListener('click', () => { form.spells.splice(i, 1); draw(); });
+      row.append(nm, fr, note, x);
+      box.appendChild(row);
+    });
+    const add = el('button', 'btn secondary small', '+ Add spell');
+    add.type = 'button';
+    add.addEventListener('click', () => { form.spells = [...(form.spells || []), { name: '', free: 'at-will', note: '' }]; draw(); });
+    box.appendChild(add);
+  };
+  draw();
+  return box;
+}
+
 // The subclass's limited-use resources: name, recharge, uses by level.
 function resourceRows() {
   const box = el('div', 'ct-parts');
@@ -487,7 +532,9 @@ function drawEditor() {
     cb.checked = !!form.repeatable;
     cb.addEventListener('change', () => { form.repeatable = cb.checked; });
     rep.append(cb, document.createTextNode('Can be taken more than once'));
-    body.append(row, row2, row3, rep, field('Description', area('desc', 'What it does', 6), { wide: true, hint: FORMAT_HINT }));
+    body.append(row, row2, row3, rep,
+      field('Spells it grants', optionSpellRows(), { wide: true, hint: 'E.g. Armor of Shadows → Mage Armor, at will. Level up puts them in the spellbook (always prepared) with a Cast free button; once per rest is counted by a "<Spell> (free cast)" resource. The note shows under the spell in Actions.' }),
+      field('Description', area('desc', 'What it does', 6), { wide: true, hint: FORMAT_HINT }));
   } else if (k === 'feat') {
     const row = el('div', 'ct-row');
     row.append(
@@ -509,7 +556,7 @@ function openEditor(entry) {
   editing = entry || null;
   form = entry
     ? JSON.parse(JSON.stringify({ ...entry, tools: (entry.tools || []).join(', ') }))
-    : { kind, source: data.entries.length ? data.entries[data.entries.length - 1].source : DEFAULT_SOURCE, size: 'Medium', speed: 30, type: 'general', minLevel: kind === 'feat' ? 4 : 0, gp: 0, features: [], traits: [], resources: [], spellcasting: null, optionType: 'invocation', cost: 1, action: '', preset: '' };
+    : { kind, source: data.entries.length ? data.entries[data.entries.length - 1].source : DEFAULT_SOURCE, size: 'Medium', speed: 30, type: 'general', minLevel: kind === 'feat' ? 4 : 0, gp: 0, features: [], traits: [], resources: [], spellcasting: null, optionType: 'invocation', cost: 1, action: '', preset: '', spells: [] };
   $('editTitle').textContent = entry ? `Edit ${ONE[entry.kind]}: ${entry.name}` : 'Add content';
   $('deleteBtn').hidden = !entry;
   $('editMsg').textContent = '';

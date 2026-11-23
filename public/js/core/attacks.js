@@ -128,7 +128,7 @@ export function buildActions(ch, itemsById, spellsById = new Map()) {
   (ch.spells || []).forEach((entry) => {
     const sp = spellsById.get(entry.spellId);
     if (!sp || (sp.level > 0 && !entry.prepared)) return;
-    actions.push({ key: entry.id, kind: 'spell', name: sp.name, spell: sp });
+    actions.push({ key: entry.id, kind: 'spell', name: sp.name, spell: sp, entry });
   });
 
   // Everyone can punch: STR + proficiency to hit, 1 + STR damage — unless
@@ -315,7 +315,18 @@ async function castRoll(sp, sc, slot, charLevel, fx) {
   return { crit: false, text: `Cast ${sp.name}${at}.` };
 }
 
-function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show, cast: castHooks }) {
+// A spell a feature lets you cast without a slot (Eldritch Invocations…):
+// at will, or once per rest — counted by the "<Spell> (free cast)" resource.
+const FREE_LABEL = { 'at-will': 'at will', long: '1/Long Rest', short: '1/Short Rest' };
+function freeCast(entry, sp, character) {
+  if (!entry || !entry.free || sp.level === 0) return null;
+  const resource = entry.free === 'at-will' ? null
+    : (character.resources || []).find((r) => r.name.toLowerCase() === `${sp.name} (free cast)`.slice(0, 40).toLowerCase()) || null;
+  const left = resource ? Math.max(0, resource.max - (resource.used || 0)) : null;
+  return { label: FREE_LABEL[entry.free], resource, left };
+}
+
+function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, onSpendResource, out, show, cast: castHooks }) {
   const sp = a.spell;
   const sc = spellcasting(character);
   const fx = spellEffects(sp, character);
@@ -337,10 +348,11 @@ function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show
   row.appendChild(head);
   const det = document.createElement('div');
   det.className = 'action-detail';
-  det.textContent = [spellHeader(sp), ...fx.applied].join(' · ');
+  const free = freeCast(a.entry, sp, character);
+  det.textContent = [spellHeader(sp), free ? `free: ${free.label}${a.entry.from ? ` (${a.entry.from})` : ''}` : '', ...fx.applied].filter(Boolean).join(' · ');
   if (sp.description) det.title = sp.description;
   row.appendChild(det);
-  appendNotes(row, fx.notes);
+  appendNotes(row, [...(a.entry && a.entry.note ? [`${a.entry.from || 'Feature'}: ${a.entry.note}`] : []), ...fx.notes]);
 
   if (canUse) {
     const btns = document.createElement('div');
@@ -391,6 +403,28 @@ function renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show
       if (castHooks.after) castHooks.after(sp);
     });
     btns.appendChild(cast);
+    if (free) {
+      // Cast at the spell's own level without a slot.
+      const fb = document.createElement('button');
+      fb.type = 'button';
+      fb.className = 'btn secondary small';
+      fb.textContent = free.resource ? `Cast free (${free.left}/${free.resource.max})` : 'Cast free';
+      fb.title = free.resource ? `No slot: ${free.label}` : 'No slot needed (at will)';
+      const noneLeft = free.resource ? free.left <= 0 : false;
+      const missing = free.label !== 'at will' && !free.resource;
+      fb.disabled = noneLeft || missing || !!castHooks.blocked;
+      if (missing) fb.title = `Add a "${sp.name} (free cast)" resource (1 use) to count it`;
+      fb.addEventListener('click', async () => {
+        if (castHooks.before && !castHooks.before(sp)) return;
+        const r = await castRoll(sp, sc, sp.level, character.level, fx);
+        if (!r) return;
+        results.set(key, { ...r, text: r.text.replace(/ \(\w+-level slot\)/, '') + ' — no slot' + (free.resource ? ` (${free.label})` : '') });
+        showResult(key);
+        if (free.resource && onSpendResource) onSpendResource(free.resource.id, 1);
+        if (castHooks.after) castHooks.after(sp);
+      });
+      btns.appendChild(fb);
+    }
     row.appendChild(btns);
   }
   row.appendChild(out);
@@ -476,7 +510,7 @@ export function renderActions(container, {
       }
     }
     g.feats.forEach((f) => container.appendChild(featureRow(f, { character, canUse, onSpendResource, onToggleModifier })));
-    g.actions.forEach((a) => container.appendChild(actionRow(a, { character, canUse, onUse, onSpendSlot, cast })));
+    g.actions.forEach((a) => container.appendChild(actionRow(a, { character, canUse, onUse, onSpendSlot, cast, onSpendResource })));
   });
 }
 
@@ -494,13 +528,13 @@ function resultSlot(key) {
   return { out, show };
 }
 
-function actionRow(a, { character, canUse, onUse, onSpendSlot, cast }) {
+function actionRow(a, { character, canUse, onUse, onSpendSlot, cast, onSpendResource }) {
   const key = character.id + ':' + a.key;
   if (a.kind === 'spell') {
     const row = document.createElement('div');
     row.className = 'action-row spell';
     const { out, show } = resultSlot(key);
-    renderSpellRow(row, a, { key, character, canUse, onSpendSlot, out, show, cast });
+    renderSpellRow(row, a, { key, character, canUse, onSpendSlot, onSpendResource, out, show, cast });
     // Casting time as a tag next to the name.
     const type = castingType(a.spell.castingTime);
     const tag = document.createElement('span');

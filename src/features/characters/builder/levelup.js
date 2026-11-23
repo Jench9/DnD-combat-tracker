@@ -242,6 +242,7 @@ function workOf(ch) {
     spellAbility: ch.spellAbility || '',
     inspiration: !!ch.inspiration,
     customActions: (ch.customActions || []).map((x) => ({ ...x })),
+    extraResources: [], // free casts of granted spells: [{ name, max, recharge }]
   };
 }
 
@@ -413,7 +414,27 @@ function applyOptions(w, c, answer, ctx, level) {
     w.blocks.push(P.featureBlock(`${c.label}: ${o.name}`, text));
     if (o.action) addCustomAction(w, { name: o.name, action: o.action, desc: text, resource: c.optionType === 'metamagic' && o.cost ? 'Sorcery Points' : '', cost: o.cost || 1 }, o.source || c.label, ctx.newId);
     if (o.preset) w.modifiers = P.addPresets(w.modifiers, [o.preset], ctx.newId);
+    addGrantedSpells(w, o, ctx);
   });
+}
+
+// Spells an option grants (Armor of Shadows → Mage Armor at will…): always
+// prepared, with how they're cast for free and the option's note; once per
+// rest gets a 1-use resource "<Spell> (free cast)".
+const FREE_RESOURCE = (name) => `${name} (free cast)`.slice(0, 40);
+function addGrantedSpells(w, o, ctx) {
+  const edition = w.ch.rulesEdition === '2014' ? '2014' : '2024';
+  const missing = [];
+  (o.spells || []).forEach((s) => {
+    const spell = findSpellByName(s.name, ctx, edition);
+    if (!spell) { missing.push(s.name); return; }
+    const extra = { prepared: true, always: true, from: o.name, ...(s.free ? { free: s.free } : {}), ...(s.note ? { note: s.note } : {}) };
+    const had = w.spells.find((x) => x.spellId === spell.id);
+    if (had) Object.assign(had, extra);
+    else w.spells.push({ id: ctx.newId(), spellId: spell.id, name: spell.name.slice(0, 60), ...extra });
+    if (s.free === 'long' || s.free === 'short') w.extraResources.push({ name: FREE_RESOURCE(spell.name), max: 1, recharge: s.free });
+  });
+  if (missing.length) w.blocks.push(P.featureBlock('To do', `${o.name}: not in the spell library: ${missing.join(', ')} — add them on the Spells page, then to the spellbook.`));
 }
 
 // Gain one level in `def` (the plan says which choices it needs). Mutates
@@ -556,8 +577,8 @@ function finishPatch(w, classes, ctx, gainedDie) {
     customActions: w.customActions,
     spellSlots: slots.spellSlots,
     pactMagic: slots.pactMagic,
-    resources: P.resourcesFor({ ...ch, resources: ch.resources }, classes, w.abilities, rules, ctx.newId),
-    features: P.appendFeatures(ch.features, w.blocks),
+    resources: P.mergeResources(P.resourcesFor({ ...ch, resources: ch.resources }, classes, w.abilities, rules, ctx.newId), w.extraResources, ctx.newId),
+    features: P.appendFeatures(ch.features, w.blocks, classes),
   };
 }
 

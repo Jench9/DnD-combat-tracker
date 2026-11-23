@@ -92,8 +92,13 @@ function classesFrom(data, rules, existing) {
 }
 
 // Options known to the Content page bring their attack modifier (e.g.
-// Agonizing Blast) and, when used in play, their action — as level up does.
+// Agonizing Blast), their action when used in play, and how their spells
+// are cast for free (the spellbook entry D&D Beyond sent, matched by name)
+// — as level up does. Returns the free-cast resources to add:
+// [{ name, max: 1, recharge }].
 function applyOptionContent(patch, data, rules, newId) {
+  const extraResources = [];
+  const norm = (s) => String(s || '').replace(/\s*\((?:2014|2024)\)\s*$/, '').replace(/[’‘]/g, "'").toLowerCase().trim();
   const tags = optionFeats(data);
   const options = rules.options || [];
   const modifiers = Array.isArray(patch.modifiers) ? [...patch.modifiers] : [];
@@ -104,6 +109,12 @@ function applyOptionContent(patch, data, rules, newId) {
     const o = options.find((x) => x.optionType === type && x.name.toLowerCase() === name);
     if (!o) return;
     if (o.preset && !modifiers.some((m) => m.preset === o.preset)) modifiers.push({ id: newId(), preset: o.preset, active: true, only: '' });
+    (o.spells || []).forEach((s) => {
+      const entry = (patch.spells || []).find((x) => norm(x.name) === norm(s.name) || norm(x.name) === norm(s.name).replace(/^[a-z]+'s\s+/, ''));
+      if (!entry) return;
+      Object.assign(entry, { prepared: true, always: true, from: o.name, ...(s.free ? { free: s.free } : {}), ...(s.note ? { note: s.note } : {}) });
+      if (s.free === 'long' || s.free === 'short') extraResources.push({ name: `${entry.name} (free cast)`.slice(0, 40), max: 1, recharge: s.free });
+    });
     if (o.action && actions && !actions.some((a) => a.name.toLowerCase() === o.name.toLowerCase())) {
       actions.push({
         id: newId(), name: o.name, type: o.action, text: String(o.desc || '').slice(0, 1500),
@@ -113,6 +124,7 @@ function applyOptionContent(patch, data, rules, newId) {
   });
   patch.modifiers = modifiers;
   if (actions) patch.customActions = actions;
+  return extraResources;
 }
 
 module.exports = { optionFeats, mergeOptionFeats, classesFrom, applyOptionContent, baseName };

@@ -69,8 +69,16 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsCh
     mapped.patch.feats = mergeOptionFeats(existing ? existing.feats : [], mapped.data);
     mapped.patch.classes = classesFrom(mapped.data, rules, existing ? existing.classes : []);
     mapped.patch.customActions = existing ? existing.customActions || [] : [];
-    applyOptionContent(mapped.patch, mapped.data, rules, uid);
+    mapped.extraResources = applyOptionContent(mapped.patch, mapped.data, rules, uid);
   }
+  // Free casts of granted spells (once per rest) as 1-use resources.
+  const withFreeCasts = (list, mapped) => {
+    const out = [...list];
+    (mapped.extraResources || []).forEach((r) => {
+      if (!out.some((x) => x.name.toLowerCase() === r.name.toLowerCase())) out.push({ id: uid(), name: r.name, max: r.max, used: 0, recharge: r.recharge });
+    });
+    return out;
+  };
 
   // Same for spells: matched by name, unknown ones added to the library;
   // slots from the caster tables, used counts from D&D Beyond.
@@ -99,7 +107,7 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsCh
       applySpells(mapped);
       mapped.patch.modifiers = mergeModifiers([], mapped.data, uid);
       applyClassOptions(mapped, null);
-      mapped.patch.resources = planResources(mapped.data, mapped.patch, uid);
+      mapped.patch.resources = withFreeCasts(planResources(mapped.data, mapped.patch, uid), mapped);
       const ch = characters.addImported({ ...mapped.patch, campaignId: campaignForNewCharacter(identityFromHeaders(req), req.body.campaignId) }, mapped.notesPrefix);
       onCharactersChanged();
       res.json({ character: ch });
@@ -133,7 +141,7 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsCh
       mapped.patch.modifiers = mergeModifiers(existing.modifiers, mapped.data, uid);
       applyClassOptions(mapped, existing);
       // Same for limited-use features: used counts from the table are kept.
-      mapped.patch.resources = mergeResources(existing.resources, planResources(mapped.data, mapped.patch, uid));
+      mapped.patch.resources = withFreeCasts(mergeResources(existing.resources, planResources(mapped.data, mapped.patch, uid)), mapped);
       const ch = characters.refreshImported(existing.id, mapped.patch, { replaceInventory: true, replaceSpells: true });
       onCharactersChanged();
       res.json({ character: ch });

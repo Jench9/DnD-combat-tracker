@@ -169,3 +169,43 @@ test('D&D Beyond: invocations recorded like the builder does, subclass matched, 
   assert.deepStrictEqual(synced.feats, ['invocation:Agonizing Blast']);
   assert.strictEqual(synced.classes[0].subclass, 'fiend-patron');
 });
+
+test('level up keeps a D&D Beyond "Later levels" list last and drops what was reached', () => {
+  const P = require('../src/features/characters/builder/progression');
+  const text = 'Pact Magic\n\n◆ Later levels (not yet)\n- Warlock Subclass (Warlock 3)\n- Contact Patron (Warlock 9)';
+  assert.strictEqual(P.appendFeatures(text, ['◆ New'], [{ name: 'Warlock', level: 3 }]), 'Pact Magic\n\n◆ New\n\n◆ Later levels (not yet)\n- Contact Patron (Warlock 9)');
+  assert.strictEqual(P.appendFeatures(text, ['◆ New'], [{ name: 'Warlock', level: 9 }]), 'Pact Magic\n\n◆ New');
+  assert.strictEqual(P.appendFeatures('A', ['B']), 'A\n\nB');
+});
+
+test('options that grant spells: always prepared, cast free at will or once per rest, with a note', () => {
+  const r = content.add({
+    source: 'Homebrew', kind: 'option', optionType: 'invocation', name: 'Shadow Coat', desc: 'x',
+    spells: [{ name: 'Mage Armor', free: 'at-will', note: 'on yourself only' }, { name: 'False Life', free: 'long', note: 'max temp HP' }, { name: 'Nope', free: 'weekly' }, { name: 'Unknown Spell', free: 'short' }],
+  }, '');
+  assert.ifError(r.error);
+  assert.deepStrictEqual(r.entry.spells.map((s) => [s.name, s.free]), [['Mage Armor', 'at-will'], ['False Life', 'long'], ['Nope', ''], ['Unknown Spell', 'short']]);
+
+  const lock = apply(blankCharacter('gs'), { class: 'Warlock 1', level: 1, abilities: { cha: 16 }, classes: [{ key: 'warlock', name: 'Warlock', level: 1 }] });
+  const plan = levelUpPlan(lock, 'warlock', ctx());
+  const sp = plan.choices.find((x) => x.type === 'spells');
+  const known = spells.all().filter((s) => s.edition === '2024' && s.level === 1 && (s.classes || []).includes('warlock')).slice(0, sp.spells).map((s) => s.id);
+  const up = applyLevelUp(lock, { classKey: 'warlock', hp: { method: 'average' }, spells: { cantrips: [], spells: known }, options: { invocation: ['Shadow Coat', 'Other One'] } }, ctx());
+  assert.ifError(up.error);
+  const ch = apply(lock, up.patch);
+  const armor = ch.spells.find((s) => s.name === 'Mage Armor');
+  assert.deepStrictEqual({ ...armor, id: 'x', spellId: 'x' }, { id: 'x', spellId: 'x', name: 'Mage Armor', prepared: true, always: true, from: 'Shadow Coat', free: 'at-will', note: 'on yourself only' });
+  assert.strictEqual(ch.spells.find((s) => s.name === 'False Life').free, 'long');
+  const res = ch.resources.find((x) => x.name === 'False Life (free cast)');
+  assert.deepStrictEqual([res.max, res.recharge], [1, 'long']);
+  assert.ok(!ch.resources.some((x) => /Mage Armor/.test(x.name)), 'at will: nothing to count');
+  assert.match(ch.features, /To do\nShadow Coat: not in the spell library: Nope, Unknown Spell/);
+
+  // D&D Beyond: the spell it sent gets the same marks and resource.
+  const opts = require('../src/features/imports/dndbeyond/options');
+  const data = { ...DDB_WARLOCK, options: { class: [{ componentId: 101, definition: { name: 'Shadow Coat' } }] } };
+  const patch = { modifiers: [], customActions: [], spells: [{ id: 's1', spellId: 'q', name: 'False Life', prepared: false }] };
+  const extra = opts.applyOptionContent(patch, data, getRules(), () => 'z' + (++n));
+  assert.deepStrictEqual(patch.spells[0], { id: 's1', spellId: 'q', name: 'False Life', prepared: true, always: true, from: 'Shadow Coat', free: 'long', note: 'max temp HP' });
+  assert.deepStrictEqual(extra, [{ name: 'False Life (free cast)', max: 1, recharge: 'long' }]);
+});

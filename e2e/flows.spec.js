@@ -486,3 +486,36 @@ test('characters: guided creation at level 3 goes on with the level up (Weapon M
   expect(ch.modifiers.find((m) => m.preset === 'weapon-mastery').only).toBe('Longsword, Greataxe, Longbow');
   await noErrors(errors);
 });
+
+test('spells a feature casts for free: at will, or once per rest (spends its resource), with the note', async ({ page }) => {
+  const errors = watchErrors(page);
+  const lib = (await snapshot('spellState')).spells;
+  const pick = (name) => lib.find((s) => s.name === name && s.edition === '2024');
+  await send([
+    ['addCharacter', { id: 'freepc', campaignId: 'flowa' }],
+    ['updateCharacter', { id: 'freepc', patch: {
+      name: 'Freecaster', class: 'Warlock 3', level: 3, spellAbility: 'cha', abilities: { cha: 16 },
+      spellSlots: [{ max: 0, used: 0 }, { max: 2, used: 0 }, ...Array.from({ length: 7 }, () => ({ max: 0, used: 0 }))],
+      spells: [
+        { id: 'fs1', spellId: pick('Mage Armor').id, name: 'Mage Armor', prepared: true, always: true, from: 'Shadow Coat', free: 'at-will', note: 'on yourself only' },
+        { id: 'fs2', spellId: pick('False Life').id, name: 'False Life', prepared: true, always: true, from: 'Shadow Coat', free: 'long' },
+      ],
+      resources: [{ id: 'fr1', name: 'False Life (free cast)', max: 1, used: 0, recharge: 'long' }],
+    } }],
+  ]);
+  await as(page, 'dm');
+  await page.goto('/characters.html#edit=freepc');
+  await page.locator('.tab-btn', { hasText: 'Actions' }).click();
+  const armor = page.locator('.action-row.spell', { has: page.locator('.action-name', { hasText: 'Mage Armor' }) });
+  await expect(armor.locator('.action-detail')).toContainText('free: at will (Shadow Coat)');
+  await expect(armor.locator('.action-note')).toHaveText('Shadow Coat: on yourself only');
+  await armor.getByRole('button', { name: 'Cast free' }).click();
+  await expect(armor.locator('.action-result')).toContainText('no slot');
+
+  const life = page.locator('.action-row.spell', { has: page.locator('.action-name', { hasText: 'False Life' }) });
+  await life.getByRole('button', { name: 'Cast free (1/1)' }).click();
+  await expect.poll(async () => (await charById('freepc')).resources[0].used).toBe(1);
+  await expect(life.getByRole('button', { name: 'Cast free (0/1)' })).toBeDisabled();
+  expect((await charById('freepc')).spellSlots[1].used).toBe(0);
+  await noErrors(errors);
+});

@@ -40,6 +40,30 @@ test('mapDndBeyondData maps core fields', () => {
   assert.match(notesPrefix, /best-effort/);
 });
 
+test('mapDndBeyondData: features above the class level are listed apart, with their level', () => {
+  const { patch } = mapDndBeyondData({
+    stats: [1, 2, 3, 4, 5, 6].map((id) => ({ id, value: 10 })),
+    classes: [{
+      level: 3, definition: { name: 'Warlock' },
+      classFeatures: [
+        { definition: { name: 'Contact Patron', requiredLevel: 9 } },
+        { definition: { name: 'Pact Magic', requiredLevel: 1 } },
+        { definition: { name: '8: Ability Score Improvement', requiredLevel: 8 } },
+        { definition: { name: 'Magical Cunning', requiredLevel: 2 } },
+      ],
+      subclassDefinition: { name: 'Fiend Patron', classFeatures: [{ definition: { name: "Dark One's Blessing", requiredLevel: 3 } }, { definition: { name: "Dark One's Own Luck", requiredLevel: 6 } }] },
+    }],
+    feats: [{ definition: { name: 'Alert' } }],
+  });
+  assert.strictEqual(patch.features, [
+    'Pact Magic', 'Magical Cunning', "Dark One's Blessing", 'Alert', '',
+    '◆ Later levels (not yet)',
+    "- Dark One's Own Luck (Fiend Patron, Warlock 6)",
+    '- Ability Score Improvement (Warlock 8)',
+    '- Contact Patron (Warlock 9)',
+  ].join('\n'));
+});
+
 test('mapDndBeyondData ability scores: background, race, feat and item bonuses', () => {
   const { patch } = mapDndBeyondData({
     stats: [1, 2, 3, 4, 5, 6].map((id) => ({ id, value: 10 })),

@@ -26,8 +26,10 @@
 //   inspiration: bool (Heroic Inspiration), exhaustion: 0–6,
 //   currency: { cp, sp, ep, gp, pp },
 //   rulesEdition: '2014' | '2024' — rest rules (Hit Dice back on a long rest),
-//   spells: [{ id, spellId, name, prepared }] — from the spell library
-//     (cantrips are always ready; leveled spells need `prepared`),
+//   spells: [{ id, spellId, name, prepared, always?, from?, free?, note? }] —
+//     from the spell library (cantrips are always ready; leveled spells need
+//     `prepared`; `always` = given by a feature, `free` = cast without a slot
+//     at will / once per long / short rest, `note` = the feature's extra),
 //   modifiers: [{ id, preset, active, only, custom }] — feats, fighting
 //     styles, class features, weapon mastery… that change attacks. `preset`
 //     names an entry of the client catalog (public/js/core/modifiers.js);
@@ -175,6 +177,11 @@ function sanitizeSpells(list) {
       // always: given by a feature (domain spells…) — prepared, and it doesn't count
       prepared: !!e.prepared || e.always === true,
       ...(e.always === true ? { always: true, from: typeof e.from === 'string' ? e.from.slice(0, 80) : '' } : {}),
+      // free: cast without a slot — at will, or once per Long / Short Rest
+      // (a "<Spell> (free cast)" resource counts it); note: what the
+      // feature adds to the spell (Eldritch Invocations…)
+      ...(['at-will', 'long', 'short'].includes(e.free) ? { free: e.free } : {}),
+      ...(typeof e.note === 'string' && e.note.trim() ? { note: e.note.trim().slice(0, 300) } : {}),
     });
   });
   return out;

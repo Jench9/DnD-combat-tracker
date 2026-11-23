@@ -100,8 +100,9 @@ function renderBook(c) {
       // Given by a feature (domain / patron spells): always prepared, not counted.
       const tag = document.createElement('span');
       tag.className = 'prep always';
-      tag.textContent = 'always prepared';
-      tag.title = e.from ? `From ${e.from} — always prepared; doesn't count against your prepared spells` : 'Always prepared';
+      const free = { 'at-will': 'at will, no slot', long: 'free 1/Long Rest', short: 'free 1/Short Rest' }[e.free];
+      tag.textContent = free ? `always prepared · ${free}` : 'always prepared';
+      tag.title = [e.from ? `From ${e.from} — always prepared; doesn't count against your prepared spells` : 'Always prepared', e.note || ''].filter(Boolean).join('\n');
       row.appendChild(tag);
     } else if (sp && sp.level > 0) {
       const prep = document.createElement('label');

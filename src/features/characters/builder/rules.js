@@ -81,7 +81,7 @@ function featFrom(e) {
 function optionFrom(e) {
   return {
     key: customKey(e), name: e.name, optionType: e.optionType, desc: e.desc, minLevel: e.minLevel, prereq: e.prereq,
-    repeatable: e.repeatable, action: e.action, cost: e.cost, preset: e.preset, source: e.source, custom: true,
+    repeatable: e.repeatable, action: e.action, cost: e.cost, preset: e.preset, spells: e.spells || [], source: e.source, custom: true,
   };
 }
 

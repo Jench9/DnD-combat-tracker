@@ -33,12 +33,16 @@
 //              repeatable, action ('' | action | bonus | reaction | free: in
 //              the sheet's Actions), cost (metamagic: Sorcery Points a use
 //              spends), preset (an attack modifier it switches on, e.g.
-//              agonizing-blast — a key of public/js/core/modifier-presets.json)
+//              agonizing-blast — a key of public/js/core/modifier-presets.json),
+//              spells: [{ name, free: '' | at-will | long | short, note }] it
+//              grants — always prepared; cast without a slot at will or once
+//              per Long / Short Rest; `note` = what it adds to the spell
 const { uid } = require('../../core/ids');
 const { createJsonStore } = require('../../core/jsonStore');
 
 const KINDS = ['subclass', 'species', 'background', 'feat', 'option'];
 const OPTION_TYPES = ['invocation', 'metamagic'];
+const FREE_CASTS = ['', 'at-will', 'long', 'short'];
 const PRESET_KEYS = new Set(require('../../../public/js/core/modifier-presets.json').map((p) => p.key));
 const ACTION_TYPES = ['', 'action', 'bonus', 'reaction', 'free'];
 const RECHARGES = ['short', 'long', 'none'];
@@ -115,6 +119,11 @@ function clean(raw, base = {}) {
     e.action = ACTION_TYPES.includes(r.action) ? r.action : '';
     e.cost = e.optionType === 'metamagic' ? int(r.cost, 0, 20, 1) : 0;
     e.preset = PRESET_KEYS.has(r.preset) ? r.preset : '';
+    e.spells = (Array.isArray(r.spells) ? r.spells : []).map((x) => ({
+      name: text(x && x.name, 60),
+      free: FREE_CASTS.includes(x && x.free) ? x.free : '',
+      note: text(x && x.note, 300),
+    })).filter((x) => x.name).slice(0, 6);
   } else {
     e.type = FEAT_TYPES.includes(r.type) ? r.type : 'general';
     e.desc = text(r.desc, 6000);
@@ -235,4 +244,4 @@ function remove(id) {
   if (entries.length !== before) persist();
 }
 
-module.exports = { KINDS, OPTION_TYPES, FEAT_TYPES, SIZES, SKILL_NAMES, ACTION_TYPES, RECHARGES, CASTER_TYPES, SPELL_LISTS, parseUses, reload, all, find, add, update, remove, getVersion };
+module.exports = { KINDS, OPTION_TYPES, FREE_CASTS, FEAT_TYPES, SIZES, SKILL_NAMES, ACTION_TYPES, RECHARGES, CASTER_TYPES, SPELL_LISTS, parseUses, reload, all, find, add, update, remove, getVersion };
