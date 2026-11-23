@@ -6,6 +6,8 @@ const { planInventory } = require('./inventory');
 const { planSpells } = require('./spells');
 const { mergeModifiers } = require('./modifiers');
 const { planResources, mergeResources } = require('./resources');
+const { mergeOptionFeats, classesFrom, applyOptionContent } = require('./options');
+const { getRules } = require('../../characters/builder/rules');
 const items = require('../../items/service');
 const spellLibrary = require('../../spells/service');
 const { uid } = require('../../../core/ids');
@@ -58,6 +60,18 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsCh
     mapped.patch.equipment = plan.otherText;
   }
 
+  // Eldritch Invocations / Metamagic as the builder records them (`feats`
+  // "invocation:<Name>"), subclasses matched to the builder's (SRD or
+  // Content page), and the Content page's modifiers / actions for those
+  // options — so level up knows what the character already has.
+  function applyClassOptions(mapped, existing) {
+    const rules = getRules();
+    mapped.patch.feats = mergeOptionFeats(existing ? existing.feats : [], mapped.data);
+    mapped.patch.classes = classesFrom(mapped.data, rules, existing ? existing.classes : []);
+    mapped.patch.customActions = existing ? existing.customActions || [] : [];
+    applyOptionContent(mapped.patch, mapped.data, rules, uid);
+  }
+
   // Same for spells: matched by name, unknown ones added to the library;
   // slots from the caster tables, used counts from D&D Beyond.
   function applySpells(mapped) {
@@ -84,6 +98,7 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsCh
       applyInventory(mapped);
       applySpells(mapped);
       mapped.patch.modifiers = mergeModifiers([], mapped.data, uid);
+      applyClassOptions(mapped, null);
       mapped.patch.resources = planResources(mapped.data, mapped.patch, uid);
       const ch = characters.addImported({ ...mapped.patch, campaignId: campaignForNewCharacter(identityFromHeaders(req), req.body.campaignId) }, mapped.notesPrefix);
       onCharactersChanged();
@@ -116,6 +131,7 @@ function createDndBeyondRouter({ onCharactersChanged, onItemsChanged, onSpellsCh
       applySpells(mapped);
       // Newly gained feats/features are added; existing modifiers are kept.
       mapped.patch.modifiers = mergeModifiers(existing.modifiers, mapped.data, uid);
+      applyClassOptions(mapped, existing);
       // Same for limited-use features: used counts from the table are kept.
       mapped.patch.resources = mergeResources(existing.resources, planResources(mapped.data, mapped.patch, uid));
       const ch = characters.refreshImported(existing.id, mapped.patch, { replaceInventory: true, replaceSpells: true });

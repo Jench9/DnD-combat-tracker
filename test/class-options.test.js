@@ -120,3 +120,52 @@ test('retired characters: only a DM sets the flag; kept on sync and copied as ac
   actions.updateCharacter({ id: 'ret1', patch: { retired: false } }, { role: 'dm' });
   assert.strictEqual(characters.find('ret1').retired, false);
 });
+
+// The shape D&D Beyond sends (trimmed): options tied to their class feature
+// by componentId, names with what they're tied to in parentheses.
+const DDB_WARLOCK = {
+  classes: [{
+    level: 3, definition: { name: 'Warlock' }, subclassDefinition: { name: 'The Fiend' },
+    classFeatures: [{ definition: { id: 101, name: 'Eldritch Invocations', requiredLevel: 1 } }, { definition: { id: 102, name: 'Pact Magic', requiredLevel: 1 } }],
+  }],
+  options: {
+    race: [{ componentId: 7, definition: { name: 'Charisma' } }],
+    class: [
+      { componentId: 101, definition: { name: 'Agonizing Blast (Eldritch Blast)' } },
+      { componentId: 101, definition: { name: 'Pact of the Tome' } },
+      { componentId: 999, definition: { name: 'Defense' } }, // another feature's option
+    ],
+  },
+};
+
+test('D&D Beyond: invocations recorded like the builder does, subclass matched, kept on sync', () => {
+  const { detectPresets } = require('../src/features/imports/dndbeyond/modifiers');
+  const opts = require('../src/features/imports/dndbeyond/options');
+  assert.ok(detectPresets(DDB_WARLOCK).includes('agonizing-blast'), '"Agonizing Blast (Eldritch Blast)" is detected');
+  assert.deepStrictEqual(opts.optionFeats(DDB_WARLOCK), ['invocation:Agonizing Blast', 'invocation:Pact of the Tome']);
+  // D&D Beyond decides the invocations; other feats stay.
+  assert.deepStrictEqual(opts.mergeOptionFeats(['alert', 'invocation:Mask of Many Faces'], DDB_WARLOCK), ['alert', 'invocation:Agonizing Blast', 'invocation:Pact of the Tome']);
+  assert.deepStrictEqual(opts.mergeOptionFeats(['invocation:Kept'], { classes: [{ level: 1, definition: { name: 'Fighter' }, classFeatures: [] }] }), ['invocation:Kept']);
+  const classes = opts.classesFrom(DDB_WARLOCK, getRules(), []);
+  assert.deepStrictEqual(classes, [{ key: 'warlock', name: 'Warlock', level: 3, subclass: 'fiend-patron', subclassName: 'Fiend Patron' }]);
+
+  // Content-page options bring their modifier and action.
+  content.add({ source: 'Homebrew', kind: 'option', optionType: 'invocation', name: 'Pact of the Tome', action: 'action', desc: 'A book.' }, '');
+  const patch = { modifiers: [], customActions: [] };
+  opts.applyOptionContent(patch, DDB_WARLOCK, getRules(), () => 'z' + (++n));
+  assert.deepStrictEqual(patch.customActions.map((a) => [a.name, a.type]), [['Pact of the Tome', 'action']]);
+
+  // Level up then knows them: Agonizing Blast is "already chosen".
+  const ch = apply(blankCharacter('ddbw'), { class: 'Warlock 4', level: 4, abilities: { cha: 16 }, classes, feats: opts.optionFeats(DDB_WARLOCK) });
+  const plan = levelUpPlan(ch, 'warlock', ctx());
+  const c = plan.choices.find((x) => x.type === 'options');
+  assert.deepStrictEqual(c.known, ['Agonizing Blast', 'Pact of the Tome']);
+  assert.strictEqual(c.options.find((o) => o.name === 'Agonizing Blast').why, 'already chosen');
+
+  // A sync without those fields keeps what the builder recorded.
+  characters.addBlank('ddbk', '');
+  characters.update('ddbk', { feats: ['invocation:Agonizing Blast'], classes });
+  const synced = characters.refreshImported('ddbk', { name: 'Synced', class: 'Warlock 3', level: 3 });
+  assert.deepStrictEqual(synced.feats, ['invocation:Agonizing Blast']);
+  assert.strictEqual(synced.classes[0].subclass, 'fiend-patron');
+});

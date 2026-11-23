@@ -56,7 +56,10 @@ function featureNames(data) {
   const options = data.options && typeof data.options === 'object' ? data.options : {};
   Object.values(options).forEach((list) => (Array.isArray(list) ? list : []).forEach((o) => names.push(nameOf(o))));
   ((data.race && data.race.racialTraits) || []).forEach((t) => names.push(nameOf(t)));
-  return names.filter(Boolean).map(norm);
+  // Options come with what they're tied to: "Agonizing Blast (Eldritch Blast)".
+  const all = names.filter(Boolean);
+  const plain = all.map((n) => String(n).replace(/\s*\([^)]*\)\s*$/, '')).filter((n, i) => n !== all[i]);
+  return [...all, ...plain].map(norm);
 }
 
 // -> preset keys, deduplicated, in catalog-ish order.

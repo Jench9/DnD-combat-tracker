@@ -118,6 +118,10 @@ function refreshImported(id, mappedPatch, { replaceInventory = false, replaceSpe
     modifiers: old.modifiers,
     resources: old.resources,
     customActions: old.customActions,
+    // What the builder recorded (subclass keys, feats and invocations taken):
+    // kept unless the patch brings its own (the sync route merges them).
+    feats: old.feats,
+    classes: old.classes,
     hitDiceUsed: old.hitDiceUsed,
     rulesEdition: old.rulesEdition, // detection is a guess; a choice made on the sheet wins
     inspiration: old.inspiration,
