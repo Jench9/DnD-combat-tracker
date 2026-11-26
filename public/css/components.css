@@ -61,9 +61,60 @@
   border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 @media (max-width: 760px) {
-  .nav-btn:not(.active) .lbl { display: none; } /* icon only; the current page keeps its name */
-  .nav-btn { padding-left: 11px; padding-right: 11px; }
+  /* Phones: the pages live in the bottom bar (.phone-nav); the top bar keeps
+     🏠, the current page's name and the badges. */
+  .nav-btn:not(.active):not(.home) { display: none; }
+  .nav-btn { flex-grow: 0; padding-left: 11px; padding-right: 11px; }
   .nav-side { padding: 0 6px; gap: 4px; }
+}
+
+/* ---- phone bottom bar (core/nav.js phoneNav), ≤ 760 px only ---- */
+.phone-nav, .pn-sheet-backdrop { display: none; }
+@media (max-width: 760px) {
+  body.has-phone-nav { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .phone-nav {
+    display: flex;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+    background: var(--nav-bg);
+    box-shadow: 0 -2px 8px var(--card-shadow);
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  body.typing .phone-nav { display: none; } /* the on-screen keyboard is up */
+  .pn-btn {
+    flex: 1 1 0; min-width: 0; min-height: 58px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    padding: 7px 2px 6px;
+    background: none; color: var(--nav-ink); text-decoration: none;
+    font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: 0.3px; text-transform: uppercase;
+    border-top: 3px solid transparent;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pn-btn .ic { font-size: 20px; line-height: 1; }
+  .pn-btn .lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pn-btn.active { color: #fff; border-top-color: var(--wax); }
+  .pn-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+  .pn-more .ic { font-size: 19px; }
+  .pn-more[aria-expanded="true"] { color: #fff; }
+
+  /* "More": a sheet rising from the bar. */
+  .pn-sheet-backdrop:not([hidden]) {
+    display: block; position: fixed; inset: 0; z-index: 89; background: rgba(10, 11, 12, 0.45);
+  }
+  .pn-sheet {
+    position: absolute; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom));
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;
+    padding: 14px max(14px, env(safe-area-inset-right)) 14px max(14px, env(safe-area-inset-left));
+    background: var(--bg-panel); border-radius: 14px 14px 0 0;
+    box-shadow: 0 -6px 20px var(--card-shadow);
+  }
+  .pn-sheet-btn {
+    display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 12px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+    color: var(--ink); text-decoration: none; font-weight: 600; font-size: 14.5px;
+  }
+  .pn-sheet-btn .ic { font-size: 20px; }
+  .pn-sheet-btn.active { border-color: var(--wax); box-shadow: inset 3px 0 0 var(--wax); }
+  .pn-sheet-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 }
 /* Wide screens: the bar spans more than the page column (up to 1280 px),
    centred on it, so the tabs fit without scrolling. */
@@ -395,3 +446,35 @@ body.is-dm .player-only { display: none !important; }
 .rt-table th { background: var(--bg); font-weight: 700; color: var(--ink); }
 .rt-table tbody tr:nth-child(even) td { background: rgba(127, 127, 127, 0.06); }
 .rt-table td:first-child, .rt-table th:first-child { text-align: left; }
+
+/* ---- touch screens (phones, tablets): `pointer: coarse` ---- */
+@media (pointer: coarse) {
+  /* iOS zooms the page into any field under 16 px; the big sheet fields
+     (name, AC/HP tiles) are larger already and keep their size. */
+  input:not([type=checkbox], [type=radio], [type=range], [type=color], [type=file], .name-input, .tile input),
+  select, textarea { font-size: 16px !important; }
+
+  /* Buttons with words: at least 44 px tall. */
+  .btn, .id-badge, .tab-btn, .import-tab, .insp-btn, .remove-btn, .b-step, .mod-chip, .slot-select, .join-new {
+    min-height: 44px;
+  }
+  a.btn { display: inline-flex; align-items: center; justify-content: center; }
+  .id-badge { min-height: 40px; } /* the top bar is ~44 px */
+
+  /* Small icon buttons keep their look; an invisible ≥ 44×44 box centred on
+     them takes the tap. */
+  :is(.expert-btn, .res-step, .insp-star, .inv-rm, .res-rm, .item .del, .ct-x, .ct-close, .b-close,
+      .link-btn, .add-cond, .chip button, .conc-check button, .res-chip button) { position: relative; }
+  :is(.expert-btn, .res-step, .insp-star, .inv-rm, .res-rm, .item .del, .ct-x, .ct-close, .b-close,
+      .link-btn, .add-cond, .chip button, .conc-check button, .res-chip button)::after {
+    content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: max(100%, 44px); height: max(100%, 44px);
+  }
+  /* Dots in a row (death saves, slot pips): taller only, so a tap never
+     lands on the neighbour. */
+  :is(.dot, .pip) { position: relative; }
+  :is(.dot, .pip)::after {
+    content: ''; position: absolute; left: -2px; right: -2px; top: 50%; transform: translateY(-50%);
+    height: 44px;
+  }
+}

@@ -4,9 +4,12 @@
 // `dmOnly` tools are hidden from players (the server doesn't send them the data either).
 // `short`: the name in the top bar (defaults to `title`); home cards use `title`.
 // `accountsOnly`: only when the server uses accounts (see core/identity.js).
+// `phone`: priority in the phone bottom bar (core/nav.js) — when the visible
+// tools don't all fit, the lowest numbers get a slot and the rest go under More.
 export const TOOLS = [
   {
     id: 'combat',
+    phone: 1,
     href: 'combat.html',
     icon: '⚔️',
     title: 'Combat Tracker',
@@ -15,6 +18,7 @@ export const TOOLS = [
   },
   {
     id: 'characters',
+    phone: 2,
     href: 'characters.html',
     icon: '📜',
     title: 'Character Sheets',
@@ -23,6 +27,7 @@ export const TOOLS = [
   },
   {
     id: 'monsters',
+    phone: 4,
     href: 'monsters.html',
     icon: '🐉',
     title: 'Monsters',
@@ -31,6 +36,7 @@ export const TOOLS = [
   },
   {
     id: 'items',
+    phone: 6,
     href: 'items.html',
     icon: '🗡️',
     title: 'Items',
@@ -38,6 +44,7 @@ export const TOOLS = [
   },
   {
     id: 'spells',
+    phone: 5,
     href: 'spells.html',
     icon: '✨',
     title: 'Spells',
@@ -45,6 +52,7 @@ export const TOOLS = [
   },
   {
     id: 'map',
+    phone: 3,
     href: 'map.html',
     icon: '🗺️',
     title: 'Battle Map',
@@ -53,6 +61,7 @@ export const TOOLS = [
   },
   {
     id: 'content',
+    phone: 7,
     href: 'content.html',
     icon: '📚',
     title: 'Content',
@@ -61,6 +70,7 @@ export const TOOLS = [
   },
   {
     id: 'players',
+    phone: 8,
     href: 'players.html',
     icon: '🔑',
     title: 'Players',

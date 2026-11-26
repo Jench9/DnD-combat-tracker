@@ -1,4 +1,5 @@
-// Renders the shared top nav into <nav class="app-nav" data-active="<id>">.
+// Renders the shared top nav into <nav class="app-nav" data-active="<id>">,
+// and on phones a bottom bar with the pages (phoneNav below).
 import { visibleTools } from './tools.js';
 import { isDm, authMode } from './identity.js';
 import { initIdentity } from './join.js';
@@ -85,4 +86,95 @@ export function renderNav() {
   const current = tabs.querySelector('.nav-btn.active');
   if (current) tabs.scrollLeft = current.offsetLeft - (tabs.clientWidth - current.offsetWidth) / 2;
   markOverflow(tabs);
+
+  phoneNav(items.filter((t) => t.id !== 'home'), active);
 }
+
+// ---- phone bottom bar (≤ 760 px; CSS hides it on wider screens) ----
+// The top bar keeps only 🏠, the current page and the right-hand badges;
+// the pages move to a bar at the bottom, in reach of the thumb. Up to
+// PHONE_SLOTS pages fit; otherwise the best-ranked (`phone` in tools.js)
+// keep a slot and the rest open from "More" as a bottom sheet.
+const PHONE_SLOTS = 5;
+
+function navLink(t, active, cls, label) {
+  const a = document.createElement('a');
+  a.className = cls + (t.id === active ? ' active' : '');
+  a.href = t.href;
+  if (t.id === active) a.setAttribute('aria-current', 'page');
+  const ic = document.createElement('span');
+  ic.className = 'ic';
+  ic.setAttribute('aria-hidden', 'true');
+  ic.textContent = t.icon;
+  const lbl = document.createElement('span');
+  lbl.className = 'lbl';
+  lbl.textContent = label;
+  a.append(ic, lbl);
+  return a;
+}
+
+function phoneNav(tools, active) {
+  document.querySelectorAll('.phone-nav, .pn-sheet-backdrop').forEach((n) => n.remove());
+  let main = tools;
+  let rest = [];
+  if (tools.length > PHONE_SLOTS) {
+    const keep = new Set([...tools].sort((a, b) => (a.phone ?? 99) - (b.phone ?? 99)).slice(0, PHONE_SLOTS - 1));
+    main = tools.filter((t) => keep.has(t)); // registry order, like the top bar
+    rest = tools.filter((t) => !keep.has(t));
+  }
+
+  const bar = document.createElement('nav');
+  bar.className = 'phone-nav';
+  bar.setAttribute('aria-label', 'Pages');
+  main.forEach((t) => bar.appendChild(navLink(t, active, 'pn-btn', t.short ?? t.title)));
+  document.body.classList.add('has-phone-nav');
+  document.body.appendChild(bar);
+  if (!rest.length) return;
+
+  const more = document.createElement('button');
+  more.type = 'button';
+  more.className = 'pn-btn pn-more' + (rest.some((t) => t.id === active) ? ' active' : '');
+  more.setAttribute('aria-haspopup', 'dialog');
+  more.setAttribute('aria-expanded', 'false');
+  more.innerHTML = '<span class="ic" aria-hidden="true">☰</span><span class="lbl">More</span>';
+  bar.appendChild(more);
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'pn-sheet-backdrop';
+  backdrop.hidden = true;
+  const sheet = document.createElement('div');
+  sheet.className = 'pn-sheet';
+  sheet.id = 'pnSheet';
+  sheet.setAttribute('role', 'dialog');
+  sheet.setAttribute('aria-modal', 'true');
+  sheet.setAttribute('aria-label', 'More pages');
+  rest.forEach((t) => sheet.appendChild(navLink(t, active, 'pn-sheet-btn', t.title)));
+  backdrop.appendChild(sheet);
+  document.body.appendChild(backdrop);
+  more.setAttribute('aria-controls', sheet.id);
+
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  function open() {
+    backdrop.hidden = false;
+    more.setAttribute('aria-expanded', 'true');
+    document.addEventListener('keydown', onKey);
+    sheet.querySelector('a')?.focus();
+  }
+  function close() {
+    if (backdrop.hidden) return;
+    backdrop.hidden = true;
+    more.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('keydown', onKey);
+    more.focus();
+  }
+  more.addEventListener('click', () => (backdrop.hidden ? open() : close()));
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+}
+
+// While typing on a phone the on-screen keyboard leaves little room, so the
+// bottom bar steps aside (CSS: body.typing) until the field loses focus.
+const TYPING = 'input:not([type=checkbox], [type=radio], [type=range], [type=button], [type=submit], [type=file], [type=color]), textarea, [contenteditable="true"]';
+document.addEventListener('focusin', (e) => {
+  if (e.target instanceof Element && e.target.matches(TYPING)) document.body.classList.add('typing');
+});
+document.addEventListener('focusout', () => document.body.classList.remove('typing'));
