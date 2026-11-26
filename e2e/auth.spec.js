@@ -319,3 +319,20 @@ test('an invite with "Runs": the new account runs one campaign and plays in anot
   await newCtx.close();
   await ctx.close();
 });
+
+test('the Players page fits a phone (long role names in the dropdown)', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 375, height: 740 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  await page.goto(BASE + '/login.html?next=%2Fplayers.html');
+  await page.fill('#loginUser', 'Dungeon Master'); // the admin: the Role dropdown shows
+  await page.fill('#loginPass', 'dm-password-1');
+  await page.click('#loginForm button[type=submit]');
+  await expect(page).toHaveURL(BASE + '/players.html');
+  // It plays characters by now (tests above): a fresh browser asks who it is.
+  const join = page.locator('.join-box');
+  await expect(join).toBeVisible();
+  await join.getByRole('button', { name: /Run this table as the DM/ }).first().click();
+  await expect(page.locator('#invRole')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  await ctx.close();
+});

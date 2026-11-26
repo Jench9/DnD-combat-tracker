@@ -199,7 +199,10 @@ export function initTokenCard({ getView, lookup, isDragging, actionsFor = () => 
     if (left + w > window.innerWidth - 8) left = r.left - gap - w;
     left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
     let top = r.top + r.height / 2 - h / 2;
-    top = Math.max(8, Math.min(top, window.innerHeight - h - 8));
+    // Keep clear of the phone bottom bar when it shows (600–760 px).
+    const bar = document.querySelector('.phone-nav');
+    const floor = bar && bar.getClientRects().length ? bar.getBoundingClientRect().top : window.innerHeight;
+    top = Math.max(8, Math.min(top, floor - h - 8));
     box.style.left = left + 'px';
     box.style.top = top + 'px';
   }

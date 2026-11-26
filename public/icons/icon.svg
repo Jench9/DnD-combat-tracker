@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Adventurer's Kit: a d20 on the dark nav color. PNGs: scripts/build-icons.js -->
+  <rect width="512" height="512" rx="96" fill="#1B1C1E"/>
+  <g stroke="#1B1C1E" stroke-width="7" stroke-linejoin="round">
+    <polygon points="256,96 395,176 395,336 256,416 117,336 117,176" fill="#C53131"/>
+    <polygon points="256,176 334,316 178,316" fill="#E04848"/>
+    <path d="M256,96 L256,176 M117,176 L256,176 L395,176 M117,176 L178,316 M395,176 L334,316 M117,336 L178,316 L256,416 L334,316 L395,336" fill="none"/>
+  </g>
+  <text x="256" y="292" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="62" fill="#fff">20</text>
+</svg>

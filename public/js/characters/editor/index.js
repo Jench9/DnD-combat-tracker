@@ -1,6 +1,6 @@
 // The character editor view: open / refresh from server / close.
 import { fillRich } from '../../core/richText.js';
-import { $ } from '../../core/dom.js';
+import { $, sideScroll } from '../../core/dom.js';
 import { store, findChar, cur, clearTouched } from '../store.js';
 import { updateDerived, renderAbilitiesGrid, renderSaves, renderSkills, refreshAbilityInputs } from './abilities.js';
 import { bindFields, refreshFields, updateHpBar } from './fields.js';
@@ -20,6 +20,15 @@ let featEd;
 function showTab(name) {
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab-pane').forEach((p) => p.classList.toggle('active', p.id === 'tab-' + name));
+  // A half-hidden tab that was tapped slides fully into view.
+  const strip = $('sheetTabs');
+  const btn = strip?.querySelector('.tab-btn.active');
+  if (btn) {
+    const sr = strip.getBoundingClientRect();
+    const br = btn.getBoundingClientRect();
+    if (br.left < sr.left) strip.scrollBy({ left: br.left - sr.left - 24, behavior: 'smooth' });
+    else if (br.right > sr.right) strip.scrollBy({ left: br.right - sr.right + 24, behavior: 'smooth' });
+  }
   if (name === 'features') featEd.resize(); // textareas can't measure while hidden
   // Phones: the tabs stick to the top (characters.css); when they're stuck,
   // open the new tab at its start instead of halfway down.
@@ -60,6 +69,7 @@ export function initEditor() {
   $('featReadBtn').addEventListener('click', () => setFeatView('read'));
   $('featEditBtn').addEventListener('click', () => setFeatView('edit'));
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  if ($('sheetTabs')) sideScroll($('sheetTabs')); // faded edges: Features / Notes are off-screen on phones
   initPortrait();
   initInventory();
   initSpellbook(refreshInventoryUi); // spell changes also redraw the Actions tab

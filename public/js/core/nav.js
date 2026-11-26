@@ -1,6 +1,7 @@
 // Renders the shared top nav into <nav class="app-nav" data-active="<id>">,
 // and on phones a bottom bar with the pages (phoneNav below).
 import { visibleTools } from './tools.js';
+import { sideScroll } from './dom.js';
 import { isDm, authMode } from './identity.js';
 import { initIdentity } from './join.js';
 import { manualDice, setManualDice } from './dice.js';
@@ -29,13 +30,6 @@ function diceToggle() {
   b.addEventListener('click', () => { setManualDice(!manualDice()); draw(); });
   draw();
   return b;
-}
-
-// Faded edges on the tab strip when there's more to scroll to.
-function markOverflow(tabs) {
-  const max = tabs.scrollWidth - tabs.clientWidth;
-  tabs.classList.toggle('more-left', tabs.scrollLeft > 2);
-  tabs.classList.toggle('more-right', max > 2 && tabs.scrollLeft < max - 2);
 }
 
 // The top bar: page tabs on the left (they scroll sideways when they don't
@@ -74,18 +68,12 @@ export function renderNav() {
   side.appendChild(diceToggle());
   initIdentity(side);
 
-  // A vertical mouse wheel scrolls the tabs sideways when they overflow.
-  tabs.addEventListener('wheel', (e) => {
-    if (tabs.scrollWidth <= tabs.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-    e.preventDefault();
-    tabs.scrollLeft += e.deltaY;
-  }, { passive: false });
-  tabs.addEventListener('scroll', () => markOverflow(tabs), { passive: true });
-  window.addEventListener('resize', () => markOverflow(tabs));
+  // Faded edges + mouse wheel when the tabs overflow (core/dom.js).
+  const mark = sideScroll(tabs);
   // Bring the current page's tab into view.
   const current = tabs.querySelector('.nav-btn.active');
   if (current) tabs.scrollLeft = current.offsetLeft - (tabs.clientWidth - current.offsetWidth) / 2;
-  markOverflow(tabs);
+  mark();
 
   phoneNav(items.filter((t) => t.id !== 'home'), active);
 }

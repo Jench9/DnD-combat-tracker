@@ -53,6 +53,10 @@ Browser smoke tests (Playwright, a dev dependency — not installed in the Docke
 - **Same wifi**: they open `http://<your-LAN-IP>:3000`. Find your IP with `ipconfig getifaddr en0` (Mac) or `ipconfig` (Windows).
 - **Different networks**: see [Putting it on the internet](#putting-it-on-the-internet) (HTTPS via a tunnel or a reverse proxy). Everyone logs in — see [Accounts](#accounts-dm-and-players).
 
+## On phones
+
+On a narrow screen the pages move to a bar at the bottom, and players get their turn and HP pinned above it on the Combat page. Players can also **install the kit as an app**. On Android (Chrome), use the menu → *Install app* / *Add to Home screen*. On iPhone (Safari), use Share → *Add to Home Screen*. It then opens full screen with its own icon. An installed app on iPhone keeps its own login, separate from Safari, so you log in once more there. The icon is `public/icons/icon.svg`. After changing it, run `node scripts/build-icons.js` to redraw the PNGs (uses Playwright's Chromium).
+
 ## SRD content
 
 The item, spell and monster libraries come with the full **System Reference Document 5.1 (2014 rules) and 5.2 (2024 rules)**: every SRD spell, weapon, armor, piece of gear, magic item and creature. The table plays **2024 rules**: where both editions have the same entry, the 2024 one has the plain name and the 2014 one is "… (2014)" (libraries saved with the older naming are renamed automatically, keeping each entry's id). This is the openly licensed (CC-BY-4.0) part of D&D — content that's only in the paid books (the rest of the Player's Handbook, Xanathar's, …) isn't included; add it as custom entries. See [NOTICE.md](NOTICE.md).

@@ -135,6 +135,43 @@ test.describe('phone: combat strip, sheet tabs, dialogs', () => {
   });
 });
 
+test.describe('phone: pages fit, app install', () => {
+  test.use(PHONE);
+
+  for (const url of ['/', '/combat.html', '/characters.html', '/monsters.html', '/items.html', '/spells.html', '/map.html', '/content.html']) {
+    test(`${url} is no wider than the phone`, async ({ page }) => {
+      await as(page, 'dm');
+      await page.goto(url);
+      await expect(page.locator('.phone-nav')).toBeVisible();
+      await page.waitForTimeout(300);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+    });
+  }
+
+  test('sheet tabs fade where more tabs are off-screen', async ({ page }) => {
+    await as(page, 'mobpc');
+    await page.goto('/characters.html');
+    const tabs = page.locator('#sheetTabs');
+    await expect(tabs).toHaveClass(/more-right/);
+    await tabs.locator('[data-tab=notes]').tap();
+    await expect(tabs).toHaveClass(/more-left/);
+    await expect(tabs).not.toHaveClass(/more-right/);
+  });
+
+  test('installable: manifest and icons', async ({ page, request }) => {
+    await page.goto('/');
+    const href = await page.locator('link[rel=manifest]').getAttribute('href');
+    const res = await request.get('/' + href);
+    expect(res.headers()['content-type']).toContain('application/manifest+json');
+    const m = await res.json();
+    expect(m.display).toBe('standalone');
+    const sizes = m.icons.map((i) => i.sizes);
+    expect(sizes).toEqual(expect.arrayContaining(['192x192', '512x512']));
+    for (const i of m.icons) expect((await request.get('/' + i.src)).ok()).toBe(true);
+    expect((await request.get('/' + await page.locator('link[rel=apple-touch-icon]').getAttribute('href'))).ok()).toBe(true);
+  });
+});
+
 test('desktop: no bottom bar, all tabs at the top', async ({ page }) => {
   await as(page, 'dm');
   await page.goto('/combat.html');

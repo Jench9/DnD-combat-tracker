@@ -4,6 +4,9 @@
 .pl-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.4px; }
 .pl-field select { padding: 7px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); font: inherit; text-transform: none; letter-spacing: 0; font-weight: 400; }
 .pl-invite .pl-field:nth-child(n+2) { flex: 1 1 200px; }
+/* Long role names ("Admin (runs the server…)") must not widen the page on phones. */
+.pl-field { min-width: 0; max-width: 100%; }
+.pl-field select { max-width: 100%; text-overflow: ellipsis; }
 .pl-checks { display: flex; flex-wrap: wrap; gap: 6px; text-transform: none; letter-spacing: 0; font-weight: 400; }
 .pl-check { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink); padding: 4px 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); cursor: pointer; }
 .pl-check:has(input:checked) { border-color: var(--good); background: rgba(47, 133, 90, 0.1); }

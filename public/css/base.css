@@ -9,7 +9,9 @@ body {
   font-family: var(--font-body);
   line-height: 1.5;
   padding: 20px 16px 80px;
-  /* Phones in landscape (viewport-fit=cover): keep clear of the notch. */
+  /* viewport-fit=cover: keep clear of the notch (landscape) and the status
+     bar (installed app). */
+  padding-top: max(20px, env(safe-area-inset-top));
   padding-left: max(16px, env(safe-area-inset-left));
   padding-right: max(16px, env(safe-area-inset-right));
 }
