@@ -172,6 +172,48 @@ test.describe('phone: pages fit, app install', () => {
   });
 });
 
+test.describe('phone: library filters stay at the top', () => {
+  test.use(PHONE);
+  test.beforeAll(async () => {
+    // A long monster list (the SRD set isn't added by default).
+    await send(Array.from({ length: 40 }, (_, i) => ['addMonster', { id: 'mobmon' + i, patch: { name: 'Mob Monster ' + i, ac: 12, maxHp: 10 } }]));
+  });
+  for (const url of ['/monsters.html', '/items.html', '/spells.html']) {
+    test(url, async ({ page }) => {
+      await as(page, 'dm');
+      await page.goto(url);
+      const filters = page.locator('.item-filters');
+      await expect(filters).toBeVisible();
+      await expect(page.locator('.item-row, .mon-card').first()).toBeVisible();
+      await page.mouse.wheel(0, 3000);
+      await expect.poll(async () => (await filters.boundingBox()).y).toBeLessThanOrEqual(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+    });
+  }
+});
+
+test.describe('landscape phone', () => {
+  test.use({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true });
+
+  test('slim bottom bar, the combat strip on one row above it', async ({ page }) => {
+    const errors = watchErrors(page);
+    await send([['clearAll', {}], ['addCharacterToCombat', { characterId: 'mobpc', init: 20 }], ['addCombatant', { name: 'Bandit', init: 5, hp: 11, maxHp: 11, ac: 12, type: 'monster' }]]);
+    await as(page, 'mobpc');
+    await page.goto('/combat.html');
+    const bar = page.locator('.phone-nav');
+    await expect(bar).toBeVisible();
+    const b = await bar.boundingBox();
+    expect(b.height).toBeLessThanOrEqual(46);
+    await expect(page.locator('.nav-tabs .nav-btn:visible')).toHaveCount(2); // 🏠 + this page
+    const strip = page.locator('#meStrip');
+    await expect(strip).toBeVisible();
+    const s = await strip.boundingBox();
+    expect(s.height).toBeLessThanOrEqual(64);
+    expect(s.y + s.height).toBeLessThanOrEqual(b.y + 1);
+    await noErrors(errors);
+  });
+});
+
 test('desktop: no bottom bar, all tabs at the top', async ({ page }) => {
   await as(page, 'dm');
   await page.goto('/combat.html');

@@ -341,18 +341,18 @@ details.ref[open] summary::before { content: "▾ "; }
 
 /* ---- phones, players: your turn + HP, fixed above the bottom bar (combat/meStrip.js) ---- */
 .me-strip { display: none; }
-@media (max-width: 600px) {
-  body.has-me-strip { padding-bottom: calc(84px + 96px + env(safe-area-inset-bottom)); }
+@media (max-width: 600px), (max-height: 500px) and (pointer: coarse) {
+  body.has-me-strip { padding-bottom: calc(var(--phone-bar-h) + 26px + 96px + env(safe-area-inset-bottom)); }
   .me-strip {
     display: flex; flex-direction: column; gap: 4px;
     position: fixed; left: 0; right: 0; z-index: 88;
-    bottom: calc(58px + env(safe-area-inset-bottom)); /* the .phone-nav height */
+    bottom: calc(var(--phone-bar-h) + env(safe-area-inset-bottom)); /* above .phone-nav */
     padding: 6px max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
     background: var(--bg-panel); border-top: 1px solid var(--line);
     box-shadow: 0 -3px 10px var(--card-shadow);
   }
   body.typing .me-strip { display: none; } /* on-screen keyboard */
-  body.typing.has-me-strip { padding-bottom: 84px; }
+  body.typing.has-me-strip { padding-bottom: calc(var(--phone-bar-h) + 26px); }
   .me-strip.my-turn { border-top: 3px solid var(--gold); background: color-mix(in srgb, var(--gold) 12%, var(--bg-panel)); }
   .me-turn { display: flex; align-items: center; gap: 8px; min-height: 30px; }
   .me-turn-text {
@@ -370,4 +370,12 @@ details.ref[open] summary::before { content: "▾ "; }
   .me-hp-val { flex: 1; min-width: 58px; text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--good); }
   .me-hp-val.mid { color: var(--gold); }
   .me-hp-val.low, .me-hp-val.down { color: var(--wax); }
+}
+/* Landscape phones: one row — turn line, HP, End turn. */
+@media (max-height: 500px) and (pointer: coarse) {
+  body.has-me-strip { padding-bottom: calc(var(--phone-bar-h) + 26px + 56px + env(safe-area-inset-bottom)); }
+  .me-strip { flex-direction: row; align-items: center; gap: 12px; padding-top: 5px; padding-bottom: 5px; }
+  .me-turn { flex: 1 1 0; min-width: 0; }
+  .me-hp { flex: none; gap: 6px; }
+  .me-hp-val { flex: none; }
 }

@@ -197,7 +197,7 @@ input#csAC[readonly] { color: var(--gold); }
 /* ---------- tabs ---------- */
 .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 16px; overflow-x: auto; }
 /* Phones: the sheet's tabs stay at the top while you scroll (editor/index.js showTab). */
-@media (max-width: 760px) { .tabs { position: sticky; top: 0; z-index: 20; background: var(--bg); margin-left: -16px; margin-right: -16px; padding: 0 8px; } }
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) { .tabs { position: sticky; top: 0; z-index: 20; background: var(--bg); margin-left: -16px; margin-right: -16px; padding: 0 8px; } }
 .tab-btn {
   background: none; color: var(--ink-soft); padding: 10px 18px; white-space: nowrap;
   font-family: var(--font-display); font-weight: 700; font-size: 13.5px; letter-spacing: 0.9px;

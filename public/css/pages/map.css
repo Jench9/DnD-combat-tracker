@@ -168,8 +168,9 @@
   left: 8px; right: 8px; bottom: 8px; top: auto; width: auto; max-height: 60vh;
 }
 /* Phones: dock above the bottom page bar (core/nav.js phoneNav). */
-@media (max-width: 760px) {
-  .has-phone-nav .token-card.docked { bottom: calc(66px + env(safe-area-inset-bottom)); max-height: min(60vh, calc(100dvh - 140px)); }
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  .has-phone-nav .token-card { max-height: calc(100dvh - var(--phone-bar-h) - 16px - env(safe-area-inset-bottom)); }
+  .has-phone-nav .token-card.docked { bottom: calc(var(--phone-bar-h) + 8px + env(safe-area-inset-bottom)); max-height: min(60vh, calc(100dvh - var(--phone-bar-h) - 82px)); }
 }
 .tc-head { display: flex; align-items: center; gap: 10px; }
 .tc-pic {
