@@ -447,6 +447,26 @@ body.is-dm .player-only { display: none !important; }
 .rt-table tbody tr:nth-child(even) td { background: rgba(127, 127, 127, 0.06); }
 .rt-table td:first-child, .rt-table th:first-child { text-align: left; }
 
+/* ---- phones: small dialogs rise from the bottom as sheets ----
+   (.spell-dlg: spells, effects, concentration, hand dice; .join-box: "Who
+   are you?" and Change password). Big forms go full screen in their page CSS. */
+@media (max-width: 600px) {
+  .spell-dlg[open] {
+    margin: auto 0 0; width: 100%; max-width: 100%; max-height: 88dvh; overflow-y: auto;
+    border-width: 1px 0 0; border-radius: 14px 14px 0 0;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    animation: sheet-up 0.18s ease-out;
+  }
+  .join-overlay { padding: 24px 0 0; }
+  .join-box {
+    margin-top: auto; max-width: none; border-radius: 14px 14px 0 0;
+    padding-bottom: calc(22px + env(safe-area-inset-bottom));
+    animation: sheet-up 0.18s ease-out;
+  }
+}
+@keyframes sheet-up { from { transform: translateY(48px); opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .spell-dlg[open], .join-box { animation: none; } }
+
 /* ---- touch screens (phones, tablets): `pointer: coarse` ---- */
 @media (pointer: coarse) {
   /* iOS zooms the page into any field under 16 px; the big sheet fields

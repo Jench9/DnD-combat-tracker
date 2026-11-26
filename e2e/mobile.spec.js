@@ -2,7 +2,7 @@
 // keeps 🏠 + the current page + the badges, and touch screens get 16 px
 // fields (no iOS zoom on focus) and ≥ 44 px tap targets.
 const { test, expect } = require('@playwright/test');
-const { as, watchErrors, send, noErrors } = require('./helpers');
+const { as, watchErrors, send, snapshot, noErrors } = require('./helpers');
 
 const PHONE = { viewport: { width: 375, height: 740 }, isMobile: true, hasTouch: true };
 
@@ -77,6 +77,61 @@ test.describe('phone', () => {
     await expect(page.locator('.phone-nav')).toBeHidden();
     await field.blur();
     await expect(page.locator('.phone-nav')).toBeVisible();
+  });
+});
+
+test.describe('phone: combat strip, sheet tabs, dialogs', () => {
+  test.use(PHONE);
+  test.beforeAll(async () => {
+    await send([
+      ['clearAll', {}],
+      ['addCharacterToCombat', { characterId: 'mobpc', init: 20 }],
+      ['addCombatant', { name: 'Bandit', init: 5, hp: 11, maxHp: 11, ac: 12, type: 'monster' }],
+    ]);
+  });
+
+  test('player: your turn + HP strip above the bar', async ({ page }) => {
+    const errors = watchErrors(page);
+    await as(page, 'mobpc');
+    await page.goto('/combat.html');
+    const strip = page.locator('#meStrip');
+    await expect(strip).toBeVisible();
+    const before = (await snapshot('state')).state.combatants.find((c) => c.characterId === 'mobpc').hp;
+    await strip.getByRole('button', { name: '1 damage' }).tap();
+    await expect(strip.locator('.me-hp-val')).toHaveText(new RegExp('^' + (before - 1) + '/'));
+    await strip.getByRole('button', { name: 'Heal 1' }).tap();
+    await expect(strip.locator('.me-hp-val')).toHaveText(new RegExp('^' + before + '/'));
+    // The strip and the bar don't cover each other.
+    const s = await strip.boundingBox();
+    const b = await page.locator('.phone-nav').boundingBox();
+    expect(s.y + s.height).toBeLessThanOrEqual(b.y + 1);
+    await noErrors(errors);
+  });
+
+  test('DM: no strip', async ({ page }) => {
+    await as(page, 'dm');
+    await page.goto('/combat.html');
+    await expect(page.locator('.row').first()).toBeVisible();
+    await expect(page.locator('#meStrip')).toHaveCount(0);
+  });
+
+  test('"Who are you?" rises from the bottom', async ({ page }) => {
+    await page.goto('/combat.html');
+    const box = page.locator('.join-box');
+    await expect(box).toBeVisible();
+    const r = await box.boundingBox();
+    expect(Math.round(r.y + r.height)).toBeGreaterThanOrEqual(740 - 1);
+  });
+
+  test('sheet tabs stay at the top while scrolling', async ({ page }) => {
+    await as(page, 'mobpc');
+    await page.goto('/characters.html');
+    const tabs = page.locator('#sheetTabs');
+    await expect(tabs).toBeVisible();
+    await page.mouse.wheel(0, 2500);
+    await expect.poll(async () => (await tabs.boundingBox()).y).toBeLessThanOrEqual(1);
+    await tabs.locator('[data-tab=notes]').tap();
+    await expect(page.locator('#tab-notes')).toBeVisible();
   });
 });
 

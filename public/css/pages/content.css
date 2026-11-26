@@ -58,3 +58,10 @@ header { display: flex; justify-content: space-between; align-items: flex-end; g
 .ct-preview-h { font-weight: 700; margin: 8px 0 2px; }
 .ct-spells-l { flex: 1 1 100%; align-items: flex-start; flex-direction: column; }
 .ct-spells { width: 100%; min-height: 48px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; }
+/* Phones: the editor takes the whole screen, like the character builder. */
+@media (max-width: 600px) {
+  .ct-dlg { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; border: 0; border-radius: 0; }
+  .ct-dlg form { max-height: 100dvh; height: 100%; }
+  .ct-dlg-head, .ct-dlg-body, .ct-dlg-btns { padding-left: 12px; padding-right: 12px; }
+  .ct-dlg-btns { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+}

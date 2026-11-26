@@ -7,7 +7,8 @@ import { setPartyData } from './party.js';
 import { setBestiary } from './bestiary.js';
 import { initAddPanels, syncAddPanels } from './addPanels.js';
 import { createPortraitLookup } from '../core/portraits.js';
-import { isDm, ownsCharacter } from '../core/identity.js';
+import { isDm, ownsCharacter, myCharacterId } from '../core/identity.js';
+import { renderMeStrip } from './meStrip.js';
 import { combatActionsFor } from '../core/combatActions.js';
 import { abilityMod, profBonusForLevel } from '../characters/rules.js';
 import { d20Penalty } from '../core/exhaustion.js';
@@ -85,6 +86,9 @@ function render() {
   const mayAdvance = isDm() || (!!controller && ownsCharacter(controller));
   $('nextTurnBtn').disabled = !mayAdvance;
   $('nextTurnBtn').title = mayAdvance ? '' : 'Only the DM (or the player whose turn it is) can end the turn';
+  // Phones: your turn + HP above the bottom bar (players only).
+  const me = myCharacterId();
+  renderMeStrip(state, { mine: !isDm() && me ? state.combatants.find((c) => c.characterId === me) : undefined, send, mayAdvance });
 }
 $('list').addEventListener('focusout', () => setTimeout(() => { if (stale) render(); }, 0));
 

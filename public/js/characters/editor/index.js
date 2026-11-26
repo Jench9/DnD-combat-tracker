@@ -21,6 +21,13 @@ function showTab(name) {
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab-pane').forEach((p) => p.classList.toggle('active', p.id === 'tab-' + name));
   if (name === 'features') featEd.resize(); // textareas can't measure while hidden
+  // Phones: the tabs stick to the top (characters.css); when they're stuck,
+  // open the new tab at its start instead of halfway down.
+  const tabs = document.getElementById('sheetTabs');
+  if (tabs && getComputedStyle(tabs).position === 'sticky' && tabs.getBoundingClientRect().top <= 1) {
+    const pane = document.getElementById('tab-' + name);
+    if (pane) window.scrollTo({ top: window.scrollY + pane.getBoundingClientRect().top - tabs.offsetHeight - 4 });
+  }
 }
 
 // Wire up the editor's static controls. Call once at startup.

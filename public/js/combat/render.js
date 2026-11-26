@@ -336,6 +336,7 @@ function renderRow(c, idx, state, ctx) {
   const down = c.health ? c.health === 'Down' : c.hp <= 0;
   row.className = 'row' + (idx === state.activeIndex ? ' active' : '') + (down ? ' down' : '')
     + (c.hidden ? ' hidden-row' : '') + (!isDm && canEdit ? ' mine' : '');
+  row.dataset.id = c.id; // the phone strip (meStrip.js) scrolls to it
 
   // Initiative is editable: fix a typo or apply a re-roll; the list re-sorts.
   const badge = document.createElement('input');
