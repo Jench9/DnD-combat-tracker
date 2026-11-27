@@ -15,7 +15,11 @@
 // HP, AC, turn, condition names) with a button for the details and actions,
 // and the board scrolls so the token stays visible above it.
 //
-//   const card = initTokenCard({ getView, lookup, isDragging, actionsFor(c), isDm() });
+// Who may change a token's HP (the DM: everyone; a player: their own) gets
+// −5 / −1 / +1 / +5 and an amount with Damage / Heal under the HP bar
+// (`adjustHp(c)` returns the function that sends `adjustHP`, or null).
+//
+//   const card = initTokenCard({ getView, lookup, isDragging, actionsFor(c), isDm(), adjustHp(c) });
 //   card.refresh()   // after every render (state changes, tokens redrawn)
 //   card.close()     // e.g. on deselect
 //   card.isOpen()
@@ -36,6 +40,44 @@ const el = (tag, cls, text) => {
   if (text !== undefined) e.textContent = text;
   return e;
 };
+
+// −5 −1 +1 +5, then an amount with Damage / Heal (Enter = damage).
+function hpControls(c, adjust) {
+  const wrap = el('div', 'tc-hp-edit');
+  const quick = el('div', 'tc-hp-quick');
+  [[-5, '5 damage'], [-1, '1 damage'], [1, 'Heal 1'], [5, 'Heal 5']].forEach(([d, label]) => {
+    const b = el('button', 'tc-hp-btn', d < 0 ? '−' + -d : '+' + d);
+    b.type = 'button';
+    b.title = label;
+    b.setAttribute('aria-label', `${label} (${c.name})`);
+    b.addEventListener('click', () => adjust(d));
+    quick.appendChild(b);
+  });
+  const amt = el('div', 'tc-hp-amt');
+  const input = el('input');
+  input.type = 'number';
+  input.min = '1';
+  input.max = '999';
+  input.inputMode = 'numeric';
+  input.placeholder = 'Amount';
+  input.setAttribute('aria-label', `Damage or healing for ${c.name}`);
+  const apply = (sign) => {
+    const n = parseInt(input.value, 10);
+    if (!(n > 0)) { input.focus(); return; }
+    input.value = '';
+    adjust(sign * Math.min(n, 999));
+  };
+  const dmg = el('button', 'btn small tc-dmg', 'Damage');
+  dmg.type = 'button';
+  dmg.addEventListener('click', () => apply(-1));
+  const heal = el('button', 'btn secondary small tc-heal', 'Heal');
+  heal.type = 'button';
+  heal.addEventListener('click', () => apply(1));
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); apply(-1); } });
+  amt.append(input, dmg, heal);
+  wrap.append(quick, amt);
+  return wrap;
+}
 
 function stat(label, value) {
   const s = el('div', 'tc-stat');
@@ -76,7 +118,7 @@ function chips(c) {
 
 // `docked`: phone layout, with a More / Less button and ✕ in the header;
 // `short`: only the essentials (docked and not expanded).
-function buildCard(c, { view, lookup, actions, docked, short, onMore, onClose }) {
+function buildCard(c, { view, lookup, actions, adjust, docked, short, onMore, onClose }) {
   const { combat, map } = view;
   const byId = new Map(combat.combatants.map((x) => [x.id, x]));
   const card = el('div', 'token-card-body');
@@ -144,6 +186,7 @@ function buildCard(c, { view, lookup, actions, docked, short, onMore, onClose })
   }
   if (c.ac !== undefined) stats.appendChild(stat('AC', c.ac));
   card.appendChild(stats);
+  if (adjust && !c.health) card.appendChild(hpControls(c, adjust));
 
   if (c.type === 'pc' && !c.health && c.hp <= 0) {
     card.appendChild(el('div', 'tc-line warn', `Death saves: ${c.deathSuccess || 0} ✓ · ${c.deathFail || 0} ✗`));
@@ -205,7 +248,7 @@ function buildCard(c, { view, lookup, actions, docked, short, onMore, onClose })
   return card;
 }
 
-export function initTokenCard({ getView, lookup, isDragging, actionsFor = () => null, isDm = () => false }) {
+export function initTokenCard({ getView, lookup, isDragging, actionsFor = () => null, isDm = () => false, adjustHp = () => null }) {
   const box = el('div', 'token-card');
   box.hidden = true;
   document.body.appendChild(box);
@@ -282,18 +325,22 @@ export function initTokenCard({ getView, lookup, isDragging, actionsFor = () => 
     }
     if (shownId !== id && expandedId !== id) expandedId = null; // a new card opens short
     const isDocked = docked();
-    // Don't rebuild under someone choosing a spell slot or typing.
-    const busy = box.contains(document.activeElement) && ['SELECT', 'INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
+    // Don't rebuild under someone choosing a spell slot or typing (an
+    // empty HP amount is fine: it was just applied; the cursor comes back).
+    const focused = box.contains(document.activeElement) ? document.activeElement : null;
+    const inAmount = !!focused?.matches('.tc-hp-amt input');
+    const busy = focused && ['SELECT', 'INPUT', 'TEXTAREA'].includes(focused.tagName) && !(inAmount && !focused.value);
     const isNew = shownId !== id;
     if (!(busy && !isNew)) {
       const scroll = isNew ? 0 : box.scrollTop;
       box.replaceChildren(buildCard(c, {
-        view, lookup, actions: actionsFill(c, id), docked: isDocked, short: isDocked && expandedId !== id,
+        view, lookup, actions: actionsFill(c, id), adjust: adjustHp(c), docked: isDocked, short: isDocked && expandedId !== id,
         onMore: () => { expandedId = expandedId === id ? null : id; pinnedId = id; refresh({ reveal: true }); },
         onClose: close,
       }));
       box.classList.toggle('with-actions', !!box.querySelector('.tc-actions'));
       box.scrollTop = scroll;
+      if (inAmount && !isNew) box.querySelector('.tc-hp-amt input')?.focus({ preventScroll: true });
     }
     shownId = id;
     box.hidden = false;

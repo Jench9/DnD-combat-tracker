@@ -287,6 +287,41 @@ test.describe('phone: battle map', () => {
     await noErrors(errors);
   });
 
+  test('DM: change a monster\'s HP from its card', async ({ page }) => {
+    const errors = watchErrors(page);
+    await as(page, 'dm');
+    await page.goto('/map.html');
+    await page.locator('#fullBtn').tap();
+    await page.locator(`#board .token[data-id="${ids.Bandit}"]`).tap();
+    const card = page.locator('.token-card');
+    const hp = card.locator('.tc-hp-text');
+    await expect(hp).toHaveText(/^11 \/ 11 HP/);
+    await card.getByRole('button', { name: '5 damage (Bandit)' }).tap();
+    await expect(hp).toHaveText(/^6 \/ 11 HP/);
+    await card.getByLabel('Damage or healing for Bandit').fill('4');
+    await card.getByRole('button', { name: 'Damage', exact: true }).tap();
+    await expect(hp).toHaveText(/^2 \/ 11 HP/);
+    await card.locator('.tc-hp-amt input').fill('3');
+    await card.getByRole('button', { name: 'Heal', exact: true }).tap();
+    await expect(hp).toHaveText(/^5 \/ 11 HP/);
+    await card.locator('.tc-hp-amt input').fill('2');
+    await card.locator('.tc-hp-amt input').press('Enter'); // Enter = damage
+    await expect(hp).toHaveText(/^3 \/ 11 HP/);
+    expect((await snapshot('state')).state.combatants.find((c) => c.id === ids.Bandit).hp).toBe(3);
+    await noErrors(errors);
+  });
+
+  test('player: HP buttons on their own token only', async ({ page }) => {
+    await as(page, 'mobpc');
+    await page.goto('/map.html');
+    await page.locator(`#board .token[data-id="${ids.Bandit}"]`).tap();
+    await expect(page.locator('.token-card .tc-name')).toHaveText('Bandit');
+    await expect(page.locator('.token-card .tc-hp-edit')).toHaveCount(0);
+    await page.locator('.token-card').getByRole('button', { name: 'Close' }).tap();
+    await page.locator(`#board .token[data-id="${ids.Pocket}"]`).tap();
+    await expect(page.locator('.token-card .tc-hp-edit')).toBeVisible();
+  });
+
   test('player: your turn + HP strip on the map, the board ends above it', async ({ page }) => {
     const errors = watchErrors(page);
     await as(page, 'mobpc');

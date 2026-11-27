@@ -50,6 +50,8 @@ const card = initTokenCard({
   actionsFor: (c) => (canMove(c) ? combatActionsFor(c, {
     characters, items, spells, state: view.combat, send, isDm: isDm(), ownsCharacter, monsterFor: pics.monsterFor,
   }) : null),
+  // HP buttons: the DM for every token, a player for their own (same rule as moving).
+  adjustHp: (c) => (canMove(c) ? (delta) => send('adjustHP', { id: c.id, delta }) : null),
 });
 
 let zoom = null; // set up below, once the board exists
