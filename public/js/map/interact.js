@@ -6,9 +6,28 @@
 //
 // A big token (Large and up) keeps the cell you grabbed it by under the
 // pointer, so its top-left corner lands `grab` cells up/left of the drop.
+//
+// Dragging a token that's already on the map shows how far it goes
+// ("6 sq · 30 ft") over the token. 2024 rules: every square is 5 ft,
+// diagonals too, so it's the larger of the two steps.
 import { canPlace, tokenSize } from './render.js';
 
 const DRAG_THRESHOLD = 5; // px of movement before a press becomes a drag
+const FEET_PER_SQUARE = 5;
+
+export const squaresBetween = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+
+// The distance label on the dragged token: `to` is where its top-left would
+// land, or null (over the tray / nowhere).
+function showDistance(to, ok) {
+  const label = drag.dist;
+  if (!label) return;
+  label.hidden = !to;
+  if (!to) return;
+  const sq = squaresBetween(drag.from, to);
+  label.textContent = `${sq} sq · ${sq * FEET_PER_SQUARE} ft`;
+  label.classList.toggle('bad', !ok); // can't land there
+}
 
 let drag = null; // { id, el, startX, startY, ghost, hover: [cells], grab: { x, y, px, py } }
 
@@ -83,7 +102,8 @@ export function initInteract({ getView, place, remove, select }) {
       y: Math.max(0, Math.min(size - 1, Math.floor(py / step))),
       px: px / r.width, py: py / r.height, // where in the token, for the ghost
     };
-    drag = { id: tok.dataset.id, el: tok, startX: e.clientX, startY: e.clientY, ghost: null, hover: [], grab, size };
+    const from = tok.closest('.cell') ? getView().map.positions[tok.dataset.id] : null; // null: from the tray
+    drag = { id: tok.dataset.id, el: tok, startX: e.clientX, startY: e.clientY, ghost: null, hover: [], grab, size, from, touch: e.pointerType !== 'mouse' };
     tok.setPointerCapture(e.pointerId);
   });
 
@@ -96,6 +116,12 @@ export function initInteract({ getView, place, remove, select }) {
       drag.ghost.classList.add('ghost');
       drag.ghost.style.width = r.width + 'px';
       drag.ghost.style.height = r.height + 'px';
+      if (drag.from) {
+        drag.dist = document.createElement('span');
+        drag.dist.className = 'drag-dist' + (drag.touch ? ' touch' : ''); // higher above a finger
+        drag.dist.hidden = true;
+        drag.ghost.appendChild(drag.dist);
+      }
       document.body.appendChild(drag.ghost);
       drag.el.classList.add('dragging');
     }
@@ -107,8 +133,13 @@ export function initInteract({ getView, place, remove, select }) {
       const a = anchor(t.cell);
       const { map, combat } = getView();
       const size = tokenSize(combatant(drag.id));
-      setHover(canPlace(map, combat.combatants, drag.id, a.x, a.y) ? footprint(a.x, a.y, size) : []);
-    } else setHover(t ? [t.el] : []);
+      const ok = canPlace(map, combat.combatants, drag.id, a.x, a.y);
+      setHover(ok ? footprint(a.x, a.y, size) : []);
+      showDistance(a, ok);
+    } else {
+      setHover(t ? [t.el] : []);
+      showDistance(null);
+    }
   });
 
   document.addEventListener('pointerup', (e) => {

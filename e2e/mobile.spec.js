@@ -286,6 +286,28 @@ test.describe('phone: battle map', () => {
     await expect(sel).toBeHidden();
     await noErrors(errors);
   });
+
+  test('player: your turn + HP strip on the map, the board ends above it', async ({ page }) => {
+    const errors = watchErrors(page);
+    await as(page, 'mobpc');
+    await page.goto('/map.html');
+    const strip = page.locator('#meStrip');
+    await expect(strip).toBeVisible();
+    await expect(strip.locator('.me-turn-text')).toHaveText(/Your turn!/);
+    await strip.getByRole('button', { name: /End turn/ }).tap();
+    await expect(strip.locator('.me-turn-text')).toHaveText(/Bandit's turn/);
+    await page.locator('#fullBtn').tap();
+    const st = await strip.boundingBox();
+    const board = await page.locator('#boardScroll').boundingBox();
+    expect(Math.abs(board.y + board.height - st.y)).toBeLessThanOrEqual(1);
+    // Tapping the turn line brings your token into view.
+    await page.locator('#boardScroll').evaluate((n) => { n.scrollLeft = 2000; n.scrollTop = 2000; });
+    const tok = page.locator(`#board .token[data-id="${ids.Pocket}"]`);
+    await expect(tok).not.toBeInViewport();
+    await strip.locator('.me-turn-text').tap();
+    await expect(tok).toBeInViewport();
+    await noErrors(errors);
+  });
 });
 
 test.describe('landscape phone', () => {
@@ -308,6 +330,28 @@ test.describe('landscape phone', () => {
     expect(s.y + s.height).toBeLessThanOrEqual(b.y + 1);
     await noErrors(errors);
   });
+});
+
+test('map: dragging a token shows how far it goes', async ({ page }) => {
+  const errors = watchErrors(page);
+  await send([['clearAll', {}], ['clearMap', {}], ['setMapSize', { cols: 20, rows: 15 }],
+    ['addCombatant', { name: 'Runner', init: 5, hp: 11, maxHp: 11, ac: 12, type: 'monster' }]]);
+  const id = (await snapshot('state')).state.combatants[0].id;
+  await send([['placeToken', { id, x: 2, y: 2 }]]);
+  await as(page, 'dm');
+  await page.goto('/map.html');
+  const center = async (sel) => { const b = await page.locator(sel).boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
+  await page.locator('#board').scrollIntoViewIfNeeded();
+  await page.mouse.move(...await center(`#board .token[data-id="${id}"]`));
+  await page.mouse.down();
+  await page.mouse.move(...await center('#board .cell[data-x="5"][data-y="4"]'), { steps: 6 });
+  await expect(page.locator('.token.ghost .drag-dist')).toHaveText('3 sq · 15 ft'); // diagonals count 5 ft
+  await page.mouse.move(...await center('#board .cell[data-x="2"][data-y="9"]'), { steps: 6 });
+  await expect(page.locator('.token.ghost .drag-dist')).toHaveText('7 sq · 35 ft');
+  await page.mouse.up();
+  await expect(page.locator('.token.ghost')).toHaveCount(0);
+  await expect.poll(async () => (await snapshot('mapState')).map.positions[id]).toEqual({ x: 2, y: 9 });
+  await noErrors(errors);
 });
 
 test('desktop: no bottom bar, all tabs at the top', async ({ page }) => {

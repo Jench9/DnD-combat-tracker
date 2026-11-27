@@ -1,9 +1,12 @@
 // Phones, players: a strip fixed above the bottom bar with whose turn it is
 // and your own character's HP, so you don't scroll the initiative list to
-// find them. Tap the turn line to jump to your row (conditions, actions…).
-// CSS shows it at ≤ 600 px only (combat.css .me-strip).
+// find them. Tap the turn line to jump to your row (conditions, actions…),
+// or on the Battle Map to your token. CSS shows it on phones only
+// (components.css .me-strip).
 //
-// `mine`: your combatant (or undefined); `mayAdvance`: you may end the turn.
+// `mine`: your combatant (or undefined); `mayAdvance`: you may end the turn;
+// `onFind`: what tapping the turn line does (default: scroll to your row in
+// the Combat page's #list), `findTitle` its tooltip.
 
 function hpButton(label, delta, title, send, id) {
   const b = document.createElement('button');
@@ -26,7 +29,7 @@ function turnText(state, myIdx) {
   return { text: `${active.name}'s turn · ` + (gap === 1 ? "you're next" : `${gap} turns until you`), mine: false };
 }
 
-export function renderMeStrip(state, { mine, send, mayAdvance }) {
+export function renderMeStrip(state, { mine, send, mayAdvance, onFind, findTitle = 'Show your row' }) {
   let strip = document.getElementById('meStrip');
   if (!mine) {
     strip?.remove();
@@ -52,11 +55,11 @@ export function renderMeStrip(state, { mine, send, mayAdvance }) {
   const txt = document.createElement('button');
   txt.type = 'button';
   txt.className = 'me-turn-text';
-  txt.title = 'Show your row';
+  txt.title = findTitle;
   txt.textContent = (turn.mine ? '▶ ' : '') + turn.text + ` · round ${state.round}`;
-  txt.addEventListener('click', () => {
+  txt.addEventListener('click', onFind || (() => {
     document.querySelector(`#list .row[data-id="${CSS.escape(mine.id)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  });
+  }));
   top.appendChild(txt);
   if (turn.mine && mayAdvance) {
     const end = document.createElement('button');

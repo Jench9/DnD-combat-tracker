@@ -8,7 +8,8 @@ import { initZoom } from './zoom.js';
 import { initTokenCard } from './card.js';
 import { combatActionsFor } from '../core/combatActions.js';
 import { createPortraitLookup } from '../core/portraits.js';
-import { isDm, ownsCharacter, identityHeaders } from '../core/identity.js';
+import { isDm, ownsCharacter, identityHeaders, myCharacterId } from '../core/identity.js';
+import { renderMeStrip } from '../combat/meStrip.js';
 import { setPartyData } from '../combat/party.js';
 import { setBestiary } from '../combat/bestiary.js';
 import { initAddPanels, syncAddPanels } from '../combat/addPanels.js';
@@ -60,7 +61,12 @@ function render() {
   if (view.selectedId && !view.combat.combatants.some((c) => c.id === view.selectedId)) view.selectedId = null;
   renderMap({ ...view, portraitFor, glyphFor: pics.glyphFor, sheetFor: pics.characterFor, canMove });
   const active = view.combat.combatants[view.combat.activeIndex];
-  $('nextTurnBtn').disabled = $('fbNextBtn').disabled = !(active ? canMove(active) : isDm());
+  const mayAdvance = active ? canMove(active) : isDm();
+  $('nextTurnBtn').disabled = $('fbNextBtn').disabled = !mayAdvance;
+  // Phones, players: your turn + HP above the page bar, as on the Combat page.
+  const me = myCharacterId();
+  const mine = !isDm() && me ? view.combat.combatants.find((c) => c.characterId === me) : undefined;
+  renderMeStrip(view.combat, { mine, send, mayAdvance, onFind: () => findToken(mine.id), findTitle: 'Show your token' });
   $('fbTurn').textContent = `R${view.combat.round} · ` + $('turnName').textContent;
   $('fbTurn').classList.toggle('mine', !!(active && !isDm() && canMove(active)));
   const off = view.combat.combatants.filter((c) => !view.map.positions[c.id]).length;
@@ -73,6 +79,14 @@ function render() {
   }
   card.refresh();
   zoom?.refresh();
+}
+
+// Bring a token into view: centred on the board, or the tray if it's not on the map.
+function findToken(id) {
+  const tok = document.querySelector(`#board .token[data-id="${CSS.escape(id)}"]`);
+  if (tok) { tok.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' }); return; }
+  if (document.body.classList.contains('map-full')) setTrayOpen(true);
+  else $('trayPanel').scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 // The selected token's bar (fixed at the bottom): what a tap on a cell does,
