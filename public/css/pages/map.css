@@ -41,7 +41,9 @@
 
 /* ---- board ---- */
 .board-scroll { overflow-x: auto; padding-bottom: 6px; }
-.zoom-tools { display: flex; justify-content: flex-end; gap: 4px; margin-bottom: 6px; }
+.map-bar { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-bottom: 6px; }
+.map-bar .full-only { display: none; }
+.zoom-tools { display: flex; gap: 4px; }
 .zoom-tools .btn { min-width: 38px; font-variant-numeric: tabular-nums; }
 .board {
   --cell: 40px;
@@ -68,6 +70,11 @@
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display); font-size: 11px; color: var(--ink-soft);
 }
+/* The letters and numbers stay at the edges while the board scrolls
+   (sideways always; up and down in full screen, where the board scrolls). */
+.board .lbl.col, .board .lbl.corner { position: sticky; top: 0; z-index: 4; background: var(--bg-panel); }
+.board .lbl.row { position: sticky; left: 0; z-index: 4; background: var(--bg-panel); }
+.board .lbl.corner { left: 0; z-index: 5; }
 .cell {
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -165,13 +172,28 @@
 }
 .token-card.with-actions { width: 360px; }
 .token-card.docked {
-  left: 8px; right: 8px; bottom: 8px; top: auto; width: auto; max-height: 60vh;
+  left: 8px; right: 8px; top: auto; width: auto;
+  bottom: calc(var(--phone-bar-h) + var(--selbar-space, 0px) + 8px + env(safe-area-inset-bottom));
+  max-height: min(60vh, calc(100dvh - var(--phone-bar-h) - var(--selbar-space, 0px) - 82px));
 }
-/* Phones: dock above the bottom page bar (core/nav.js phoneNav). */
+/* Phones: keep clear of the bottom page bar (core/nav.js phoneNav). */
 @media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
-  .has-phone-nav .token-card { max-height: calc(100dvh - var(--phone-bar-h) - 16px - env(safe-area-inset-bottom)); }
-  .has-phone-nav .token-card.docked { bottom: calc(var(--phone-bar-h) + 8px + env(safe-area-inset-bottom)); max-height: min(60vh, calc(100dvh - var(--phone-bar-h) - 82px)); }
+  .has-phone-nav .token-card:not(.docked) { max-height: calc(100dvh - var(--phone-bar-h) - 16px - env(safe-area-inset-bottom)); }
 }
+/* Docked: the header gets More / Less and ✕; room below the board so a
+   token near the bottom can scroll up out from under the card. */
+.token-card.docked .tc-head { align-items: flex-start; }
+.token-card.docked .tc-title { flex: 1; }
+.tc-more { flex-shrink: 0; }
+.tc-close {
+  flex-shrink: 0; position: relative; width: 28px; height: 28px; margin: -4px -6px 0 0;
+  border: 0; border-radius: 50%; background: none; color: var(--ink-soft); font-size: 16px; cursor: pointer;
+}
+.tc-close:hover { background: var(--line); color: var(--ink); }
+@media (pointer: coarse) { .tc-close::after { content: ''; position: absolute; inset: -8px; } }
+.tc-chips { font-size: 12.5px; margin-top: 2px; }
+body.tc-docked:not(.map-full) { padding-bottom: 50dvh; }
+body.tc-docked.map-full .board-scroll { padding-bottom: 50dvh; }
 .tc-head { display: flex; align-items: center; gap: 10px; }
 .tc-pic {
   width: 42px; height: 42px; flex-shrink: 0; border-radius: 50%; overflow: hidden;
@@ -222,3 +244,70 @@
   letter-spacing: 0.5px; text-transform: uppercase; color: var(--good);
 }
 .tc-actions .actions-body { margin-top: 4px; }
+
+/* ---- the selected token's bar (map/main.js renderSelBar) ---- */
+body.has-selbar { --selbar-space: 60px; }
+.sel-bar {
+  position: fixed; z-index: 70; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--phone-bar-h) + 8px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 6px; max-width: calc(100vw - 16px); box-sizing: border-box;
+  padding: 6px 6px 6px 12px; border: 1px solid var(--line); border-radius: 26px;
+  background: var(--bg-panel); color: var(--ink); box-shadow: 0 6px 18px var(--card-shadow);
+}
+.sel-text { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; line-height: 1.2; }
+.sel-text b, .sel-text small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sel-text b { font-size: 13.5px; }
+.sel-text small { font-size: 11.5px; color: var(--ink-soft); }
+.sel-bar .btn { flex-shrink: 0; white-space: nowrap; }
+.sel-bar .size-field { flex-shrink: 1; min-width: 0; }
+.sel-bar select {
+  min-width: 0; max-width: 150px; padding: 5px 4px; border: 1px solid var(--line); border-radius: 4px;
+  background: var(--bg); color: var(--ink); font: inherit;
+}
+.sel-x { min-width: 38px; border-radius: 50%; }
+@media (max-width: 600px) {
+  .sel-bar { left: 8px; right: 8px; transform: none; }
+  .sel-bar .sel-lbl { display: none; }
+  .sel-bar select { max-width: 96px; }
+}
+
+/* ---- full screen (map/main.js setFull): only the board, between a slim
+   bar at the top and the phone's page bar; the tray opens as a drawer. ---- */
+body.map-full { overflow: hidden; --mapbar-h: 48px; }
+@media (pointer: coarse) { body.map-full { --mapbar-h: 56px; } }
+body.map-full .map-bar {
+  position: fixed; z-index: 60; left: 0; right: 0; top: 0; margin: 0; box-sizing: border-box;
+  height: calc(var(--mapbar-h) + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+  background: var(--bg-panel); border-bottom: 1px solid var(--line);
+}
+body.map-full .map-bar .full-only { display: inline-flex; }
+body.map-full #fbNextBtn:disabled { display: none; }
+.mb-turn {
+  flex: 1 1 auto; min-width: 0; align-items: center; margin-right: auto;
+  font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--gold);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+body.map-full .map-bar .mb-turn { display: block; }
+.mb-turn.mine { color: var(--good); }
+/* Zoom: a column at the board's top-right corner. */
+body.map-full .zoom-tools {
+  position: fixed; z-index: 60; flex-direction: column;
+  top: calc(var(--mapbar-h) + env(safe-area-inset-top) + 28px); right: max(8px, env(safe-area-inset-right));
+}
+body.map-full .zoom-tools .btn { background: var(--bg-panel); box-shadow: 0 2px 8px var(--card-shadow); }
+body.map-full .board-scroll {
+  position: fixed; z-index: 50; left: 0; right: 0; margin: 0;
+  top: calc(var(--mapbar-h) + env(safe-area-inset-top));
+  bottom: calc(var(--phone-bar-h) + env(safe-area-inset-bottom));
+  overflow: auto; overscroll-behavior: contain; background: var(--bg);
+  padding: 0 0 0 env(safe-area-inset-left);
+}
+body.map-full .board { border-radius: 0; border-top: 0; border-left: 0; }
+body.map-full .tray-panel { display: none; }
+body.map-full.map-tray-open .tray-panel {
+  display: block; position: fixed; z-index: 75; left: 0; right: 0; margin: 0;
+  bottom: calc(var(--phone-bar-h) + env(safe-area-inset-bottom));
+  max-height: 55dvh; overflow-y: auto; overscroll-behavior: contain;
+  border-radius: 12px 12px 0 0; box-shadow: 0 -6px 24px var(--card-shadow);
+}

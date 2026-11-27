@@ -192,6 +192,102 @@ test.describe('phone: library filters stay at the top', () => {
   }
 });
 
+test.describe('phone: battle map', () => {
+  test.use(PHONE);
+  let ids;
+  test.beforeEach(async () => {
+    await send([['clearAll', {}], ['clearMap', {}], ['setMapSize', { cols: 20, rows: 15 }],
+      ['addCharacterToCombat', { characterId: 'mobpc', init: 20 }],
+      ['addCombatant', { name: 'Bandit', init: 5, hp: 11, maxHp: 11, ac: 12, type: 'monster' }],
+      ['addCombatant', { name: 'Wolf', init: 3, hp: 11, maxHp: 11, ac: 13, type: 'monster' }]]);
+    const cs = (await snapshot('state')).state.combatants;
+    ids = Object.fromEntries(cs.map((c) => [c.name, c.id]));
+    await send([['placeToken', { id: ids.Pocket, x: 2, y: 2 }], ['placeToken', { id: ids.Bandit, x: 15, y: 12 }]]);
+  });
+
+  test('full screen: the board between the bars, labels stay, Esc leaves, remembered', async ({ page }) => {
+    const errors = watchErrors(page);
+    await as(page, 'dm');
+    await page.goto('/map.html');
+    await page.locator('#fullBtn').tap();
+    await expect(page.locator('body')).toHaveClass(/map-full/);
+    const bar = await page.locator('#mapBar').boundingBox();
+    const scroller = page.locator('#boardScroll');
+    const s = await scroller.boundingBox();
+    const nav = await page.locator('.phone-nav').boundingBox();
+    expect(Math.abs(s.y - (bar.y + bar.height))).toBeLessThanOrEqual(1);
+    expect(Math.abs(s.y + s.height - nav.y)).toBeLessThanOrEqual(1);
+    expect(s.width).toBe(375);
+    // The board scrolls inside; the letters and numbers stay at the edges.
+    await scroller.evaluate((n) => { n.scrollTop = 200; n.scrollLeft = 200; });
+    const colA = await page.locator('#board .lbl.col').first().boundingBox();
+    const row1 = await page.locator('#board .lbl.row').first().boundingBox();
+    expect(Math.abs(colA.y - s.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(row1.x - s.x)).toBeLessThanOrEqual(1);
+    await expect(page.locator('#fbTurn')).toHaveText(/R1 · Pocket's turn/);
+
+    await page.reload();
+    await expect(page.locator('body')).toHaveClass(/map-full/);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('body')).not.toHaveClass(/map-full/);
+    await expect(page.locator('#fullBtn')).toHaveText(/Full screen/);
+    await noErrors(errors);
+  });
+
+  test('a short card first, details and actions on request', async ({ page }) => {
+    const errors = watchErrors(page);
+    await as(page, 'mobpc');
+    await page.goto('/map.html');
+    await page.locator(`#board .token[data-id="${ids.Pocket}"]`).tap();
+    const card = page.locator('.token-card');
+    await expect(card).toBeVisible();
+    await expect(card.locator('.tc-name')).toHaveText('Pocket');
+    await expect(card.locator('.tc-actions')).toHaveCount(0);
+    await card.getByRole('button', { name: /Actions/ }).tap();
+    await expect(card.locator('.tc-actions')).toBeVisible();
+    await expect(card.getByRole('button', { name: /Less/ })).toHaveAttribute('aria-expanded', 'true');
+    await card.getByRole('button', { name: 'Close' }).tap();
+    await expect(card).toBeHidden();
+    await noErrors(errors);
+  });
+
+  test('the token bar: tap a cell to move, back to the tray, deselect', async ({ page }) => {
+    const errors = watchErrors(page);
+    await as(page, 'dm');
+    await page.goto('/map.html');
+    await page.locator('#fullBtn').tap();
+    await page.locator(`#board .token[data-id="${ids.Pocket}"]`).tap();
+    const sel = page.locator('#selBar');
+    await expect(sel).toBeVisible();
+    await expect(sel).toContainText('Pocket · C3');
+    // The card sits above the bar, the bar above the page bar.
+    const c = await page.locator('.token-card').boundingBox();
+    const b = await sel.boundingBox();
+    const nav = await page.locator('.phone-nav').boundingBox();
+    expect(c.y + c.height).toBeLessThanOrEqual(b.y + 1);
+    expect(b.y + b.height).toBeLessThanOrEqual(nav.y + 1);
+
+    await page.locator('#board .cell[data-x="4"][data-y="2"]').tap();
+    await expect.poll(async () => (await snapshot('mapState')).map.positions[ids.Pocket]).toEqual({ x: 4, y: 2 });
+    await expect(sel).toContainText('Pocket · E3');
+    await sel.getByRole('button', { name: /Tray/ }).tap();
+    await expect.poll(async () => (await snapshot('mapState')).map.positions[ids.Pocket]).toBeUndefined();
+    await expect(sel).toBeHidden();
+
+    // From the drawer: picking a token closes it, then a tap places it.
+    await page.locator('#trayBtn').tap();
+    await expect(page.locator('#trayPanel')).toBeVisible();
+    await page.locator(`#tray .token[data-id="${ids.Wolf}"]`).tap();
+    await expect(page.locator('#trayPanel')).toBeHidden();
+    await expect(sel).toContainText('Tap a cell to place');
+    await page.locator('#board .cell[data-x="1"][data-y="1"]').tap();
+    await expect.poll(async () => (await snapshot('mapState')).map.positions[ids.Wolf]).toEqual({ x: 1, y: 1 });
+    await sel.getByRole('button', { name: 'Deselect' }).tap();
+    await expect(sel).toBeHidden();
+    await noErrors(errors);
+  });
+});
+
 test.describe('landscape phone', () => {
   test.use({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true });
 

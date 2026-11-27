@@ -11,8 +11,14 @@
 // It only uses what this browser already received — the server filters
 // what players get, so nothing secret can show up here.
 //
+// Phones (< 600 px) get it docked along the bottom, short at first (name,
+// HP, AC, turn, condition names) with a button for the details and actions,
+// and the board scrolls so the token stays visible above it.
+//
 //   const card = initTokenCard({ getView, lookup, isDragging, actionsFor(c), isDm() });
 //   card.refresh()   // after every render (state changes, tokens redrawn)
+//   card.close()     // e.g. on deselect
+//   card.isOpen()
 import { CONCENTRATION_ICON, conditionIcon, effectIcon } from '../core/effects.js';
 import { conditionDescription } from '../combat/conditions.js';
 import { abilityMod, fmtMod, profBonusForLevel } from '../characters/rules.js';
@@ -59,7 +65,18 @@ function sheetLines(ch) {
   return lines;
 }
 
-function buildCard(c, { view, lookup, actions }) {
+// Condition / effect names in one line, for the short card.
+function chips(c) {
+  const names = [];
+  if (c.concentration) names.push(CONCENTRATION_ICON + ' ' + c.concentration);
+  (c.conditions || []).forEach((n) => names.push(conditionIcon(n) + ' ' + n));
+  (c.effects || []).forEach((e) => names.push(effectIcon(e.name) + ' ' + e.name));
+  return names.length ? el('div', 'tc-chips', names.join(' · ')) : null;
+}
+
+// `docked`: phone layout, with a More / Less button and ✕ in the header;
+// `short`: only the essentials (docked and not expanded).
+function buildCard(c, { view, lookup, actions, docked, short, onMore, onClose }) {
   const { combat, map } = view;
   const byId = new Map(combat.combatants.map((x) => [x.id, x]));
   const card = el('div', 'token-card-body');
@@ -90,6 +107,18 @@ function buildCard(c, { view, lookup, actions }) {
   const sizeName = size > 1 && !kind.includes(SIZE_NAMES[size]) ? SIZE_NAMES[size] : ''; // stat blocks already say it
   title.appendChild(el('div', 'tc-sub', [kind, sizeName, where].filter(Boolean).join(' · ')));
   head.append(pic, title);
+  if (docked) {
+    const more = el('button', 'btn secondary small tc-more', short ? (actions ? 'Actions ▾' : 'Details ▾') : 'Less ▴');
+    more.type = 'button';
+    more.setAttribute('aria-expanded', String(!short));
+    more.addEventListener('click', onMore);
+    const x = el('button', 'tc-close', '✕');
+    x.type = 'button';
+    x.setAttribute('aria-label', 'Close');
+    x.title = 'Close';
+    x.addEventListener('click', onClose);
+    head.append(more, x);
+  }
   card.appendChild(head);
 
   // Turn / initiative.
@@ -118,6 +147,11 @@ function buildCard(c, { view, lookup, actions }) {
 
   if (c.type === 'pc' && !c.health && c.hp <= 0) {
     card.appendChild(el('div', 'tc-line warn', `Death saves: ${c.deathSuccess || 0} ✓ · ${c.deathFail || 0} ✗`));
+  }
+  if (short) {
+    const line = chips(c);
+    if (line) card.appendChild(line);
+    return card;
   }
 
   // Sheet numbers, Heroic Inspiration and exhaustion.
@@ -181,12 +215,14 @@ export function initTokenCard({ getView, lookup, isDragging, actionsFor = () => 
   let shownId = null;
   let timer = null;
   let lastPointer = 'mouse';
+  let lastPress = 0; // time of the last pointerdown
+  let expandedId = null; // phones: the card showing its details and actions
 
   const tokenEl = (id) => document.querySelector('#board .token[data-id="' + id + '"], #tray .token[data-id="' + id + '"]');
 
   function place(tok) {
     const r = tok.getBoundingClientRect();
-    if (window.innerWidth < 600) { // phones: a sheet along the bottom
+    if (docked()) { // phones: a sheet along the bottom
       box.classList.add('docked');
       box.style.left = box.style.top = '';
       return;
@@ -202,7 +238,9 @@ export function initTokenCard({ getView, lookup, isDragging, actionsFor = () => 
     // Keep clear of the phone bottom bar when it shows (600–760 px).
     const bar = document.querySelector('.phone-nav');
     const floor = bar && bar.getClientRects().length ? bar.getBoundingClientRect().top : window.innerHeight;
-    top = Math.max(8, Math.min(top, floor - h - 8));
+    // Full screen: below the bar at the top (map.css body.map-full).
+    const ceil = document.body.classList.contains('map-full') ? document.getElementById('mapBar').getBoundingClientRect().bottom + 8 : 8;
+    top = Math.max(ceil, Math.min(top, floor - h - 8));
     box.style.left = left + 'px';
     box.style.top = top + 'px';
   }
@@ -215,28 +253,59 @@ export function initTokenCard({ getView, lookup, isDragging, actionsFor = () => 
     return isDm() && pinnedId !== id ? null : fill;
   }
 
-  function refresh() {
+  const docked = () => window.innerWidth < 600;
+
+  function hide() {
+    box.hidden = true;
+    shownId = null;
+    document.body.classList.remove('tc-docked');
+  }
+
+  // Docked card: scroll the board (full screen) or the page so the token
+  // isn't hidden under the card.
+  function keepVisible(tok) {
+    const over = tok.getBoundingClientRect().bottom + 8 - box.getBoundingClientRect().top;
+    if (over <= 0) return;
+    const scroller = document.body.classList.contains('map-full') ? tok.closest('.board-scroll') : null;
+    (scroller || window).scrollBy({ top: over, behavior: 'smooth' });
+  }
+
+  function refresh({ reveal = false } = {}) {
     const id = isDragging() ? null : (hoverId || pinnedId);
     const view = getView();
     const c = id && view.combat.combatants.find((x) => x.id === id);
     const tok = c && tokenEl(id);
     if (!c || !tok) {
-      box.hidden = true;
-      shownId = null;
+      hide();
       if (id && !c) { hoverId = hoverId === id ? null : hoverId; pinnedId = pinnedId === id ? null : pinnedId; }
       return;
     }
+    if (shownId !== id && expandedId !== id) expandedId = null; // a new card opens short
+    const isDocked = docked();
     // Don't rebuild under someone choosing a spell slot or typing.
     const busy = box.contains(document.activeElement) && ['SELECT', 'INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
-    if (!(busy && shownId === id)) {
-      const scroll = shownId === id ? box.scrollTop : 0;
-      box.replaceChildren(buildCard(c, { view, lookup, actions: actionsFill(c, id) }));
+    const isNew = shownId !== id;
+    if (!(busy && !isNew)) {
+      const scroll = isNew ? 0 : box.scrollTop;
+      box.replaceChildren(buildCard(c, {
+        view, lookup, actions: actionsFill(c, id), docked: isDocked, short: isDocked && expandedId !== id,
+        onMore: () => { expandedId = expandedId === id ? null : id; pinnedId = id; refresh({ reveal: true }); },
+        onClose: close,
+      }));
       box.classList.toggle('with-actions', !!box.querySelector('.tc-actions'));
       box.scrollTop = scroll;
     }
     shownId = id;
     box.hidden = false;
+    document.body.classList.toggle('tc-docked', isDocked);
     place(tok);
+    if (isDocked && (isNew || reveal)) keepVisible(tok);
+  }
+
+  function close() {
+    pinnedId = null;
+    hoverId = null;
+    refresh();
   }
 
   // Only move the card (no rebuild), e.g. while the board scrolls.
@@ -247,7 +316,7 @@ export function initTokenCard({ getView, lookup, isDragging, actionsFor = () => 
 
   const later = (fn, ms) => { clearTimeout(timer); timer = setTimeout(fn, ms); };
 
-  document.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType || 'mouse'; }, true);
+  document.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType || 'mouse'; lastPress = Date.now(); }, true);
 
   // Mouse: hover a token to see its card; the card stays while the
   // pointer moves onto it (to click its buttons).
@@ -276,16 +345,17 @@ export function initTokenCard({ getView, lookup, isDragging, actionsFor = () => 
     if (tok && !tok.classList.contains('ghost')) {
       pinnedId = pinnedId === tok.dataset.id ? null : tok.dataset.id;
       if (lastPointer === 'mouse' && pinnedId) hoverId = pinnedId;
-    } else if (!e.target.closest('dialog')) {
+    } else if (!e.target.closest('dialog, .map-bar, .sel-bar')) { // zooming or the token bar keeps it
       pinnedId = null;
     }
     refresh();
   });
 
-  // Keyboard: Tab onto a token shows it.
+  // Keyboard: Tab onto a token shows it. (Not the focus main.js gives a
+  // token selected with a tap: that tap's click opens the card itself.)
   document.addEventListener('focusin', (e) => {
     const tok = e.target.closest && e.target.closest('.token');
-    if (tok && tok.matches(':focus-visible')) { pinnedId = tok.dataset.id; refresh(); }
+    if (tok && tok.matches(':focus-visible') && Date.now() - lastPress > 1000) { pinnedId = tok.dataset.id; refresh(); }
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && (pinnedId || hoverId)) { pinnedId = null; hoverId = null; refresh(); }
@@ -294,5 +364,5 @@ export function initTokenCard({ getView, lookup, isDragging, actionsFor = () => 
   document.addEventListener('scroll', (e) => { if (!box.contains(e.target)) reposition(); }, { passive: true, capture: true });
   window.addEventListener('resize', reposition);
 
-  return { refresh };
+  return { refresh: () => refresh(), close, isOpen: () => !box.hidden };
 }

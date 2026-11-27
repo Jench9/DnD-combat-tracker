@@ -11,7 +11,8 @@
 // The zoom is a factor on the "fit to width" cell size (render.js setZoom),
 // so it survives redraws and grid resizes; it's per page load, not saved.
 // While zooming, the grid point under the fingers (or the mouse) stays put:
-// the board scroller pans horizontally, the page vertically.
+// the board scroller pans horizontally, the page vertically (in full screen,
+// body.map-full, the board scroller does both).
 import { $ } from '../core/dom.js';
 import { getZoom, setZoom, sizeBoard, fitCell, MIN_CELL, MAX_CELL } from './render.js';
 
@@ -22,6 +23,10 @@ const STEP = 1.25; // per button press
 export function initZoom({ getCols, onGestureStart, onZoom }) {
   const scroll = $('boardScroll');
   const board = $('board');
+  const panY = (dy) => {
+    if (document.body.classList.contains('map-full')) scroll.scrollTop += dy;
+    else window.scrollBy(0, dy);
+  };
 
   // Zoom to `z`, keeping the grid point under client (cx, cy) in place.
   function zoomAt(z, cx, cy) {
@@ -33,7 +38,7 @@ export function initZoom({ getCols, onGestureStart, onZoom }) {
     const gx = cx - before.left - LABEL_W;
     const gy = cy - before.top - LABEL_H;
     scroll.scrollLeft += gx * (ratio - 1);
-    window.scrollBy(0, gy * (ratio - 1));
+    panY(gy * (ratio - 1));
     updateButtons();
     if (ratio !== 1) onZoom();
   }
@@ -76,7 +81,7 @@ export function initZoom({ getCols, onGestureStart, onZoom }) {
     const m = mid(e.touches);
     // Pan first (fingers moved together), then zoom around the new midpoint.
     scroll.scrollLeft -= m.x - pinch.mx;
-    window.scrollBy(0, -(m.y - pinch.my));
+    panY(-(m.y - pinch.my));
     pinch.mx = m.x;
     pinch.my = m.y;
     const z = pinch.zoom * (dist(e.touches) / pinch.dist);

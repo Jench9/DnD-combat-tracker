@@ -38,19 +38,11 @@
 
   <div id="addPanels"></div>
 
-  <div class="panel tray-panel">
+  <div class="panel tray-panel" id="trayPanel">
     <div class="tray-head">
       <div class="panel-title">Not on the map</div>
       <label class="size-field names-toggle"><input type="checkbox" id="namesToggle" checked> Names</label>
       <div class="map-tools dm-only">
-        <label class="size-field" id="tokenSizeField" hidden>Token
-          <select id="tokenSizeSelect" aria-label="Size of the selected token">
-            <option value="1">Medium or smaller (1×1)</option>
-            <option value="2">Large (2×2)</option>
-            <option value="3">Huge (3×3)</option>
-            <option value="4">Gargantuan (4×4)</option>
-          </select>
-        </label>
         <label class="size-field">Grid
           <input id="colsInput" type="number" min="5" max="50" aria-label="Columns"> ×
           <input id="rowsInput" type="number" min="5" max="50" aria-label="Rows">
@@ -72,15 +64,38 @@
     <div class="tray" id="tray" data-drop="tray"></div>
   </div>
 
-  <div class="zoom-tools" role="group" aria-label="Zoom the board">
-    <button class="btn secondary small" id="zoomOutBtn" title="Zoom out (or pinch / Ctrl + wheel)" aria-label="Zoom out">−</button>
-    <button class="btn secondary small" id="zoomFitBtn" title="Fit the board to the width">100%</button>
-    <button class="btn secondary small" id="zoomInBtn" title="Zoom in (or pinch / Ctrl + wheel)" aria-label="Zoom in">+</button>
+  <!-- Above the board; in full screen (map.css body.map-full) a bar at the top. -->
+  <div class="map-bar" id="mapBar">
+    <div class="mb-turn full-only" id="fbTurn"></div>
+    <button class="btn small full-only" id="fbNextBtn">Next →</button>
+    <button class="btn secondary small full-only" id="trayBtn" aria-expanded="false" aria-controls="trayPanel" title="Tokens not on the map, grid and background">Tokens</button>
+    <div class="zoom-tools" role="group" aria-label="Zoom the board">
+      <button class="btn secondary small" id="zoomOutBtn" title="Zoom out (or pinch / Ctrl + wheel)" aria-label="Zoom out">−</button>
+      <button class="btn secondary small" id="zoomFitBtn" title="Fit the board to the width">100%</button>
+      <button class="btn secondary small" id="zoomInBtn" title="Zoom in (or pinch / Ctrl + wheel)" aria-label="Zoom in">+</button>
+    </div>
+    <button class="btn secondary small" id="fullBtn" aria-pressed="false" title="Only the board, as big as the screen (Esc to leave)">⛶ Full screen</button>
   </div>
   <div class="board-scroll" id="boardScroll">
     <div class="board" id="board"></div>
   </div>
-  <div class="map-hint"><span class="player-only">You can move your own token. </span>Drag a token onto the grid, or click it and then click a cell. With a token selected: arrow keys move it, Delete puts it back in the tray, Esc deselects. Hover over a token (or tap it) to see its details. Pinch with two fingers to zoom and move them together to pan (Ctrl + wheel on a computer).</div>
+  <div class="map-hint"><span class="player-only">You can move your own token. </span>Drag a token onto the grid, or tap it and then tap a cell. Tap a token to see its details. Pinch with two fingers to zoom and move them together to pan (Ctrl + wheel on a computer). With a token selected: arrow keys move it, Delete puts it back in the tray, Esc deselects.</div>
+</div>
+
+<!-- The selected token: what a tap does next, and what else you can do with it (map/main.js). -->
+<div class="sel-bar" id="selBar" role="toolbar" aria-label="Selected token" hidden>
+  <span class="sel-text" id="selText"></span>
+  <button class="btn secondary small" id="selTrayBtn" title="Take it off the map (Delete)">↩ Tray</button>
+  <label class="size-field dm-only" id="tokenSizeField" title="Size of the selected token">
+    <span class="sel-lbl">Size</span>
+    <select id="tokenSizeSelect" aria-label="Size of the selected token">
+      <option value="1">Medium or smaller (1×1)</option>
+      <option value="2">Large (2×2)</option>
+      <option value="3">Huge (3×3)</option>
+      <option value="4">Gargantuan (4×4)</option>
+    </select>
+  </label>
+  <button class="btn secondary small sel-x" id="selClearBtn" title="Deselect (Esc)" aria-label="Deselect">✕</button>
 </div>
 
 <script type="module" src="js/map/main.js"></script>

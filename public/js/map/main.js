@@ -2,7 +2,7 @@
 import { $ } from '../core/dom.js';
 import { renderNav } from '../core/nav.js';
 import { connectSocket } from '../core/socket.js';
-import { renderMap, sizeBoard, tokenSize } from './render.js';
+import { renderMap, sizeBoard, tokenSize, cellLabel } from './render.js';
 import { initInteract, isDragging, cancelDrag } from './interact.js';
 import { initZoom } from './zoom.js';
 import { initTokenCard } from './card.js';
@@ -60,11 +60,12 @@ function render() {
   if (view.selectedId && !view.combat.combatants.some((c) => c.id === view.selectedId)) view.selectedId = null;
   renderMap({ ...view, portraitFor, glyphFor: pics.glyphFor, sheetFor: pics.characterFor, canMove });
   const active = view.combat.combatants[view.combat.activeIndex];
-  $('nextTurnBtn').disabled = !(active ? canMove(active) : isDm());
-  // DM: size picker for the selected token (Large, Huge… from the stat block).
-  const selected = view.combat.combatants.find((c) => c.id === view.selectedId);
-  $('tokenSizeField').hidden = !selected;
-  if (selected && document.activeElement !== $('tokenSizeSelect')) $('tokenSizeSelect').value = String(tokenSize(selected));
+  $('nextTurnBtn').disabled = $('fbNextBtn').disabled = !(active ? canMove(active) : isDm());
+  $('fbTurn').textContent = `R${view.combat.round} · ` + $('turnName').textContent;
+  $('fbTurn').classList.toggle('mine', !!(active && !isDm() && canMove(active)));
+  const off = view.combat.combatants.filter((c) => !view.map.positions[c.id]).length;
+  $('trayBtn').textContent = off ? `Tokens · ${off}` : 'Tokens';
+  renderSelBar();
   const busy = ['INPUT', 'SELECT'].includes(document.activeElement?.tagName) || document.activeElement?.closest('.token-card, dialog');
   if (view.selectedId && !busy) {
     const tok = document.querySelector('.token[data-id="' + view.selectedId + '"]');
@@ -72,6 +73,23 @@ function render() {
   }
   card.refresh();
   zoom?.refresh();
+}
+
+// The selected token's bar (fixed at the bottom): what a tap on a cell does,
+// back to the tray, size (DM) and deselect, so phones don't need the keys.
+function renderSelBar() {
+  const c = view.combat.combatants.find((x) => x.id === view.selectedId);
+  $('selBar').hidden = !c;
+  document.body.classList.toggle('has-selbar', !!c);
+  if (!c) return;
+  const p = view.map.positions[c.id];
+  const name = document.createElement('b');
+  name.textContent = c.name + (p ? ' · ' + cellLabel(p.x, p.y) : '');
+  const hint = document.createElement('small');
+  hint.textContent = p ? 'Tap a cell to move' : 'Tap a cell to place';
+  $('selText').replaceChildren(name, hint);
+  $('selTrayBtn').hidden = !p;
+  if (document.activeElement !== $('tokenSizeSelect')) $('tokenSizeSelect').value = String(tokenSize(c));
 }
 
 const socket = connectSocket({
@@ -97,25 +115,31 @@ const send = socket.send;
 initAddPanels($('addPanels'), { send, page: 'map' });
 const updateJoin = () => syncAddPanels({ characters, combatants: view.combat.combatants });
 
-initInteract({
-  getView: () => view,
-  // Move locally right away; the server's echo is authoritative.
-  place: (id, x, y) => {
-    view.map = { ...view.map, positions: { ...view.map.positions, [id]: { x, y } } };
-    view.selectedId = id;
-    render();
-    send('placeToken', { id, x, y });
-  },
-  remove: (id) => {
-    const positions = { ...view.map.positions };
-    delete positions[id];
-    view.map = { ...view.map, positions };
-    view.selectedId = null;
-    render();
-    send('removeToken', { id });
-  },
-  select: (id) => { view.selectedId = id; render(); },
-});
+// Move locally right away; the server's echo is authoritative.
+function placeToken(id, x, y) {
+  view.map = { ...view.map, positions: { ...view.map.positions, [id]: { x, y } } };
+  view.selectedId = id;
+  render();
+  send('placeToken', { id, x, y });
+}
+function removeToken(id) {
+  const positions = { ...view.map.positions };
+  delete positions[id];
+  view.map = { ...view.map, positions };
+  view.selectedId = null;
+  render();
+  send('removeToken', { id });
+}
+function selectToken(id) {
+  view.selectedId = id;
+  // Full screen: picked from the tray drawer → close it so the board is free to tap.
+  if (id && !view.map.positions[id]) setTrayOpen(false);
+  render();
+}
+initInteract({ getView: () => view, place: placeToken, remove: removeToken, select: selectToken });
+
+$('selTrayBtn').addEventListener('click', () => { if (view.selectedId) { card.close(); removeToken(view.selectedId); } });
+$('selClearBtn').addEventListener('click', () => { card.close(); selectToken(null); });
 
 function sendSize() {
   send('setMapSize', { cols: parseInt($('colsInput').value, 10), rows: parseInt($('rowsInput').value, 10) });
@@ -137,6 +161,7 @@ $('clearMapBtn').addEventListener('click', () => {
 });
 
 $('nextTurnBtn').addEventListener('click', () => send('nextTurn'));
+$('fbNextBtn').addEventListener('click', () => send('nextTurn'));
 
 // The TV view in its own window, ready to move to a TV / AirPlay display.
 $('tvBtn').addEventListener('click', () => window.open('/tv', 'kit-tv', 'popup,width=1280,height=720'));
@@ -202,4 +227,42 @@ zoom = initZoom({
 });
 
 window.addEventListener('resize', () => { sizeBoard(view.map.cols); zoom.refresh(); });
+
+// ---- full screen: only the board, between a slim bar at the top and the
+// phone's page bar (map.css body.map-full). One finger pans the board itself.
+// The tray, grid and background tools open as a drawer ("Tokens").
+// Remembered per browser.
+const FULL_KEY = 'kit-map-full';
+function setTrayOpen(open) {
+  if (open === document.body.classList.contains('map-tray-open')) return;
+  document.body.classList.toggle('map-tray-open', open);
+  $('trayBtn').setAttribute('aria-expanded', String(open));
+}
+function setFull(on) {
+  document.body.classList.toggle('map-full', on);
+  $('fullBtn').setAttribute('aria-pressed', String(on));
+  $('fullBtn').textContent = on ? '✕' : '⛶ Full screen';
+  $('fullBtn').setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen');
+  $('fullBtn').title = on ? 'Back to the page (Esc)' : 'Only the board, as big as the screen (Esc to leave)';
+  if (!on) setTrayOpen(false);
+  try { localStorage.setItem(FULL_KEY, on ? '1' : '0'); } catch { /* storage blocked */ }
+  sizeBoard(view.map.cols); // the board is wider now (or narrower again)
+  zoom.refresh();
+  card.refresh();
+}
+$('fullBtn').addEventListener('click', () => setFull(!document.body.classList.contains('map-full')));
+$('trayBtn').addEventListener('click', () => {
+  const open = !document.body.classList.contains('map-tray-open');
+  if (open) card.close(); // it would cover the drawer
+  setTrayOpen(open);
+});
+// Esc closes the closest thing first: the drawer, then the token card or
+// selection (card.js / interact.js), then full screen.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !document.body.classList.contains('map-full') || document.querySelector('dialog[open]')) return;
+  if (document.body.classList.contains('map-tray-open')) { setTrayOpen(false); e.stopImmediatePropagation(); return; }
+  if (!view.selectedId && !card.isOpen()) setFull(false);
+}, true);
+try { if (localStorage.getItem(FULL_KEY) === '1') setFull(true); } catch { /* storage blocked */ }
+
 render();
